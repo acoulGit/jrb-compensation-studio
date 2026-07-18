@@ -7,6 +7,21 @@ résultats explicables et testables. Il ne définit aucune formule exécutable.
 
 > **Statut général : À implémenter dans un lot ultérieur.**
 
+## Lot 1B — stockage des paramètres uniquement
+
+Le Lot 1B persiste les paramètres de référence par campagne (familles, grades,
+grille S0, positions, coefficients et mode 9-Box) dans les tables
+`campaign_reference_*`. Aucune formule exécutable n’est introduite : le moteur
+ne calcule ni positionnement, ni proposition matricielle, ni consommation
+budgétaire.
+
+Les étapes **4. Positionnement dans la grille** et **5. Application du mode
+9-Box** consommeront ultérieurement ces tables (`campaign_salary_grid`,
+`campaign_salary_positions`, `campaign_reference_config`,
+`campaign_performance_factors`, `campaign_potential_factors`,
+`campaign_nine_box_factors`) comme instantané versionné des paramètres de la
+campagne.
+
 ## Principes
 
 - Une exécution utilise un instantané versionné des données et paramètres.
@@ -107,5 +122,5 @@ et écarts budgétaires. Produire les éléments de preuve associés.
 
 Le futur résultat devra distinguer proposition matricielle, complément de
 promotion, correction, mesure sociale, ancienneté, total final, alertes et
-consommation budgétaire. Aucun de ces éléments n’est calculé dans le lot de
-fondation.
+consommation budgétaire. Aucun de ces éléments n’est calculé dans les lots
+fondation (1A) ni référentiels (1B).

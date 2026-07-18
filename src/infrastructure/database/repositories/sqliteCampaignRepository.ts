@@ -1,5 +1,6 @@
 import { getDatabase, utcNowIso } from "../connection";
 import { mapCampaign } from "../mappers";
+import { seedCampaignReferences } from "../seedCampaignReferences";
 import type { Campaign, CampaignDraftInput, CampaignRow } from "../types";
 import type { CampaignRepository } from "./campaignRepository";
 
@@ -46,13 +47,28 @@ export class SqliteCampaignRepository implements CampaignRepository {
   async createCampaign(input: CampaignDraftInput): Promise<Campaign> {
     const db = await getDatabase();
     const now = utcNowIso();
-    const result = (await db.execute(
-      `INSERT INTO campaigns (name, reference_year, status, notes, created_at, updated_at, archived_at)
-       VALUES ($1, $2, 'draft', $3, $4, $5, NULL)`,
-      [input.name, input.referenceYear, input.notes, now, now],
-    )) as { lastInsertId: number };
+    let campaignId: number;
 
-    const created = await this.getCampaign(result.lastInsertId);
+    try {
+      await db.execute("BEGIN IMMEDIATE");
+      const result = (await db.execute(
+        `INSERT INTO campaigns (name, reference_year, status, notes, created_at, updated_at, archived_at)
+         VALUES ($1, $2, 'draft', $3, $4, $5, NULL)`,
+        [input.name, input.referenceYear, input.notes, now, now],
+      )) as { lastInsertId: number };
+      campaignId = result.lastInsertId;
+      await seedCampaignReferences(db, campaignId, now);
+      await db.execute("COMMIT");
+    } catch (error) {
+      try {
+        await db.execute("ROLLBACK");
+      } catch {
+        // La connexion peut déjà être hors transaction.
+      }
+      throw error;
+    }
+
+    const created = await this.getCampaign(campaignId);
     if (!created) {
       throw new Error("La campagne créée est introuvable.");
     }

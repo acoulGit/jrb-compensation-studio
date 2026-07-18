@@ -4,6 +4,15 @@ Ce document consigne uniquement les règles validées. Toute précision,
 interprétation ou nouvelle règle doit faire l’objet d’une validation métier
 avant d’être ajoutée.
 
+## Persistance des paramètres (Lot 1B)
+
+Le Lot 1B ne crée aucune règle métier nouvelle. Il persiste, **par campagne**,
+les paramètres déjà validés ci-dessous : structure familles/grades, médianes S0,
+positions salariales (ratios et coefficients), mode 9-Box et coefficients
+Performance, Potentiel et 9-Box. Les valeurs par défaut et les contraintes de
+stockage sont décrites dans `docs/COMPENSATION_REFERENCES.md` et
+`docs/DATA_DICTIONARY.md`.
+
 ## Grilles
 
 - Le référentiel comprend 5 familles de métiers et 6 grades.

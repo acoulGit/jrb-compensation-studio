@@ -35,10 +35,11 @@ export const pageDefinitions: Record<PageId, FeatureDefinition> = {
   },
   references: {
     title: "Référentiels",
-    description: "Préparez les grilles, grades, coefficients et règles de référence.",
-    emptyTitle: "Aucun référentiel configuré",
+    description:
+      "Configurez les familles, grades, médianes S0, positions et coefficients par campagne.",
+    emptyTitle: "Aucune campagne",
     emptyDescription:
-      "Cet espace accueillera les paramètres nécessaires aux futurs calculs.",
+      "Créez une campagne pour initialiser automatiquement son référentiel de rémunération.",
     plannedFeatures: [
       "Familles de métiers et grades",
       "Grilles salariales et positions",

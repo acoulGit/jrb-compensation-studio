@@ -1,4 +1,5 @@
 import type { CampaignRepository } from "../infrastructure/database/repositories/campaignRepository";
+import type { CompensationReferenceRepository } from "../infrastructure/database/repositories/compensationReferenceRepository";
 import type {
   Campaign,
   CampaignDraftInput,
@@ -12,7 +13,10 @@ import { AppError } from "./errors";
 export type CampaignListFilter = "current" | "archived" | "all";
 
 export class CampaignService {
-  constructor(private readonly repository: CampaignRepository) {}
+  constructor(
+    private readonly repository: CampaignRepository,
+    private readonly referenceRepository?: CompensationReferenceRepository,
+  ) {}
 
   listCampaigns(): Promise<Campaign[]> {
     return this.repository.listCampaigns();
@@ -34,7 +38,13 @@ export class CampaignService {
   async createCampaign(input: CampaignDraftInput): Promise<Campaign> {
     const normalized = normalizeCampaignInput(input);
     validateCampaignInput(normalized);
-    return this.repository.createCampaign(normalized);
+    const campaign = await this.repository.createCampaign(normalized);
+    // SQLite initialise déjà dans la transaction de création ;
+    // le dépôt mémoire (et tout fallback) s’appuie sur ce point unique.
+    if (this.referenceRepository) {
+      await this.referenceRepository.initializeForCampaign(campaign.id);
+    }
+    return campaign;
   }
 
   async updateCampaign(

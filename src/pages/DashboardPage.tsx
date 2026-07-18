@@ -1,4 +1,5 @@
 import { useAppData } from "../app/AppDataProvider";
+import { useCompensationReference } from "../app/CompensationReferenceProvider";
 import { EmptyState } from "../components/ui/EmptyState";
 import { MetricCard } from "../components/ui/MetricCard";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -7,7 +8,11 @@ import { pageDefinitions } from "./pageDefinitions";
 
 export function DashboardPage() {
   const { activeCampaign } = useAppData();
+  const { activeCampaignCompleteness } = useCompensationReference();
   const definition = pageDefinitions.dashboard;
+  const referenceLabel = activeCampaign
+    ? (activeCampaignCompleteness?.badge ?? "À compléter")
+    : "Non configuré";
   const metrics = [
     [
       "Campagne active",
@@ -17,11 +22,18 @@ export function DashboardPage() {
         : "Aucun exercice ouvert",
       "C",
     ],
+    [
+      "Référentiel",
+      referenceLabel,
+      activeCampaign
+        ? "Paramètres de rémunération de la campagne"
+        : "Aucune campagne active",
+      "R",
+    ],
     ["Budget annoncé", "Non configuré", "Masse salariale de référence", "%"],
     ["Population importée", "0", "Aucune donnée RH chargée", "P"],
     ["Scénarios", "0", "Aucune simulation créée", "S"],
     ["Alertes", "0", "Aucun contrôle à signaler", "!"],
-    ["Statut de validation", "Non configuré", "Circuit non démarré", "V"],
   ] as const;
 
   return (

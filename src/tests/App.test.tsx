@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CampaignService } from "../services/campaignService";
 import { AppError } from "../services/errors";
 import { MemoryCampaignRepository } from "../infrastructure/database/repositories/memoryCampaignRepository";
@@ -54,8 +54,10 @@ describe("socle applicatif", () => {
       "À propos",
     ]) {
       await user.click(screen.getByRole("button", { name: page }));
+      const headingName =
+        page === "Référentiels" ? "Référentiels de rémunération" : page;
       expect(
-        screen.getByRole("heading", { name: page, level: 1 }),
+        screen.getByRole("heading", { name: headingName, level: 1 }),
       ).toBeInTheDocument();
     }
   });
@@ -301,6 +303,9 @@ describe("initialisation", () => {
     const services = createMemoryAppServices();
     const user = userEvent.setup();
     let shouldFail = true;
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
 
     render(
       <App
@@ -326,5 +331,6 @@ describe("initialisation", () => {
         screen.getByRole("navigation", { name: "Navigation principale" }),
       ).toBeInTheDocument();
     });
+    consoleError.mockRestore();
   });
 });

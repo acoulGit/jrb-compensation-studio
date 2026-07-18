@@ -1,4 +1,5 @@
 import { AppDataProvider } from "./app/AppDataProvider";
+import { CompensationReferenceProvider } from "./app/CompensationReferenceProvider";
 import { AppShell } from "./app/AppShell";
 import type { AppServices } from "./services/createAppServices";
 import "./styles/global.css";
@@ -14,7 +15,9 @@ function App({ services, initializeErrorFactory }: AppProps) {
       services={services}
       initializeErrorFactory={initializeErrorFactory}
     >
-      <AppShell />
+      <CompensationReferenceProvider>
+        <AppShell />
+      </CompensationReferenceProvider>
     </AppDataProvider>
   );
 }
