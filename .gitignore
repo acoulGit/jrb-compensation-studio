@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+coverage
 *.local
 
 # Editor directories and files
@@ -30,6 +31,7 @@ dist-ssr
 /backups/
 /private/
 /test-data/real/
+/test-data/tmp/
 
 # Bases de données locales
 *.db
