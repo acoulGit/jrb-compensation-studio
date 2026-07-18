@@ -1,4 +1,4 @@
-import { branding } from "../../config/branding";
+import { useAppData } from "../../app/AppDataProvider";
 import {
   primaryNavigation,
   secondaryNavigation,
@@ -53,6 +53,9 @@ export function Sidebar({
   onNavigate,
   onToggle,
 }: SidebarProps) {
+  const { organization } = useAppData();
+  const footerLabel = organization?.reportFooter ?? "Document confidentiel";
+
   return (
     <aside className={`sidebar${collapsed ? " sidebar--collapsed" : ""}`}>
       <div className="brand">
@@ -89,7 +92,7 @@ export function Sidebar({
           </span>
           <div>
             <strong>Mode local</strong>
-            <span>{branding.reportFooter}</span>
+            <span>{footerLabel}</span>
           </div>
         </div>
         <button

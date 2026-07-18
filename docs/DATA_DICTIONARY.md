@@ -2,16 +2,43 @@
 
 ## Conventions
 
-- Les noms techniques sont en anglais et en `camelCase`.
-- Les montants monétaires sont exprimés en FCFA. Le futur stockage devra éviter
-  les nombres flottants pour les montants.
-- Les dates utilisent le format ISO `YYYY-MM-DD`.
+- Les noms techniques de domaine sont en anglais et en `camelCase`.
+- Les colonnes SQLite sont en `snake_case`.
+- Les montants monétaires futurs sont exprimés en FCFA. Le stockage devra
+  éviter les nombres flottants pour les montants.
+- Les dates métier utilisent le format ISO `YYYY-MM-DD`.
+- Les horodatages de persistance utilisent l’UTC ISO-8601 complet.
 - Les valeurs importées restent distinguées des paramètres, résultats calculés
   et décisions RH.
-- Les règles de présence et listes de valeurs définitives restent à valider avec
-  le modèle d’import.
 
-## Données importées
+## Paramètres locaux persistés (Lot 1A)
+
+### OrganizationProfile
+
+| Champ domaine | Colonne SQLite | Nature |
+| --- | --- | --- |
+| `productName` | `product_name` | Paramètre local |
+| `organizationName` | `organization_name` | Paramètre local |
+| `organizationShortName` | `organization_short_name` | Paramètre local |
+| `applicationSubtitle` | `application_subtitle` | Paramètre local |
+| `reportFooter` | `report_footer` | Paramètre local |
+| `createdAt` | `created_at` | Technique |
+| `updatedAt` | `updated_at` | Technique |
+
+### Campaign
+
+| Champ domaine | Colonne SQLite | Nature |
+| --- | --- | --- |
+| `id` | `id` | Technique |
+| `name` | `name` | Paramètre de campagne |
+| `referenceYear` | `reference_year` | Paramètre de campagne |
+| `status` | `status` | Décision de cycle (`draft` / `active` / `archived`) |
+| `notes` | `notes` | Annotation locale |
+| `createdAt` | `created_at` | Technique |
+| `updatedAt` | `updated_at` | Technique |
+| `archivedAt` | `archived_at` | Technique / suppression logique |
+
+## Données importées (lots ultérieurs)
 
 ### `employeeNumber`
 
@@ -66,12 +93,11 @@ Booléen indiquant un statut de sous-performant confirmé.
 Montant d’augmentation de promotion déjà reçu, en FCFA. Il sert à déterminer
 un éventuel complément, sans être confondu avec celui-ci.
 
-## Paramètres
+## Paramètres métier futurs
 
-Les paramètres ne font pas partie des champs salariés importés. Ils comprendront
-notamment l’exercice, le budget annoncé, la date de référence, le mode 9-Box,
-les coefficients, les familles, grades, médianes S0 et positions de grille.
-Leur schéma détaillé sera versionné lors du lot de paramétrage.
+Les paramètres salariaux (budget annoncé, mode 9-Box, coefficients, familles,
+grades, médianes S0 et positions) seront versionnés lors des lots de
+paramétrage. Ils ne sont pas encore stockés dans SQLite.
 
 ## Données calculées
 
