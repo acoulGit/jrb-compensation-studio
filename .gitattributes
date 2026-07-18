@@ -13,6 +13,7 @@
 *.rs text eol=lf
 *.toml text eol=lf
 *.lock text eol=lf
+*.sql text eol=lf
 
 # Scripts Windows
 *.bat text eol=crlf

@@ -27,6 +27,7 @@ interface AppDataContextValue {
   organization: OrganizationProfile | null;
   campaigns: Campaign[];
   activeCampaign: Campaign | null;
+  services: AppServices;
   retry: () => void;
   saveOrganization: (
     input: OrganizationProfileInput,
@@ -219,6 +220,7 @@ export function AppDataProvider({
       organization,
       campaigns,
       activeCampaign,
+      services: resolvedServices,
       retry: () => setReloadToken((token) => token + 1),
       saveOrganization,
       createCampaign,
@@ -235,6 +237,7 @@ export function AppDataProvider({
       createCampaign,
       errorMessage,
       organization,
+      resolvedServices,
       restoreCampaign,
       saveOrganization,
       status,

@@ -1,4 +1,4 @@
-# Schéma de base de données — Lot 1A
+# Schéma de base de données — Lots 1A et 1B
 
 ## Emplacement logique
 
@@ -44,6 +44,131 @@ Initialisation : `INSERT OR IGNORE` avec les valeurs par défaut produit.
 | `updated_at` | TEXT | NOT NULL (UTC) |
 | `archived_at` | TEXT | NULL (UTC) |
 
+### `campaign_reference_config` (Lot 1B)
+
+Configuration générale du référentiel de rémunération, une ligne par campagne.
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `campaign_id` | INTEGER | PRIMARY KEY, FK → `campaigns(id)` |
+| `nine_box_mode` | TEXT | NOT NULL, CHECK (`none` / `performance_only` / `full_nine_box` / `performance_potential`) |
+| `created_at` | TEXT | NOT NULL (UTC) |
+| `updated_at` | TEXT | NOT NULL (UTC) |
+
+### `campaign_job_families` (Lot 1B)
+
+Cinq familles de métiers par campagne (codes et libellés modifiables).
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| `campaign_id` | INTEGER | NOT NULL, FK → `campaigns(id)` |
+| `code` | TEXT | NOT NULL, CHECK (`length(trim(code)) > 0`) |
+| `label` | TEXT | NOT NULL, CHECK (`length(trim(label)) > 0`) |
+| `sort_order` | INTEGER | NOT NULL, CHECK (1–5) |
+| `created_at` | TEXT | NOT NULL (UTC) |
+| `updated_at` | TEXT | NOT NULL (UTC) |
+
+Index uniques : `(campaign_id, code COLLATE NOCASE)`, `(campaign_id, sort_order)`.
+
+### `campaign_grades` (Lot 1B)
+
+Six grades par campagne (directeurs hors grille au niveau métier).
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| `campaign_id` | INTEGER | NOT NULL, FK → `campaigns(id)` |
+| `code` | TEXT | NOT NULL, CHECK (`length(trim(code)) > 0`) |
+| `label` | TEXT | NOT NULL, CHECK (`length(trim(label)) > 0`) |
+| `sort_order` | INTEGER | NOT NULL, CHECK (1–6) |
+| `created_at` | TEXT | NOT NULL (UTC) |
+| `updated_at` | TEXT | NOT NULL (UTC) |
+
+Index uniques : `(campaign_id, code COLLATE NOCASE)`, `(campaign_id, sort_order)`.
+
+### `campaign_salary_grid` (Lot 1B)
+
+Matrice S0 : 5 × 6 = 30 cellules par campagne. `NULL` = non configuré.
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `campaign_id` | INTEGER | NOT NULL, FK → `campaigns(id)` |
+| `job_family_id` | INTEGER | NOT NULL, FK → `campaign_job_families(id)` |
+| `grade_id` | INTEGER | NOT NULL, FK → `campaign_grades(id)` |
+| `s0_amount` | INTEGER | NULL ou > 0 (FCFA entier) |
+| `created_at` | TEXT | NOT NULL (UTC) |
+| `updated_at` | TEXT | NOT NULL (UTC) |
+
+Clé primaire : `(campaign_id, job_family_id, grade_id)`.
+
+### `campaign_salary_positions` (Lot 1B)
+
+Dix-sept positions salariales par campagne. Ratios de référence fixes (bps),
+coefficients reparamétrables (milli).
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| `campaign_id` | INTEGER | NOT NULL, FK → `campaigns(id)` |
+| `code` | TEXT | NOT NULL, CHECK (`length(trim(code)) > 0`) |
+| `label` | TEXT | NOT NULL, CHECK (`length(trim(label)) > 0`) |
+| `sort_order` | INTEGER | NOT NULL, CHECK (1–17) |
+| `reference_ratio_bps` | INTEGER | NULL ou 0–20 000 (basis points ; NULL pour Sout- / Sout+) |
+| `position_factor_milli` | INTEGER | NOT NULL, CHECK (0–10 000) |
+| `created_at` | TEXT | NOT NULL (UTC) |
+| `updated_at` | TEXT | NOT NULL (UTC) |
+
+Index uniques : `(campaign_id, code COLLATE NOCASE)`, `(campaign_id, sort_order)`.
+
+### `campaign_performance_factors` (Lot 1B)
+
+Trois niveaux de coefficient Performance par campagne.
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `campaign_id` | INTEGER | NOT NULL, FK → `campaigns(id)` |
+| `level` | TEXT | NOT NULL, CHECK (`low` / `medium` / `high`) |
+| `label` | TEXT | NOT NULL |
+| `sort_order` | INTEGER | NOT NULL, CHECK (1–3) |
+| `factor_milli` | INTEGER | NOT NULL, CHECK (0–10 000) |
+| `created_at` | TEXT | NOT NULL (UTC) |
+| `updated_at` | TEXT | NOT NULL (UTC) |
+
+Clé primaire : `(campaign_id, level)`.
+
+### `campaign_potential_factors` (Lot 1B)
+
+Trois niveaux de coefficient Potentiel par campagne.
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `campaign_id` | INTEGER | NOT NULL, FK → `campaigns(id)` |
+| `level` | TEXT | NOT NULL, CHECK (`low` / `medium` / `high`) |
+| `label` | TEXT | NOT NULL |
+| `sort_order` | INTEGER | NOT NULL, CHECK (1–3) |
+| `factor_milli` | INTEGER | NOT NULL, CHECK (0–10 000) |
+| `created_at` | TEXT | NOT NULL (UTC) |
+| `updated_at` | TEXT | NOT NULL (UTC) |
+
+Clé primaire : `(campaign_id, level)`.
+
+### `campaign_nine_box_factors` (Lot 1B)
+
+Neuf coefficients 9-Box par campagne (cases 1 à 9).
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `campaign_id` | INTEGER | NOT NULL, FK → `campaigns(id)` |
+| `box_code` | INTEGER | NOT NULL, CHECK (1–9) |
+| `performance_level` | TEXT | NOT NULL, CHECK (`low` / `medium` / `high`) |
+| `potential_level` | TEXT | NOT NULL, CHECK (`low` / `medium` / `high`) |
+| `factor_milli` | INTEGER | NOT NULL, CHECK (0–10 000) |
+| `created_at` | TEXT | NOT NULL (UTC) |
+| `updated_at` | TEXT | NOT NULL (UTC) |
+
+Clé primaire : `(campaign_id, box_code)`.
+
 ## Index
 
 - `ux_campaigns_one_active` : index unique partiel sur `status` lorsque
@@ -59,9 +184,11 @@ le statut à `draft` et `archived_at` à NULL.
 
 - aucune table salariés ;
 - aucun import RH ;
-- aucun référentiel salarial ;
 - aucun budget calculé ;
 - aucune simulation.
+
+Les référentiels de rémunération par campagne (Lot 1B) sont persistés ; ils ne
+contiennent ni effectifs ni résultats de calcul individuel.
 
 ## Stratégie de migrations
 
@@ -70,5 +197,16 @@ intégrées au build Rust via `include_str!`. Elles sont enregistrées dans le
 builder `tauri-plugin-sql` avec la même chaîne de connexion que le frontend.
 Le préchargement est déclaré dans `tauri.conf.json` (`plugins.sql.preload`).
 
-Évolution : ajouter un fichier `0002_....sql`, une constante associée et une
+| Version | Fichier | Description |
+| --- | --- | --- |
+| 1 | `0001_initial_persistence.sql` | `organization_profile`, `campaigns` |
+| 2 | `0002_compensation_references.sql` | huit tables `campaign_reference_*` et seed idempotent |
+
+La migration `0002` active `PRAGMA foreign_keys = ON`, crée les huit tables
+Lot 1B, puis initialise toutes les campagnes déjà présentes via
+`INSERT OR IGNORE` (config, familles, grades, grille S0 à `NULL`, positions,
+facteurs Performance / Potentiel / 9-Box). Les valeurs déjà configurées ne sont
+pas écrasées lors d’une réapplication.
+
+Évolution : ajouter un fichier `0003_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.

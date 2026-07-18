@@ -6,6 +6,7 @@ import { AboutPage } from "./AboutPage";
 import { CampaignsPage } from "./CampaignsPage";
 import { DashboardPage } from "./DashboardPage";
 import { pageDefinitions } from "./pageDefinitions";
+import { ReferencesPage } from "./ReferencesPage";
 import { SettingsPage } from "./SettingsPage";
 
 export { pageDefinitions };
@@ -13,7 +14,10 @@ export { pageDefinitions };
 function FeaturePage({
   page,
 }: {
-  page: Exclude<PageId, "dashboard" | "about" | "settings" | "campaigns">;
+  page: Exclude<
+    PageId,
+    "dashboard" | "about" | "settings" | "campaigns" | "references"
+  >;
 }) {
   const definition = pageDefinitions[page];
 
@@ -34,6 +38,7 @@ function FeaturePage({
 export function PageContent({ page }: { page: PageId }) {
   if (page === "dashboard") return <DashboardPage />;
   if (page === "campaigns") return <CampaignsPage />;
+  if (page === "references") return <ReferencesPage />;
   if (page === "settings") return <SettingsPage />;
   if (page === "about") return <AboutPage />;
   return <FeaturePage page={page} />;

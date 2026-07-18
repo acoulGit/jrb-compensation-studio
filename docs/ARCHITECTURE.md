@@ -19,8 +19,10 @@ télémétrie. Le serveur Vite local est exclusivement un outil de développemen
 - `src/components/ui` contient les composants de présentation réutilisables.
 - `src/config` conserve les valeurs initiales de référence (identité client).
 - `src/pages` compose les écrans fonctionnels.
-- `src/domain` expose les modèles métier purs.
-- `src/services` orchestre validations et cas d’usage, sans dépendre de React.
+- `src/domain` expose les modèles métier purs, dont
+  `src/domain/compensationReference` (Lot 1B).
+- `src/services` orchestre validations et cas d’usage, sans dépendre de React,
+  notamment `compensationReferenceService` et `campaignService`.
 - `src/infrastructure/database` gère la connexion SQLite, les mappers et les
   repositories (SQLite et mémoire pour les tests).
 - `src/tests` contient les tests du front.
@@ -29,6 +31,28 @@ télémétrie. Le serveur Vite local est exclusivement un outil de développemen
 Cette séparation vise une dépendance orientée vers le domaine : l’interface et
 l’infrastructure peuvent utiliser les contrats métier, tandis que le domaine
 ne dépend ni de React, ni de Tauri, ni de SQLite.
+
+## Couche référentiels de rémunération (Lot 1B)
+
+Le Lot 1B ajoute la persistance des paramètres de rémunération par campagne,
+sans moteur de calcul ni données salariés.
+
+- **Domaine** (`src/domain/compensationReference`) : modèles (`NineBoxMode`,
+  `JobFamily`, `Grade`, `SalaryGridCell`, `SalaryPosition`, facteurs Performance /
+  Potentiel / 9-Box), valeurs par défaut, conversions bps/milli, validation et
+  calcul de complétude (`ReferenceCompleteness`).
+- **Repositories** : contrat `CompensationReferenceRepository` avec implémentations
+  SQLite (`sqliteCompensationReferenceRepository`) et mémoire
+  (`memoryCompensationReferenceRepository`). L’initialisation idempotente d’une
+  campagne est centralisée dans `seedCampaignReferences.ts`.
+- **Services** : `CompensationReferenceService` orchestre lectures, mises à jour
+  et contrôles métier ; `CampaignService` déclenche l’initialisation du
+  référentiel à la création d’une campagne.
+- **Provider React** : `CompensationReferenceProvider` expose l’état du
+  référentiel sélectionné, la complétude de la campagne active et les actions
+  de mise à jour à la page Référentiels et au bandeau de contexte campagne.
+
+Voir `docs/COMPENSATION_REFERENCES.md` pour le périmètre fonctionnel détaillé.
 
 ## Persistance SQLite
 
@@ -74,4 +98,4 @@ distincts des règles métier.
 - Protection des données et sauvegardes.
 - Contrats d’import et d’export Excel.
 - Représentation exacte des montants et conventions d’arrondi.
-- Tables salariés et référentiels.
+- Tables salariés.
