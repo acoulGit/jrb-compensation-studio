@@ -59,19 +59,27 @@ sans moteur de calcul ni données salariés.
 
 Voir `docs/COMPENSATION_REFERENCES.md` pour le périmètre fonctionnel détaillé.
 
-## Couche moteur individuel (Lot 2A-2)
+## Couche moteur de calcul (Lots 2A-2 / 2A-3)
 
 Module pur `src/domain/compensationCalculation/` : aucune dépendance React,
 SQLite, Tauri, navigateur, filesystem, date courante, locale ou réseau.
 
+**Lot 2A-2 — individuel**
+
 - `resolveSalaryPosition` — classement Salaire/S0 → position + facteur ;
 - `resolveEvaluationFactor` — facteur selon le mode de campagne ;
-- `calculateIndividualMatrixWeight` — poids composite exact + trace ;
-- erreurs typées `CompensationCalculationError` (codes stables).
+- `calculateIndividualMatrixWeight` — poids composite exact + trace.
 
-Le moteur ne duplique pas en Rust. Il ne persiste rien, n’expose aucune
-commande Tauri et ne modifie pas l’UI. Le calibrage budgétaire et le montant
-d’augmentation restent des lots ultérieurs.
+**Lot 2A-3 — population / budget**
+
+- `exactFraction` — rationnels BigInt (PGCD, +, −, ×, ÷, compare, arrondi pas) ;
+- `resolveBudgetTarget` — budget manuel ou % d’assiette (sans arrondi) ;
+- `allocateTheoreticalPopulationBudget` — parts exactes au prorata des poids ;
+- `roundPopulationAllocations` — arrondi individuel paramétrable ;
+- `calculatePopulationBudgetAllocation` — orchestrateur optionnel.
+
+Erreurs typées `CompensationCalculationError` (codes stables). Pas de
+duplication Rust, ni UI, ni persistance, ni commande Tauri.
 
 Voir `docs/CALCULATION_CONTRACT.md` et `docs/BUSINESS_RULES.md`.
 

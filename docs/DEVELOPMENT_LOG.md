@@ -388,3 +388,34 @@ d’augmentation ni calibrage budget.
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
 - `git diff --check`
 - migrations 0001–0004 : diff silencieux
+
+## 2026-07-19 — Lot 2A-3 : budget cible, allocation théorique, arrondi
+
+### Objectif
+
+Séparer résolution du budget, répartition théorique exacte et arrondi
+individuel paramétrable — sans forcer le total réel au budget cible.
+
+### Choix
+
+- `ExactAmount` BigInt réduit (PGCD) ; aucun flottant métier.
+- Modes `manual_amount` (montant = budget ; assiette/taux ignorés) et
+  `percentage_of_eligible_payroll` (payroll × bps / 10000).
+- Allocation `budget × poids / Σpoids` ; invariant Σ parts = budget.
+- Arrondi `nearest_half_up` + `stepFcfa` explicite (non figé à 5).
+- Montant réel = Σ finaux ; `totalRoundingDelta` exposé, non corrigé.
+- Pas de plus forts restes ni réconciliation forcée.
+
+### Livrables
+
+- Extensions `src/domain/compensationCalculation/`
+- Tests `src/tests/populationBudgetAllocation.test.ts`
+- Docs mises à jour
+- Aucune migration / UI / Rust / persistance
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux

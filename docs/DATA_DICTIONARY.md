@@ -15,6 +15,10 @@
 - **Échelles moteur Lot 2A-2** : facteur d’évaluation sur **1 000 000** ;
   poids individuel sur **1 000 000 000** (`positionFactorMilli ×
   evaluationFactorScaled`). Calculs en entiers / `BigInt`, sans flottants.
+- **Montants rationnels Lot 2A-3** : `ExactAmount { numerator, denominator }`
+  (fraction réduite, dénominateur > 0). Budget cible, parts théoriques et
+  écarts d’arrondi restent exacts jusqu’à l’arrondi individuel final.
+- **Basis points budget** : `10000` = 100,00 % du taux de budget cible.
 - **Ratio affiché** : basis points entiers (half-up), présentation à deux
   décimales ; distinct du ratio rationnel exact utilisé pour classer.
 - Les dates métier utilisent le format ISO `YYYY-MM-DD`.
@@ -261,7 +265,19 @@ Résultats de domaine purs (non stockés) :
 | `blockingReason` | Ex. `CONFIRMED_UNDERPERFORMER` |
 | `explanationSteps` | Trace structurée déterministe |
 
-Éligibilité, montant matriciel FCFA, promotion, ancienneté, consommation et
+### Lot 2A-3 (non persisté)
+
+| Concept | Nature |
+| --- | --- |
+| `BudgetTargetMode` | `manual_amount` / `percentage_of_eligible_payroll` |
+| `exactAmount` | Budget / part / écart rationnel (`numerator`/`denominator`) |
+| `theoreticalAmount` | Part individuelle exacte avant arrondi |
+| `finalRoundedAmountFcfa` | Montant individuel final (entier, multiple du pas) |
+| `actualOperationAmountFcfa` | Σ montants finaux |
+| `totalRoundingDelta` | `réel − budget` (fraction exacte) |
+| `RoundingPolicy` | `nearest_half_up` + `stepFcfa` explicite |
+
+Éligibilité, masse auto, promotion, ancienneté, persistance des résultats et
 alertes budgétaires restent à produire dans des lots ultérieurs.
 
 ## Décisions RH

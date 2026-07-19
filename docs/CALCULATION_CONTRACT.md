@@ -94,6 +94,40 @@ Poids théorique calculé et tracé ; poids effectif = 0 ;
 `MISSING_PERFORMANCE_LEVEL`, `MISSING_POTENTIAL_LEVEL`, `DUPLICATE_FACTOR`,
 `FACTOR_NOT_FOUND`, `INVALID_FACTOR`, `UNSUPPORTED_EVALUATION_MODE`.
 
+## Lot 2A-3 — budget cible, allocation théorique, arrondi individuel
+
+Fonctions pures dans le même module :
+
+- `resolveBudgetTarget`
+- `allocateTheoreticalPopulationBudget`
+- `roundPopulationAllocations`
+- orchestrateur optionnel `calculatePopulationBudgetAllocation`
+
+### Modes de budget
+
+| Mode | Formule exacte | Données |
+| --- | --- | --- |
+| `manual_amount` | `manualBudgetFcfa / 1` | montant ≥ 0 (assiette/taux ignorés) |
+| `percentage_of_eligible_payroll` | `payroll × rateBps / 10000` | assiette ≥ 0, taux bps ≥ 0 |
+
+Aucun arrondi du budget. Pas d’obligation de divisibilité par le pas d’arrondi.
+Assiette éligible **non calculée** ici (fournie en entrée).
+
+### Allocation théorique
+
+`part_i = budget × weight_i / Σ weight` (fractions réduites, échelles
+hétérogènes admises). Invariant : Σ parts = budget. Aucun plus fort reste.
+
+### Arrondi final
+
+Politique explicite : `nearest_half_up` + `stepFcfa > 0`. Montant réel =
+Σ finaux ; `totalRoundingDelta = réel − budget` (non forcé à zéro).
+
+### Hors périmètre Lot 2A-3
+
+Éligibilité, masse auto, UI, persistance, Tauri, migration, ancienneté,
+promotion, correction, mesure sociale, min/max individuels.
+
 ## Principes
 
 - Une exécution utilise un instantané versionné des données et paramètres.
@@ -160,15 +194,16 @@ Correspondance seed validée (Lot 1B / Lot 2A-1) :
 | 8 | medium | high | 1,10 |
 | 9 | high | high | 1,40 |
 
-**À implémenter dans un lot ultérieur (montant / proposition calibrée).**
+**Lot 2A-2** fournit le poids ; **Lot 2A-3** convertit budget + poids en
+montants individuels (théoriques puis arrondis).
 
 ### 6. Détermination de la proposition matricielle
 
 Produire la cible individuelle à partir du positionnement et des coefficients,
 sans présumer qu’elle équivaut au taux budgétaire annoncé.
 
-Le Lot 2A-2 fournit le **poids individuel** exact ; la conversion en montant
-FCFA et la répartition budgétaire restent à définir.
+**Lot 2A-3** : allocation théorique exacte `budget × poids / Σpoids`, puis
+arrondi individuel paramétrable. Pas de forçage du total au budget cible.
 
 ### 7. Traitement de la promotion
 
@@ -194,18 +229,18 @@ la conserver hors de l’enveloppe annoncée.
 
 ### 10. Consolidation budgétaire et ajustement
 
-Comparer la somme des composantes incluses au budget global. Un mécanisme futur
-pourra permettre une consommation exacte sans transformer le taux annoncé en
-garantie individuelle.
+Comparer la somme des composantes incluses au budget global.
 
-**Règles d’ajustement à valider et à implémenter dans un lot ultérieur.**
+**Lot 2A-3** : le montant réel (= Σ montants individuels arrondis) peut différer
+du budget cible ; l’écart est tracé. Aucune réconciliation forcée (plus forts
+restes) n’est appliquée. Un ajustement métier ultérieur reste possible hors
+moteur pur.
 
 ### 11. Arrondi final
 
-Appliquer l’arrondi final au multiple de 5 FCFA, puis mesurer et documenter
-l’éventuel effet d’arrondi sur la consommation.
-
-**Convention d’arrondi à préciser et à implémenter dans un lot ultérieur.**
+**Lot 2A-3** : arrondi individuel `nearest_half_up` au pas `stepFcfa`
+paramétrable (non figé à 5 FCFA), uniquement sur le montant final individuel.
+Mesure de `totalRoundingDelta = réel − budget`.
 
 ### 12. Contrôles et alertes
 
