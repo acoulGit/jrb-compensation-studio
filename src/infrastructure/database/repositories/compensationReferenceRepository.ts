@@ -3,6 +3,7 @@ import type {
   LevelFactorInput,
   NineBoxFactorInput,
   NineBoxMode,
+  NineBoxOrientation,
   ReferenceCompleteness,
   SalaryGridCellInput,
   SalaryPositionFactorInput,
@@ -40,6 +41,10 @@ export interface CompensationReferenceRepository {
   updateNineBoxMode(
     campaignId: number,
     mode: NineBoxMode,
+  ): Promise<CompensationReferenceSet>;
+  updateNineBoxOrientation(
+    campaignId: number,
+    orientation: NineBoxOrientation,
   ): Promise<CompensationReferenceSet>;
   getCompleteness(campaignId: number): Promise<ReferenceCompleteness | null>;
 }

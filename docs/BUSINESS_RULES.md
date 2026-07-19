@@ -19,30 +19,128 @@ stockage sont décrites dans `docs/COMPENSATION_REFERENCES.md` et
 - Les directeurs sont hors grille.
 - La médiane de référence est S0.
 - Les positions sont S1- à S7- et S1+ à S7+.
-- Le pas entre positions est de 5 %.
+- Le pas entre positions de référence est de 5 %.
 - S7- correspond à 65 % de S0.
 - S7+ correspond à 135 % de S0.
 - Sout- désigne une position inférieure à 65 %.
 - Sout+ désigne une position supérieure à 135 %.
 
+### Classement en position (convention JRB Compensation Studio)
+
+Règle produit du Lot 2A-2 (moteur individuel), indépendante de toute
+convention historique non documentée :
+
+- classer au **point de référence le plus proche** parmi 65 %, 70 %, …, 135 % ;
+- comparaison exacte par produits croisés / distances en `BigInt`
+  (`|salary × 10000 − s0 × R|`) ;
+- en cas d’égalité à mi-chemin, retenir le **ratio supérieur** ;
+- ratio strictement `< 65 %` → Sout- ;
+- ratio strictement `> 135 %` → Sout+ ;
+- en particulier, 132,5 % à 135 % inclus → S7+ ;
+- le ratio **affiché** (basis points, arrondi half-up, deux décimales) ne
+  sert jamais au classement.
+
 ## 9-Box
 
-- Les codes vont de 1 à 9.
+- Les codes de case vont de 1 à 9 (propriété visuelle / historique).
+- La clé métier d’un facteur 9-Box est le couple sémantique
+  **Performance × Potentiel** (`low` / `medium` / `high` × idem), pas le
+  numéro de case ni l’orientation de la matrice.
 - Quatre modes sont disponibles :
   1. aucun effet ;
   2. performance uniquement ;
   3. 9-Box complète ;
   4. performance avec modulation du potentiel.
 - Les coefficients sont reparamétrables.
+- Deux orientations de présentation (Lot 2A-1) :
+  1. `performance_rows_potential_columns` (défaut Orange) — performance en
+     lignes, potentiel en colonnes ;
+  2. `performance_columns_potential_rows` — performance en colonnes, potentiel
+     en lignes.
+- L’orientation n’affecte pas le facteur métier d’un couple
+  Performance/Potentiel ; elle transpose uniquement l’affichage.
+- Ordre d’affichage (non paramétrable au Lot 2A-1) :
+  - lignes : haut = high, milieu = medium, bas = low ;
+  - colonnes : gauche = low, centre = medium, droite = high.
+
+### Facteur d’évaluation et poids individuel (Lot 2A-2)
+
+- **Facteur** ≠ **montant** : le facteur module la pondération ; le montant
+  d’augmentation n’est pas calculé dans ce sous-lot.
+- Échelle uniforme du facteur d’évaluation : **1 000 000** (= 1,000) :
+  - `none` → 1 000 000 ;
+  - `performance_only` → `performanceMilli × 1000` ;
+  - `full_nine_box` → `nineBoxMilli × 1000` ;
+  - `performance_potential` → `performanceMilli × potentialMilli`.
+- Données individuelles requises :
+  - `none` : aucune ;
+  - `performance_only` : Performance ;
+  - `full_nine_box` : Performance + Potentiel ;
+  - `performance_potential` : Performance + Potentiel.
+- **Poids individuel** = `positionFactorMilli × evaluationFactorScaled`,
+  échelle uniforme **1 000 000 000**, sans arrondi prématuré.
+- Sous-performant confirmé : poids théorique conservé dans la trace ;
+  poids effectif = 0 ; `blockingReason = CONFIRMED_UNDERPERFORMER` ;
+  les données du mode restent obligatoires.
+- Salaire `≤ 0` → erreur `INVALID_SALARY` ; S0 absent ou `≤ 0` → `INVALID_S0`.
 
 ## Budget
 
-- Le budget est exprimé en pourcentage de la masse des salaires de base payés
-  en décembre N-1.
-- Les directeurs sont exclus.
 - Le budget est global et ne constitue pas un taux individuel garanti.
-- Une consommation exacte du budget est possible.
+- Les directeurs sont exclus de l’assiette (résolution d’assiette hors Lot 2A-3).
+- Une consommation exacte du budget n’est **pas** forcée après arrondi
+  individuel : le montant réel de l’opération est la somme des montants
+  individuels finaux arrondis, et peut différer légèrement du budget cible.
 - Certains salariés peuvent recevoir moins ou plus que le taux annoncé.
+
+### Budget cible et répartition (Lot 2A-3 — convention JRB)
+
+Trois responsabilités séparées, calculs exacts en fractions `BigInt` :
+
+1. **Résoudre** le budget cible (`resolveBudgetTarget`) — aucun arrondi ;
+2. **Allouer** théoriquement selon les poids effectifs
+   (`allocateTheoreticalPopulationBudget`) — aucun arrondi ;
+3. **Arrondir** uniquement chaque montant individuel final
+   (`roundPopulationAllocations`).
+
+Modes de budget (toujours explicites) :
+
+- `manual_amount` : le montant saisi **est** le budget cible (`N / 1`) ;
+  aucun calcul ; assiette et taux éventuellement fournis sont **ignorés** ;
+  aucune obligation de divisibilité par le pas d’arrondi.
+- `percentage_of_eligible_payroll` :
+  `eligiblePayrollFcfa × budgetRateBasisPoints / 10_000` (fraction réduite) ;
+  l’assiette éligible est fournie en entrée (non calculée dans ce lot) ;
+  le budget peut rester fractionnaire.
+
+Répartition théorique : `part = budget × poids / Σpoids` ; somme exacte des
+parts = budget cible. Poids nuls → part nulle. Pas de méthode des plus forts
+restes ni de réconciliation forcée.
+
+### Base de répartition budgétaire (Lot 2A-4 — convention JRB)
+
+Le poids transmis à l’allocation n’est **pas** le poids matriciel seul :
+
+`allocationWeight = salaryFcfa × effectiveMatrixWeight`
+
+Conséquence : deux salariés au même poids matriciel effectif reçoivent le même
+**taux** théorique d’augmentation ; leurs montants sont proportionnels à leurs
+salaires.
+
+Formules équivalentes (fractions BigInt exactes, sans arrondi) :
+
+- `totalAllocationWeight = Σ(salary × effectiveMatrixWeight)`
+- `calibrationCoefficient = budgetTarget / totalAllocationWeight`
+- `theoreticalIncreaseRate = calibrationCoefficient × effectiveMatrixWeight`
+- `theoreticalIncreaseAmount = salary × theoreticalIncreaseRate`
+  (= `budget × allocationWeight / totalAllocationWeight`)
+
+Identique pour `manual_amount` et `percentage_of_eligible_payroll`.
+
+Arrondi individuel : politique explicite (`nearest_half_up`, `stepFcfa`
+paramétrable : 1, 5, 10, 100, 1000… — **pas figé à 5 FCFA**).
+Montant réel = Σ montants arrondis ; écart total = montant réel − budget cible
+(exposé, non corrigé).
 
 ## Éligibilité
 
@@ -92,6 +190,7 @@ Détails techniques : `docs/HR_IMPORT.md`.
 - En cas de promotion, un complément est accordé seulement si la cible
   matricielle dépasse l’augmentation de promotion déjà reçue.
 - La correction Sout- est distincte et peut être étalée sur deux ans.
-- L’arrondi final est effectué au multiple de 5 FCFA.
+- L’arrondi final individuel est effectué au multiple d’un pas paramétrable
+  (politique `nearest_half_up`) ; le pas n’est pas figé à 5 FCFA.
 - Tout dépassement S7+ est signalé à la RH.
 - Le bonus de performance est hors périmètre.

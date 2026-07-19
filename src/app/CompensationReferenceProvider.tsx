@@ -12,6 +12,7 @@ import type {
   LevelFactorInput,
   NineBoxFactorInput,
   NineBoxMode,
+  NineBoxOrientation,
   ReferenceCompleteness,
   SalaryGridCellInput,
   SalaryPositionFactorInput,
@@ -55,6 +56,9 @@ interface CompensationReferenceContextValue {
     updates: NineBoxFactorInput[],
   ) => Promise<CompensationReferenceSet>;
   updateNineBoxMode: (mode: NineBoxMode) => Promise<CompensationReferenceSet>;
+  updateNineBoxOrientation: (
+    orientation: NineBoxOrientation,
+  ) => Promise<CompensationReferenceSet>;
 }
 
 const CompensationReferenceContext =
@@ -288,6 +292,17 @@ export function CompensationReferenceProvider({
           services.compensationReference.updateNineBoxMode(
             selectedCampaignId,
             mode,
+          ),
+        );
+      },
+      updateNineBoxOrientation: (orientation) => {
+        if (selectedCampaignId === null) {
+          return Promise.reject(new Error("Aucune campagne sélectionnée."));
+        }
+        return wrapMutation(() =>
+          services.compensationReference.updateNineBoxOrientation(
+            selectedCampaignId,
+            orientation,
           ),
         );
       },

@@ -12,6 +12,15 @@
 - **Millièmes (`*_milli`)** : entiers ; `1000` = 1,000. Plage autorisée 0 à
   10 000 (soit 0 à 10 inclus). Utilisés pour les coefficients de position et
   de 9-Box. Aucun type `REAL` pour ces paramètres.
+- **Échelles moteur Lot 2A-2** : facteur d’évaluation sur **1 000 000** ;
+  poids individuel sur **1 000 000 000** (`positionFactorMilli ×
+  evaluationFactorScaled`). Calculs en entiers / `BigInt`, sans flottants.
+- **Montants rationnels Lot 2A-3** : `ExactAmount { numerator, denominator }`
+  (fraction réduite, dénominateur > 0). Budget cible, parts théoriques et
+  écarts d’arrondi restent exacts jusqu’à l’arrondi individuel final.
+- **Basis points budget** : `10000` = 100,00 % du taux de budget cible.
+- **Ratio affiché** : basis points entiers (half-up), présentation à deux
+  décimales ; distinct du ratio rationnel exact utilisé pour classer.
 - Les dates métier utilisent le format ISO `YYYY-MM-DD`.
 - Les horodatages de persistance utilisent l’UTC ISO-8601 complet.
 - Les valeurs importées restent distinguées des paramètres, résultats calculés
@@ -54,8 +63,11 @@ Persistés dans les tables `campaign_reference_*`. Voir
 | Champ domaine | Colonne SQLite | Nature |
 | --- | --- | --- |
 | — | `nine_box_mode` (`campaign_reference_config`) | Paramètre de campagne |
+| — | `nine_box_orientation` (`campaign_reference_config`) | Présentation matrice (Lot 2A-1) |
 
-Valeurs : `none`, `performance_only`, `full_nine_box`, `performance_potential`.
+Valeurs mode : `none`, `performance_only`, `full_nine_box`, `performance_potential`.
+Valeurs orientation : `performance_rows_potential_columns` (défaut Orange),
+`performance_columns_potential_rows`.
 
 ### JobFamily
 
@@ -125,14 +137,14 @@ Tables : `campaign_performance_factors`, `campaign_potential_factors`.
 | Champ domaine | Colonne SQLite | Nature |
 | --- | --- | --- |
 | `campaignId` | `campaign_id` | Rattachement campagne |
-| `boxCode` | `box_code` | Code case (1–9) |
-| `performanceLevel` | `performance_level` | Niveau performance associé |
-| `potentialLevel` | `potential_level` | Niveau potentiel associé |
+| `boxCode` | `box_code` | Numéro de case historique / visuel (1–9), **pas** la clé moteur |
+| `performanceLevel` | `performance_level` | Clé sémantique performance |
+| `potentialLevel` | `potential_level` | Clé sémantique potentiel |
 | `factorMilli` | `factor_milli` | Coefficient reparamétrable en milli |
 | `createdAt` | `created_at` | Technique |
 | `updatedAt` | `updated_at` | Technique |
 
-Table : `campaign_nine_box_factors`.
+Table : `campaign_nine_box_factors`. Lookup métier : `getNineBoxFactor(factors, performance, potential)`.
 
 ### ReferenceCompleteness
 
@@ -232,15 +244,54 @@ de calcul ; ils sont désormais persistés par le Lot 1C :
 
 Les paramètres salariaux de campagne (budget annoncé, enveloppe, scénarios) ne
 sont pas encore stockés. Les référentiels par campagne (Lot 1B) et la population
-importée (Lot 1C) le sont ; le moteur de calcul les consommera ultérieurement
-conformément à `CALCULATION_CONTRACT.md`.
+importée (Lot 1C) le sont. Le Lot 2A-2 calcule en mémoire pure le
+positionnement, le facteur d’évaluation et le poids individuel ; la
+persistance des résultats et le calibrage budgétaire restent ultérieurs
+(`CALCULATION_CONTRACT.md`).
 
 ## Données calculées
 
-Les données calculées seront produites par le moteur et ne devront pas être
-écrasées par l’import : éligibilité, position dans la grille, proposition
-matricielle, complément de promotion, ancienneté, total final, consommation et
-alertes. Le schéma sera aligné sur `CALCULATION_CONTRACT.md`.
+### Lot 2A-2 (non persisté)
+
+Résultats de domaine purs (non stockés) :
+
+| Concept | Nature |
+| --- | --- |
+| `ratioBasisPoints` | Ratio Salaire/S0 affiché (bps half-up) |
+| `positionCode` / `positionFactorMilli` | Position et facteur |
+| `exactFactorNumerator` | Facteur d’évaluation (échelle 1e6) |
+| `exactWeightNumerator` | Poids individuel effectif (échelle 1e9, `BigInt`) |
+| `theoreticalWeightNumerator` | Poids avant blocage sous-performant |
+| `blockingReason` | Ex. `CONFIRMED_UNDERPERFORMER` |
+| `explanationSteps` | Trace structurée déterministe |
+
+### Lot 2A-3 (non persisté)
+
+| Concept | Nature |
+| --- | --- |
+| `BudgetTargetMode` | `manual_amount` / `percentage_of_eligible_payroll` |
+| `exactAmount` | Budget / part / écart rationnel (`numerator`/`denominator`) |
+| `theoreticalAmount` | Part individuelle exacte avant arrondi |
+| `finalRoundedAmountFcfa` | Montant individuel final (entier, multiple du pas) |
+| `actualOperationAmountFcfa` | Σ montants finaux |
+| `totalRoundingDelta` | `réel − budget` (fraction exacte) |
+| `RoundingPolicy` | `nearest_half_up` + `stepFcfa` explicite |
+
+### Lot 2A-4 (non persisté)
+
+| Concept | Nature |
+| --- | --- |
+| `PreparedEmployeeCalculationInput` | Salarié préparé (hors import RH) |
+| `allocationWeight` | `salary × effectiveMatrixWeight` (ExactAmount) |
+| `calibrationCoefficient` | `budget / Σ allocationWeight` |
+| `theoreticalIncreaseRate` | `calibration × effectiveMatrixWeight` |
+| `theoreticalIncreaseAmount` | Part théorique exacte |
+| `finalRoundedIncreaseAmountFcfa` | Montant matriciel final |
+| `PopulationCalculationSummary` | Synthèse population |
+| `POPULATION_CALCULATION_FAILED` | Échec atomique + `issues[]` |
+
+Éligibilité, masse auto, promotion, ancienneté, persistance des résultats et
+alertes budgétaires restent à produire dans des lots ultérieurs.
 
 ## Décisions RH
 

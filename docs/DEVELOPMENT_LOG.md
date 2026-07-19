@@ -322,3 +322,126 @@ SheetJS n’est chargé qu’au moment de l’analyse d’un fichier (import dyn
 - Fichier source non conservé après import.
 - Pas de chiffrement ni sauvegarde automatique.
 - La complétude du référentiel n’empêche pas l’import (avertissement seulement).
+
+## 2026-07-19 — Lot 2A-1 : contrat sémantique 9-Box et orientation
+
+### Objectif
+
+Solidifier le modèle 9-Box avant le moteur de calcul : orientation
+paramétrable, clé métier Performance/Potentiel, sans calcul d’augmentation.
+
+### Choix
+
+- Mapping case → (performance, potentiel, facteur) déduit des seeds Lot 1B /
+  migration 0002 (non ambigu).
+- Orientation stockée dans `campaign_reference_config.nine_box_orientation`
+  (défaut Orange = `performance_rows_potential_columns`).
+- Index unique `ux_campaign_nine_box_semantic` sur le couple sémantique.
+- Ordre d’axes centralisé dans `nineBoxOrientation.ts` (lignes high→low,
+  colonnes low→high).
+- Lookup pur `getNineBoxFactor` indépendant de l’orientation et du box_code.
+- Écriture d’orientation : un seul `UPDATE` atomique (pas de BEGIN via le pool).
+
+### Migration
+
+`0004_compensation_calculation.sql` — 0001/0002/0003 inchangées.
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0003 : diff silencieux
+
+### Limites
+
+- Pas encore de calcul d’augmentation, budget, calibrage, etc.
+- Recette manuelle UI (redémarrage / archivage) à valider sur AppData.
+
+## 2026-07-19 — Lot 2A-2 : moteur individuel position + pondération
+
+### Objectif
+
+Produire, pour un salarié, le ratio Salaire/S0, la position, le facteur
+d’évaluation, le poids composite et une trace déterministe — sans montant
+d’augmentation ni calibrage budget.
+
+### Convention JRB retenue
+
+- Position : point de référence le plus proche (65…135), `BigInt`, mi-chemin →
+  ratio supérieur ; `< 65 %` Sout- ; `> 135 %` Sout+.
+- Modes : `none` = 1,000 ; `performance_potential` = produit ; échelle
+  évaluation 1e6 ; poids 1e9.
+- Sous-performant confirmé : poids effectif 0, trace théorique conservée.
+
+### Livrables
+
+- Module `src/domain/compensationCalculation/`
+- Tests `src/tests/compensationCalculation.test.ts`
+- Docs : BUSINESS_RULES, CALCULATION_CONTRACT, ARCHITECTURE, DATA_DICTIONARY,
+  DEVELOPMENT_LOG
+- Aucune migration, UI, persistance ni commande Tauri
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux
+
+## 2026-07-19 — Lot 2A-3 : budget cible, allocation théorique, arrondi
+
+### Objectif
+
+Séparer résolution du budget, répartition théorique exacte et arrondi
+individuel paramétrable — sans forcer le total réel au budget cible.
+
+### Choix
+
+- `ExactAmount` BigInt réduit (PGCD) ; aucun flottant métier.
+- Modes `manual_amount` (montant = budget ; assiette/taux ignorés) et
+  `percentage_of_eligible_payroll` (payroll × bps / 10000).
+- Allocation `budget × poids / Σpoids` ; invariant Σ parts = budget.
+- Arrondi `nearest_half_up` + `stepFcfa` explicite (non figé à 5).
+- Montant réel = Σ finaux ; `totalRoundingDelta` exposé, non corrigé.
+- Pas de plus forts restes ni réconciliation forcée.
+
+### Livrables
+
+- Extensions `src/domain/compensationCalculation/`
+- Tests `src/tests/populationBudgetAllocation.test.ts`
+- Docs mises à jour
+- Aucune migration / UI / Rust / persistance
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux
+
+## 2026-07-19 — Lot 2A-4 : orchestrateur population préparée
+
+### Objectif
+
+Assembler 2A-2 + 2A-3 pour une population préparée (S0 → poids → budget →
+allocation → arrondi), sans UI ni persistance.
+
+### Convention JRB
+
+`allocationWeight = salaryFcfa × effectiveMatrixWeight`
+même poids matriciel ⇒ même taux théorique ; montants ∝ salaires.
+
+### Livrables
+
+- `resolveEmployeeS0`, validation, calcul salarié, orchestrateur
+- Tests `preparedPopulationCompensation.test.ts`
+- Docs mises à jour
+- Aucune migration / UI / Rust / persistance
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux

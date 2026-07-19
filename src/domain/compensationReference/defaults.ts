@@ -1,6 +1,13 @@
 /** Valeurs de démarrage du référentiel (non métier, configurables). */
 
-import type { FactorLevel, NineBoxMode } from "./models";
+import type {
+  FactorLevel,
+  NineBoxMode,
+  PerformanceLevel,
+  PotentialLevel,
+} from "./models";
+
+export { DEFAULT_NINE_BOX_ORIENTATION } from "./nineBoxOrientation";
 
 export interface DefaultJobFamilySeed {
   code: string;
@@ -31,8 +38,8 @@ export interface DefaultLevelFactorSeed {
 
 export interface DefaultNineBoxSeed {
   boxCode: number;
-  performanceLevel: FactorLevel;
-  potentialLevel: FactorLevel;
+  performanceLevel: PerformanceLevel;
+  potentialLevel: PotentialLevel;
   factorMilli: number;
 }
 

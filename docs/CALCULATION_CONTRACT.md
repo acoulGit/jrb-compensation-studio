@@ -35,6 +35,117 @@ consommées aux étapes 1 à 12 lors de l’implémentation du moteur. L’impor
 déjà la forme et la cohérence référentielle des entrées, mais ne produit aucun
 résultat calculé ni alerte métier de calcul (S7+, consommation budget, etc.).
 
+## Lot 2A-1 — contrat sémantique 9-Box (sans calcul)
+
+Le Lot 2A-1 solidifie le modèle 9-Box avant le moteur :
+
+- orientation de présentation persistée par campagne ;
+- lookup métier par couple Performance/Potentiel (`getNineBoxFactor`) ;
+- unicité SQLite du couple sémantique ;
+- aucun calcul d’augmentation.
+
+## Lot 2A-2 — moteur individuel pur (position + pondération)
+
+Module domaine `src/domain/compensationCalculation/` :
+
+- `resolveSalaryPosition` — ratio Salaire/S0, position, facteur de position ;
+- `resolveEvaluationFactor` — facteur d’évaluation selon le mode ;
+- `calculateIndividualMatrixWeight` — poids composite exact.
+
+**Produit** : poids individuel déterministe + trace structurée.
+**Hors périmètre** : montant d’augmentation, calibrage budget, arrondi final,
+ancienneté, promotion, correction, mesure sociale, persistance, UI, commande
+Tauri, migration.
+
+### Arithmétique
+
+- Aucun flottant binaire métier ; FCFA entiers, millièmes, `BigInt`.
+- Ratio affiché : basis points half-up, deux décimales ; classement via le
+  ratio rationnel exact uniquement.
+- Facteur d’évaluation : échelle **1 000 000**.
+- Poids : `positionFactorMilli × evaluationFactorScaled`, échelle
+  **1 000 000 000**.
+
+### Positionnement (convention JRB)
+
+Point de référence le plus proche (65…135) ; mi-chemin → ratio supérieur ;
+`< 65 %` → Sout- ; `> 135 %` → Sout+.
+
+### Modes d’évaluation
+
+| Mode | Formule (numérateur, échelle 1e6) | Données requises |
+| --- | --- | --- |
+| `none` | `1_000_000` | — |
+| `performance_only` | `performanceMilli × 1000` | Performance |
+| `full_nine_box` | `nineBoxMilli × 1000` | Performance + Potentiel |
+| `performance_potential` | `performanceMilli × potentialMilli` | Performance + Potentiel |
+
+Indépendant de l’orientation 9-Box et du `boxCode`.
+
+### Sous-performant confirmé
+
+Poids théorique calculé et tracé ; poids effectif = 0 ;
+`blockingReason = CONFIRMED_UNDERPERFORMER`.
+
+### Erreurs métier (codes stables)
+
+`INVALID_SALARY`, `INVALID_S0`, `EMPTY_POSITION_REFERENCE`,
+`DUPLICATE_POSITION`, `INCOHERENT_POSITION_THRESHOLDS`, `POSITION_NOT_FOUND`,
+`MISSING_PERFORMANCE_LEVEL`, `MISSING_POTENTIAL_LEVEL`, `DUPLICATE_FACTOR`,
+`FACTOR_NOT_FOUND`, `INVALID_FACTOR`, `UNSUPPORTED_EVALUATION_MODE`.
+
+## Lot 2A-3 — budget cible, allocation théorique, arrondi individuel
+
+Fonctions pures dans le même module :
+
+- `resolveBudgetTarget`
+- `allocateTheoreticalPopulationBudget`
+- `roundPopulationAllocations`
+- orchestrateur optionnel `calculatePopulationBudgetAllocation`
+
+### Modes de budget
+
+| Mode | Formule exacte | Données |
+| --- | --- | --- |
+| `manual_amount` | `manualBudgetFcfa / 1` | montant ≥ 0 (assiette/taux ignorés) |
+| `percentage_of_eligible_payroll` | `payroll × rateBps / 10000` | assiette ≥ 0, taux bps ≥ 0 |
+
+Aucun arrondi du budget. Pas d’obligation de divisibilité par le pas d’arrondi.
+Assiette éligible **non calculée** ici (fournie en entrée).
+
+### Allocation théorique
+
+`part_i = budget × weight_i / Σ weight` (fractions réduites, échelles
+hétérogènes admises). Invariant : Σ parts = budget. Aucun plus fort reste.
+
+### Arrondi final
+
+Politique explicite : `nearest_half_up` + `stepFcfa > 0`. Montant réel =
+Σ finaux ; `totalRoundingDelta = réel − budget` (non forcé à zéro).
+
+### Hors périmètre Lot 2A-3
+
+Éligibilité, masse auto, UI, persistance, Tauri, migration, ancienneté,
+promotion, correction, mesure sociale, min/max individuels.
+
+## Lot 2A-4 — orchestrateur population préparée
+
+Fonction pure `calculatePreparedPopulationCompensation` :
+
+1. valider la population préparée (erreurs structurées, atomicité) ;
+2. résoudre le S0 (`resolveEmployeeS0`) ;
+3. chaîner 2A-2 (position, évaluation, poids matriciel) ;
+4. construire `allocationWeight = salary × effectiveMatrixWeight` ;
+5. résoudre le budget (2A-3) ;
+6. allouer théoriquement puis arrondir individuellement (2A-3).
+
+La population est déjà préparée : **aucune** dépendance au module d’import RH.
+Résultats salariés triés par `employeeId` (ordre lexicographique UTF-16, sans
+locale). Échec global `POPULATION_CALCULATION_FAILED` si une erreur bloquante.
+
+Hors périmètre : UI, persistance, éligibilité, ancienneté, promotion,
+correction, mesure sociale, export, scénarios.
+
 ## Principes
 
 - Une exécution utilise un instantané versionné des données et paramètres.
@@ -71,21 +182,49 @@ d’emploi. Geler les actions en cas de disponibilité hors groupe.
 Rattacher famille, grade et médiane S0, puis déterminer la position salariale et
 les cas Sout- ou Sout+.
 
-**À implémenter dans un lot ultérieur.**
+**Lot 2A-2** : résolution pure `resolveSalaryPosition` (convention JRB du point
+le plus proche). Le calibrage population / budget reste ultérieur.
 
 ### 5. Application du mode 9-Box
 
 Appliquer le mode sélectionné et ses coefficients reparamétrables. Le
 sous-performant confirmé reçoit 0 % matriciel.
 
-**À implémenter dans un lot ultérieur.**
+Le moteur sélectionne le coefficient 9-Box exclusivement via le couple
+sémantique `(performance_level, potential_level)`. L’orientation de matrice
+(`nine_box_orientation`) et le numéro de case (`box_code`) sont hors clé de
+calcul : ce sont des données de présentation / compatibilité.
+
+**Lot 2A-2** : `resolveEvaluationFactor` + poids
+`calculateIndividualMatrixWeight` (pas encore de montant FCFA).
+
+Correspondance seed validée (Lot 1B / Lot 2A-1) :
+
+| Case | Performance | Potentiel | Facteur |
+| --- | --- | --- | --- |
+| 1 | low | low | 0,20 |
+| 2 | medium | low | 0,80 |
+| 3 | high | low | 1,10 |
+| 4 | low | medium | 0,25 |
+| 5 | medium | medium | 1,00 |
+| 6 | high | medium | 1,25 |
+| 7 | low | high | 0,30 |
+| 8 | medium | high | 1,10 |
+| 9 | high | high | 1,40 |
+
+**Lot 2A-2** fournit le poids ; **Lot 2A-3** convertit budget + poids en
+montants individuels (théoriques puis arrondis).
 
 ### 6. Détermination de la proposition matricielle
 
 Produire la cible individuelle à partir du positionnement et des coefficients,
 sans présumer qu’elle équivaut au taux budgétaire annoncé.
 
-**Formules à définir et à implémenter dans un lot ultérieur.**
+**Lot 2A-3** : allocation théorique exacte `budget × poids / Σpoids`, puis
+arrondi individuel paramétrable. Pas de forçage du total au budget cible.
+
+**Lot 2A-4** : orchestrateur population ; poids d’allocation =
+`salary × effectiveMatrixWeight` (même taux pour même poids matriciel).
 
 ### 7. Traitement de la promotion
 
@@ -111,18 +250,18 @@ la conserver hors de l’enveloppe annoncée.
 
 ### 10. Consolidation budgétaire et ajustement
 
-Comparer la somme des composantes incluses au budget global. Un mécanisme futur
-pourra permettre une consommation exacte sans transformer le taux annoncé en
-garantie individuelle.
+Comparer la somme des composantes incluses au budget global.
 
-**Règles d’ajustement à valider et à implémenter dans un lot ultérieur.**
+**Lot 2A-3** : le montant réel (= Σ montants individuels arrondis) peut différer
+du budget cible ; l’écart est tracé. Aucune réconciliation forcée (plus forts
+restes) n’est appliquée. Un ajustement métier ultérieur reste possible hors
+moteur pur.
 
 ### 11. Arrondi final
 
-Appliquer l’arrondi final au multiple de 5 FCFA, puis mesurer et documenter
-l’éventuel effet d’arrondi sur la consommation.
-
-**Convention d’arrondi à préciser et à implémenter dans un lot ultérieur.**
+**Lot 2A-3** : arrondi individuel `nearest_half_up` au pas `stepFcfa`
+paramétrable (non figé à 5 FCFA), uniquement sur le montant final individuel.
+Mesure de `totalRoundingDelta = réel − budget`.
 
 ### 12. Contrôles et alertes
 

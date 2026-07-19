@@ -15,11 +15,13 @@ import {
   type LevelFactorInput,
   type NineBoxFactorInput,
   type NineBoxMode,
+  type NineBoxOrientation,
   type ReferenceCompleteness,
   type SalaryGridCellInput,
   type SalaryPositionFactorInput,
   type StructureItemInput,
 } from "../domain/compensationReference/models";
+import { NINE_BOX_ORIENTATIONS } from "../domain/compensationReference/nineBoxOrientation";
 import { isValidFactorMilli } from "../domain/compensationReference/validationHelpers";
 import type { CampaignRepository } from "../infrastructure/database/repositories/campaignRepository";
 import type { CompensationReferenceRepository } from "../infrastructure/database/repositories/compensationReferenceRepository";
@@ -205,6 +207,21 @@ export class CompensationReferenceService {
       throw new AppError("VALIDATION", "Mode 9-Box non reconnu.");
     }
     return this.referenceRepository.updateNineBoxMode(campaignId, mode);
+  }
+
+  async updateNineBoxOrientation(
+    campaignId: number,
+    orientation: NineBoxOrientation,
+  ): Promise<CompensationReferenceSet> {
+    const campaign = await this.requireEditableCampaign(campaignId);
+    await this.ensureInitialized(campaign.id);
+    if (!(NINE_BOX_ORIENTATIONS as readonly string[]).includes(orientation)) {
+      throw new AppError("VALIDATION", "Orientation 9-Box non reconnue.");
+    }
+    return this.referenceRepository.updateNineBoxOrientation(
+      campaignId,
+      orientation,
+    );
   }
 
   /** Convertit une saisie décimale conviviale vers factor_milli. */

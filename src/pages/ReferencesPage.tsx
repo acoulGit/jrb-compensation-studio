@@ -15,10 +15,19 @@ import {
   salaryPositionInterpretation,
 } from "../domain/compensationReference/conversions";
 import type {
+  CompensationReferenceSet,
   FactorLevel,
   NineBoxMode,
+  NineBoxOrientation,
   StructureItemInput,
 } from "../domain/compensationReference/models";
+import {
+  getNineBoxFactorAtCell,
+  getNineBoxMatrixAxes,
+  nineBoxOrientationLabel,
+  NINE_BOX_ORIENTATIONS,
+  type NineBoxAxisDimension,
+} from "../domain/compensationReference/nineBoxOrientation";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -66,6 +75,7 @@ export function ReferencesPage() {
     updatePotentialFactors,
     updateNineBoxFactors,
     updateNineBoxMode,
+    updateNineBoxOrientation,
   } = useCompensationReference();
 
   const definition = pageDefinitions.references;
@@ -88,6 +98,8 @@ export function ReferencesPage() {
   >({ low: "", medium: "", high: "" });
   const [nineBoxDraft, setNineBoxDraft] = useState<Record<number, string>>({});
   const [modeDraft, setModeDraft] = useState<NineBoxMode>("none");
+  const [orientationDraft, setOrientationDraft] =
+    useState<NineBoxOrientation>("performance_rows_potential_columns");
 
   useEffect(() => {
     if (!referenceSet) return;
@@ -132,7 +144,13 @@ export function ReferencesPage() {
     }
     setNineBoxDraft(boxes);
     setModeDraft(referenceSet.config.nineBoxMode);
+    setOrientationDraft(referenceSet.config.nineBoxOrientation);
   }, [referenceSet]);
+
+  const nineBoxAxes = useMemo(
+    () => getNineBoxMatrixAxes(orientationDraft),
+    [orientationDraft],
+  );
 
   const filledGridCount = useMemo(() => {
     return Object.values(gridDraft).filter((value) => value.trim() !== "")
@@ -243,6 +261,7 @@ export function ReferencesPage() {
     await runSave(async () => {
       try {
         await updateNineBoxMode(modeDraft);
+        await updateNineBoxOrientation(orientationDraft);
         await updatePerformanceFactors(
           (["low", "medium", "high"] as const).map((level) => ({
             level,
@@ -699,6 +718,30 @@ export function ReferencesPage() {
                   </select>
                 </label>
 
+                <label className="field">
+                  <span>Orientation de la matrice 9-Box</span>
+                  <select
+                    data-testid="nine-box-orientation-select"
+                    value={orientationDraft}
+                    disabled={isReadOnly || busy}
+                    onChange={(event) =>
+                      setOrientationDraft(
+                        event.target.value as NineBoxOrientation,
+                      )
+                    }
+                  >
+                    {NINE_BOX_ORIENTATIONS.map((orientation) => (
+                      <option key={orientation} value={orientation}>
+                        {nineBoxOrientationLabel(orientation)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="references-help">
+                  L’orientation change uniquement la présentation. Le facteur
+                  d’un couple Performance / Potentiel reste identique.
+                </p>
+
                 <FactorGroup
                   title="Performance"
                   active={
@@ -744,44 +787,68 @@ export function ReferencesPage() {
                       : "Non actif pour le mode courant"}
                   </span>
                 </h3>
-                <p className="references-help">
-                  Potentiel en lignes, performance en colonnes. Cases 1 à 9.
+                <p className="references-help" data-testid="nine-box-axes-help">
+                  {nineBoxAxes.rowAxisLabel} en lignes (
+                  {nineBoxAxes.rowLevels.join(" → ")}),{" "}
+                  {nineBoxAxes.columnAxisLabel} en colonnes (
+                  {nineBoxAxes.columnLevels.join(" → ")}). Cases historiques
+                  1 à 9 conservées.
                 </p>
                 <div className="data-table-wrap">
-                  <table className="data-table nine-box-table">
+                  <table
+                    className="data-table nine-box-table"
+                    data-testid="nine-box-matrix"
+                    data-orientation={orientationDraft}
+                  >
                     <thead>
                       <tr>
-                        <th>Potentiel \\ Performance</th>
-                        <th>Faible</th>
-                        <th>Moyenne</th>
-                        <th>Élevée</th>
+                        <th>{nineBoxAxes.cornerLabel}</th>
+                        {nineBoxAxes.columnLevels.map((level) => (
+                          <th key={level}>
+                            {levelLabel(
+                              nineBoxAxes.columnDimension,
+                              level,
+                              referenceSet,
+                            )}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {(
-                        [
-                          ["low", "Faible"],
-                          ["medium", "Moyen"],
-                          ["high", "Élevé"],
-                        ] as const
-                      ).map(([potential, label]) => (
-                        <tr key={potential}>
-                          <th scope="row">{label}</th>
-                          {(
-                            ["low", "medium", "high"] as const
-                          ).map((performance) => {
-                            const factor = referenceSet.nineBoxFactors.find(
-                              (item) =>
-                                item.potentialLevel === potential &&
-                                item.performanceLevel === performance,
-                            );
-                            if (!factor) return <td key={performance}>—</td>;
+                      {nineBoxAxes.rowLevels.map((rowLevel) => (
+                        <tr key={rowLevel}>
+                          <th scope="row">
+                            {levelLabel(
+                              nineBoxAxes.rowDimension,
+                              rowLevel,
+                              referenceSet,
+                            )}
+                          </th>
+                          {nineBoxAxes.columnLevels.map((columnLevel) => {
+                            let factor;
+                            try {
+                              factor = getNineBoxFactorAtCell(
+                                referenceSet.nineBoxFactors,
+                                orientationDraft,
+                                rowLevel,
+                                columnLevel,
+                              );
+                            } catch {
+                              return (
+                                <td key={`${rowLevel}-${columnLevel}`}>—</td>
+                              );
+                            }
                             return (
-                              <td key={performance}>
+                              <td
+                                key={`${rowLevel}-${columnLevel}`}
+                                data-performance={factor.performanceLevel}
+                                data-potential={factor.potentialLevel}
+                                data-box-code={factor.boxCode}
+                              >
                                 <div className="nine-box-cell">
                                   <span>Case {factor.boxCode}</span>
                                   <input
-                                    aria-label={`Coefficient 9-Box case ${factor.boxCode}`}
+                                    aria-label={`Coefficient 9-Box ${factor.performanceLevel}/${factor.potentialLevel}`}
                                     value={nineBoxDraft[factor.boxCode] ?? ""}
                                     disabled={isReadOnly || busy}
                                     onChange={(event) =>
@@ -873,6 +940,18 @@ export function ReferencesPage() {
       ) : null}
     </>
   );
+}
+
+function levelLabel(
+  dimension: NineBoxAxisDimension,
+  level: FactorLevel,
+  referenceSet: CompensationReferenceSet,
+): string {
+  const source =
+    dimension === "performance"
+      ? referenceSet.performanceFactors
+      : referenceSet.potentialFactors;
+  return source.find((item) => item.level === level)?.label ?? level;
 }
 
 function FactorGroup({
