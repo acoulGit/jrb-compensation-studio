@@ -21,8 +21,10 @@ télémétrie. Le serveur Vite local est exclusivement un outil de développemen
 - `src/pages` compose les écrans fonctionnels.
 - `src/domain` expose les modèles métier purs, dont
   `src/domain/compensationReference` (Lot 1B + orientation 9-Box Lot 2A-1),
-  `src/domain/compensationCalculation` (Lot 2A-2 — moteur individuel pur) et
+  `src/domain/compensationCalculation` (Lots 2A-2 à 2A-4 — moteur pur) et
   `src/domain/hrImport` (Lot 1C).
+- `src/application` orchestre les cas d’usage multi-services sans UI, notamment
+  `campaignSimulation` (Lot 2B-1 — readiness de simulation).
 - `src/services` orchestre validations et cas d’usage, sans dépendre de React,
   notamment `compensationReferenceService`, `campaignService` et
   `hrImportService`.
@@ -90,6 +92,27 @@ Erreurs typées `CompensationCalculationError` (codes stables). Pas de
 duplication Rust, ni UI, ni persistance, ni commande Tauri.
 
 Voir `docs/CALCULATION_CONTRACT.md` et `docs/BUSINESS_RULES.md`.
+
+## Couche préparation de simulation (Lot 2B-1)
+
+Module applicatif `src/application/campaignSimulation/` : pont entre campagne,
+population RH courante, référentiels persistés et contrats d’entrée du moteur
+2A-4, **sans** exécuter le calcul d’allocation.
+
+- `buildCampaignSimulationReadiness` — charge campagne / lot courant /
+  population / référentiels via ports injectés ; produit
+  `CampaignSimulationReadinessReport` ;
+- `mapImportedEmployeeToPreparedInput` — mapping déterministe
+  `EmployeeSnapshot` → `PreparedEmployeeCalculationInput` ;
+- `buildPopulationCalculationReferences` — projection des référentiels campagne
+  vers `PopulationCalculationReferences` (orientation 9-Box exclue du moteur) ;
+- normalisation explicite des niveaux Performance/Potentiel (`low` / `medium` /
+  `high`).
+
+Pas de dépendance React, SQLite directe, Tauri, date système ni locale.
+Aucune migration, UI ou commande Tauri dans ce sous-lot.
+
+Voir `docs/CAMPAIGN_SIMULATION.md`.
 
 ## Couche import RH (Lot 1C)
 

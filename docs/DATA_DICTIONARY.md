@@ -293,6 +293,19 @@ Résultats de domaine purs (non stockés) :
 Éligibilité, masse auto, promotion, ancienneté, persistance des résultats et
 alertes budgétaires restent à produire dans des lots ultérieurs.
 
+### Lot 2B-1 (non persisté — readiness)
+
+| Concept | Nature |
+| --- | --- |
+| `CampaignSimulationReadinessReport` | Rapport de préparation campagne |
+| `CampaignSimulationReadinessIssue` | Issue structurée (scope, code, severity) |
+| `SimulationConfigurationReadiness` | Budget / arrondi encore nécessaires |
+| `preparedEmployees` | Entrées moteur triées, sans montants |
+| `preparedReferences` | `PopulationCalculationReferences` ou null |
+| `nineBoxOrientation` | Métadonnée informative (hors calcul) |
+
+Voir `docs/CAMPAIGN_SIMULATION.md`.
+
 ## Décisions RH
 
 ### `correctionAmount`

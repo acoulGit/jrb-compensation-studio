@@ -282,13 +282,16 @@ campagne sans affecter les autres.
 
 ## Moteur de calcul
 
-Aucun calcul salarié n’est exécuté dans ce lot. Les données importées
-alimentent le futur moteur décrit dans `docs/CALCULATION_CONTRACT.md`
-(éligibilité, positionnement, proposition, budget, etc.).
+Aucun calcul salarié n’est exécuté dans le Lot 1C. Les données importées
+alimentent d’abord la **préparation de simulation** (Lot 2B-1 :
+`mapImportedEmployeeToPreparedInput`, rapport de readiness), puis le moteur
+Lot 2A-4 à partir du sous-lot 2B-2. Voir `docs/CAMPAIGN_SIMULATION.md` et
+`docs/CALCULATION_CONTRACT.md`.
 
 ## Documentation associée
 
 - Schéma : `docs/DATABASE_SCHEMA.md` (tables `hr_import_*`)
 - Dictionnaire : `docs/DATA_DICTIONARY.md`
 - Architecture : `docs/ARCHITECTURE.md`
+- Simulation : `docs/CAMPAIGN_SIMULATION.md`
 - Journal : `docs/DEVELOPMENT_LOG.md` (entrée Lot 1C)

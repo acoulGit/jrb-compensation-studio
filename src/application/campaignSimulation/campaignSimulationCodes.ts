@@ -1,0 +1,37 @@
+/** Codes stables de préparation de simulation (Lot 2B-1). */
+
+export type CampaignSimulationReadinessCode =
+  | "CAMPAIGN_NOT_FOUND"
+  | "CAMPAIGN_ARCHIVED"
+  | "CURRENT_IMPORT_BATCH_NOT_FOUND"
+  | "EMPTY_CURRENT_POPULATION"
+  | "DUPLICATE_EMPLOYEE_ID"
+  | "EMPLOYEE_MAPPING_FAILED"
+  | "MISSING_EMPLOYEE_FAMILY"
+  | "MISSING_EMPLOYEE_GRADE"
+  | "INVALID_EMPLOYEE_SALARY"
+  | "MISSING_EMPLOYEE_PERFORMANCE"
+  | "MISSING_EMPLOYEE_POTENTIAL"
+  | "MISSING_CONFIRMED_UNDERPERFORMER"
+  | "UNKNOWN_FAMILY"
+  | "UNKNOWN_GRADE"
+  | "UNKNOWN_FACTOR_LEVEL"
+  | "S0_REFERENCE_NOT_FOUND"
+  | "DUPLICATE_S0_REFERENCE"
+  | "INCOMPLETE_COMPENSATION_REFERENCES"
+  | "MISSING_BUDGET_CONFIGURATION"
+  | "MISSING_ROUNDING_POLICY"
+  | "SIMULATION_NOT_READY"
+  | "INVALID_NINE_BOX_CODE"
+  | "DUPLICATE_NINE_BOX_CODE";
+
+export type ReadinessSeverity = "blocking" | "warning";
+
+export type ReadinessScope =
+  | "campaign"
+  | "import"
+  | "employee"
+  | "references"
+  | "budget"
+  | "rounding"
+  | "evaluation";

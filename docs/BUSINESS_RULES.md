@@ -183,6 +183,24 @@ moteur.
 
 Détails techniques : `docs/HR_IMPORT.md`.
 
+## Préparation de simulation (Lot 2B-1)
+
+Règles de readiness (sans calcul d’allocation) :
+
+- Campagnes `draft` et `active` : préparation autorisée.
+- Campagne `archived` : consultation possible, nouvelle simulation bloquée ;
+  le statut n’est pas modifié par la préparation.
+- Population : uniquement le lot RH `current` ; lots `superseded` ignorés.
+- Mapping déterministe vers `PreparedEmployeeCalculationInput` ; aucune valeur
+  par défaut silencieuse (notamment `confirmedUnderperformer`).
+- Niveaux Performance/Potentiel : valeurs canoniques `low` / `medium` /
+  `high` (aliases FR normalisés explicitement).
+- Orientation 9-Box : métadonnée de rapport uniquement, hors moteur.
+- Configuration budget / arrondi : section distincte de la population et des
+  référentiels ; absente ⇒ non prêt, sans masquer les autres issues.
+
+Détails : `docs/CAMPAIGN_SIMULATION.md`.
+
 ## Autres règles
 
 - Un sous-performant confirmé reçoit 0 % matriciel.

@@ -445,3 +445,35 @@ même poids matriciel ⇒ même taux théorique ; montants ∝ salaires.
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
 - `git diff --check`
 - migrations 0001–0004 : diff silencieux
+
+## 2026-07-19 — Lot 2B-1 : préparation applicative de simulation
+
+### Objectif
+
+Créer le pont campagne ↔ population RH courante ↔ référentiels ↔ contrats
+moteur Lot 2A, sous forme d’un rapport de readiness, sans lancer le calcul.
+
+### Décision contrat d’entrée
+
+Mapping non ambigu : `employeeNumber` → `employeeId` ;
+`jobFamilyId`/`gradeId` → codes référentiel ; `decemberBaseSalary` →
+`salaryFcfa` ; Performance/Potentiel dérivés de `nineBoxCode` via facteurs
+9-Box ; `confirmedUnderperformer` booléen post-import (pas de défaut
+silencieux dans le mapper). Statut : pas de
+`LOT_2B_1_BLOCKED_INPUT_CONTRACT`.
+
+### Livrables
+
+- `src/application/campaignSimulation/` (modèles, mapping, readiness, codes)
+- `CampaignService.getCampaign` (lecture seule)
+- Tests `campaignSimulationReadiness.test.ts`
+- Docs : `CAMPAIGN_SIMULATION.md` + mises à jour Architecture / règles /
+  contrat / dictionnaire / import / journal
+- Aucune migration / UI / Rust / persistance / calcul d’allocation
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux

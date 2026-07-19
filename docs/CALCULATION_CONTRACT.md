@@ -270,6 +270,21 @@ et écarts budgétaires. Produire les éléments de preuve associés.
 
 **À implémenter dans un lot ultérieur.**
 
+## Lot 2B-1 — préparation (sans calcul)
+
+Avant d’appeler le moteur 2A-4, la couche applicative produit un
+`CampaignSimulationReadinessReport` :
+
+- mapping population courante → `PreparedEmployeeCalculationInput` ;
+- projection référentiels → `PopulationCalculationReferences` ;
+- contrôle de configuration (`BudgetTargetInput`, `RoundingPolicy`) optionnelle
+  en entrée ;
+- issues bloquantes / warnings, sans montants ni allocations.
+
+Le Lot 2B-1 **ne doit pas** appeler
+`calculatePreparedPopulationCompensation`. Voir
+`docs/CAMPAIGN_SIMULATION.md`.
+
 ## Sorties attendues
 
 Le futur résultat devra distinguer proposition matricielle, complément de
