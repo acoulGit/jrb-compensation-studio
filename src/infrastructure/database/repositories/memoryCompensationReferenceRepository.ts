@@ -4,6 +4,7 @@ import {
   DEFAULT_JOB_FAMILIES,
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_NINE_BOX_MODE,
+  DEFAULT_NINE_BOX_ORIENTATION,
   DEFAULT_PERFORMANCE_FACTORS,
   DEFAULT_POTENTIAL_FACTORS,
   DEFAULT_SALARY_POSITIONS,
@@ -17,6 +18,7 @@ import type {
   NineBoxFactor,
   NineBoxFactorInput,
   NineBoxMode,
+  NineBoxOrientation,
   PerformanceFactor,
   PotentialFactor,
   ReferenceCompleteness,
@@ -141,6 +143,7 @@ export class MemoryCompensationReferenceRepository
       config: {
         campaignId,
         nineBoxMode: DEFAULT_NINE_BOX_MODE,
+        nineBoxOrientation: DEFAULT_NINE_BOX_ORIENTATION,
         createdAt: now,
         updatedAt: now,
       },
@@ -314,6 +317,20 @@ export class MemoryCompensationReferenceRepository
     store.config = {
       ...store.config,
       nineBoxMode: mode,
+      updatedAt: now,
+    };
+    return this.cloneSet(campaignId, store);
+  }
+
+  async updateNineBoxOrientation(
+    campaignId: number,
+    orientation: NineBoxOrientation,
+  ): Promise<CompensationReferenceSet> {
+    const store = this.requireStore(campaignId);
+    const now = new Date().toISOString();
+    store.config = {
+      ...store.config,
+      nineBoxOrientation: orientation,
       updatedAt: now,
     };
     return this.cloneSet(campaignId, store);

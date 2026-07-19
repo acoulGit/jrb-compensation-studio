@@ -4,6 +4,7 @@ import type {
   LevelFactorInput,
   NineBoxFactorInput,
   NineBoxMode,
+  NineBoxOrientation,
   ReferenceCompleteness,
   SalaryGridCellInput,
   SalaryPositionFactorInput,
@@ -46,7 +47,7 @@ export class SqliteCompensationReferenceRepository
   ): Promise<CompensationReferenceSet | null> {
     const db = await getDatabase();
     const configs = await db.select<ReferenceConfigRow[]>(
-      `SELECT campaign_id, nine_box_mode, created_at, updated_at
+      `SELECT campaign_id, nine_box_mode, nine_box_orientation, created_at, updated_at
        FROM campaign_reference_config
        WHERE campaign_id = $1`,
       [campaignId],
@@ -327,6 +328,29 @@ export class SqliteCompensationReferenceRepository
     const set = await this.getReferenceSet(campaignId);
     if (!set) {
       throw new Error("Référentiel introuvable après changement de mode.");
+    }
+    return set;
+  }
+
+  async updateNineBoxOrientation(
+    campaignId: number,
+    orientation: NineBoxOrientation,
+  ): Promise<CompensationReferenceSet> {
+    // Écriture atomique en une seule instruction (pas de BEGIN via le pool).
+    const db = await getDatabase();
+    const now = utcNowIso();
+    await db.execute(
+      `UPDATE campaign_reference_config
+       SET nine_box_orientation = $1, updated_at = $2
+       WHERE campaign_id = $3`,
+      [orientation, now, campaignId],
+    );
+
+    const set = await this.getReferenceSet(campaignId);
+    if (!set) {
+      throw new Error(
+        "Référentiel introuvable après changement d’orientation 9-Box.",
+      );
     }
     return set;
   }

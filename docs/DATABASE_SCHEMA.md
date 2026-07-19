@@ -44,7 +44,7 @@ Initialisation : `INSERT OR IGNORE` avec les valeurs par défaut produit.
 | `updated_at` | TEXT | NOT NULL (UTC) |
 | `archived_at` | TEXT | NULL (UTC) |
 
-### `campaign_reference_config` (Lot 1B)
+### `campaign_reference_config` (Lot 1B / Lot 2A-1)
 
 Configuration générale du référentiel de rémunération, une ligne par campagne.
 
@@ -52,6 +52,7 @@ Configuration générale du référentiel de rémunération, une ligne par campa
 | --- | --- | --- |
 | `campaign_id` | INTEGER | PRIMARY KEY, FK → `campaigns(id)` |
 | `nine_box_mode` | TEXT | NOT NULL, CHECK (`none` / `performance_only` / `full_nine_box` / `performance_potential`) |
+| `nine_box_orientation` | TEXT | NOT NULL (Lot 2A-1), DEFAULT `performance_rows_potential_columns`, CHECK (`performance_rows_potential_columns` / `performance_columns_potential_rows`) |
 | `created_at` | TEXT | NOT NULL (UTC) |
 | `updated_at` | TEXT | NOT NULL (UTC) |
 
@@ -153,9 +154,10 @@ Trois niveaux de coefficient Potentiel par campagne.
 
 Clé primaire : `(campaign_id, level)`.
 
-### `campaign_nine_box_factors` (Lot 1B)
+### `campaign_nine_box_factors` (Lot 1B / Lot 2A-1)
 
-Neuf coefficients 9-Box par campagne (cases 1 à 9).
+Neuf coefficients 9-Box par campagne. Clé historique : `box_code`. Clé métier
+sémantique (Lot 2A-1) : couple `(performance_level, potential_level)`.
 
 | Colonne | Type | Contraintes |
 | --- | --- | --- |
@@ -168,6 +170,8 @@ Neuf coefficients 9-Box par campagne (cases 1 à 9).
 | `updated_at` | TEXT | NOT NULL (UTC) |
 
 Clé primaire : `(campaign_id, box_code)`.
+Index unique Lot 2A-1 : `ux_campaign_nine_box_semantic` sur
+`(campaign_id, performance_level, potential_level)`.
 
 ### `hr_import_batches` (Lot 1C)
 

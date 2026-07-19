@@ -671,4 +671,73 @@ describe("référentiels — interface", () => {
     await screen.findByText(/lecture seule/i);
     expect(screen.getByLabelText("Libellé famille 1")).toBeDisabled();
   });
+
+  it("transpose la matrice 9-Box selon l’orientation sans changer les facteurs", async () => {
+    const services = createMemoryAppServices();
+    const campaign = await services.campaign.createCampaign({
+      name: "Orientation UI",
+      referenceYear: 2026,
+      notes: "",
+    });
+    await services.campaign.activateCampaign(campaign.id);
+    const { user } = await renderApp(services);
+
+    await openReferences(user);
+    await user.click(
+      screen.getByRole("tab", { name: "Performance et 9-Box" }),
+    );
+
+    const matrix = await screen.findByTestId("nine-box-matrix");
+    expect(matrix).toHaveAttribute(
+      "data-orientation",
+      "performance_rows_potential_columns",
+    );
+    expect(screen.getByTestId("nine-box-axes-help")).toHaveTextContent(
+      /Performance en lignes/i,
+    );
+
+    const highLowBefore = matrix.querySelector(
+      '[data-performance="high"][data-potential="low"]',
+    );
+    expect(highLowBefore).not.toBeNull();
+    expect(highLowBefore).toHaveAttribute("data-box-code", "3");
+
+    await user.selectOptions(
+      screen.getByTestId("nine-box-orientation-select"),
+      "performance_columns_potential_rows",
+    );
+
+    const performanceCard = screen
+      .getByRole("heading", { name: "Performance et 9-Box" })
+      .closest("section");
+    expect(performanceCard).not.toBeNull();
+    await user.click(
+      within(performanceCard as HTMLElement).getByRole("button", {
+        name: "Enregistrer",
+      }),
+    );
+    await screen.findByText("Paramètres Performance et 9-Box enregistrés.");
+
+    const matrixAfter = await screen.findByTestId("nine-box-matrix");
+    expect(matrixAfter).toHaveAttribute(
+      "data-orientation",
+      "performance_columns_potential_rows",
+    );
+    expect(screen.getByTestId("nine-box-axes-help")).toHaveTextContent(
+      /Potentiel en lignes/i,
+    );
+
+    const highLowAfter = matrixAfter.querySelector(
+      '[data-performance="high"][data-potential="low"]',
+    );
+    expect(highLowAfter).not.toBeNull();
+    expect(highLowAfter).toHaveAttribute("data-box-code", "3");
+
+    const reloaded = await services.compensationReference.getReferenceSet(
+      campaign.id,
+    );
+    expect(reloaded.config.nineBoxOrientation).toBe(
+      "performance_columns_potential_rows",
+    );
+  });
 });

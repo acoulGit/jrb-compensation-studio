@@ -20,8 +20,8 @@ télémétrie. Le serveur Vite local est exclusivement un outil de développemen
 - `src/config` conserve les valeurs initiales de référence (identité client).
 - `src/pages` compose les écrans fonctionnels.
 - `src/domain` expose les modèles métier purs, dont
-  `src/domain/compensationReference` (Lot 1B) et `src/domain/hrImport`
-  (Lot 1C).
+  `src/domain/compensationReference` (Lot 1B + orientation 9-Box Lot 2A-1) et
+  `src/domain/hrImport` (Lot 1C).
 - `src/services` orchestre validations et cas d’usage, sans dépendre de React,
   notamment `compensationReferenceService`, `campaignService` et
   `hrImportService`.
@@ -29,6 +29,8 @@ télémétrie. Le serveur Vite local est exclusivement un outil de développemen
   repositories (SQLite et mémoire pour les tests).
 - `src/tests` contient les tests du front.
 - `src-tauri` contient l’hôte natif, les migrations SQL et les capacités.
+  Les écritures multi-statements critiques (import RH, archivage campagne)
+  passent par des commandes Rust à connexion SQLite dédiée.
 
 Cette séparation vise une dépendance orientée vers le domaine : l’interface et
 l’infrastructure peuvent utiliser les contrats métier, tandis que le domaine

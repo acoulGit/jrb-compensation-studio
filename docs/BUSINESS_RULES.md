@@ -27,13 +27,26 @@ stockage sont décrites dans `docs/COMPENSATION_REFERENCES.md` et
 
 ## 9-Box
 
-- Les codes vont de 1 à 9.
+- Les codes de case vont de 1 à 9 (propriété visuelle / historique).
+- La clé métier d’un facteur 9-Box est le couple sémantique
+  **Performance × Potentiel** (`low` / `medium` / `high` × idem), pas le
+  numéro de case ni l’orientation de la matrice.
 - Quatre modes sont disponibles :
   1. aucun effet ;
   2. performance uniquement ;
   3. 9-Box complète ;
   4. performance avec modulation du potentiel.
 - Les coefficients sont reparamétrables.
+- Deux orientations de présentation (Lot 2A-1) :
+  1. `performance_rows_potential_columns` (défaut Orange) — performance en
+     lignes, potentiel en colonnes ;
+  2. `performance_columns_potential_rows` — performance en colonnes, potentiel
+     en lignes.
+- L’orientation n’affecte pas le facteur métier d’un couple
+  Performance/Potentiel ; elle transpose uniquement l’affichage.
+- Ordre d’affichage (non paramétrable au Lot 2A-1) :
+  - lignes : haut = high, milieu = medium, bas = low ;
+  - colonnes : gauche = low, centre = medium, droite = high.
 
 ## Budget
 

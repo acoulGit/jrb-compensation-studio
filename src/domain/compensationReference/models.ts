@@ -15,6 +15,20 @@ export const NINE_BOX_MODES: readonly NineBoxMode[] = [
 
 export type FactorLevel = "low" | "medium" | "high";
 
+/** Niveau de performance canonique (clé sémantique 9-Box). */
+export type PerformanceLevel = FactorLevel;
+
+/** Niveau de potentiel canonique (clé sémantique 9-Box). */
+export type PotentialLevel = FactorLevel;
+
+/**
+ * Orientation de présentation de la matrice 9-Box.
+ * N’affecte pas le facteur métier du couple Performance/Potentiel.
+ */
+export type NineBoxOrientation =
+  | "performance_rows_potential_columns"
+  | "performance_columns_potential_rows";
+
 export const FACTOR_LEVELS: readonly FactorLevel[] = [
   "low",
   "medium",
@@ -37,6 +51,8 @@ export const MIN_FACTOR_MILLI = 0;
 export interface CompensationReferenceConfig {
   campaignId: number;
   nineBoxMode: NineBoxMode;
+  /** Présentation uniquement ; défaut Orange = performance en lignes. */
+  nineBoxOrientation: NineBoxOrientation;
   createdAt: string;
   updatedAt: string;
 }
@@ -104,11 +120,18 @@ export interface PotentialFactor {
   updatedAt: string;
 }
 
+/**
+ * Facteur 9-Box.
+ * Clé métier : (performanceLevel, potentialLevel).
+ * boxCode = numéro historique / visuel (compatibilité import), pas la clé moteur.
+ */
 export interface NineBoxFactor {
   campaignId: number;
+  /** Numéro de case historique 1–9 (présentation / compatibilité). */
   boxCode: number;
-  performanceLevel: FactorLevel;
-  potentialLevel: FactorLevel;
+  performanceLevel: PerformanceLevel;
+  potentialLevel: PotentialLevel;
+  /** Coefficient en millièmes (1000 = 1,000). */
   factorMilli: number;
   createdAt: string;
   updatedAt: string;

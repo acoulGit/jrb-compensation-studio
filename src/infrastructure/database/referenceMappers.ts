@@ -8,11 +8,13 @@ import {
   type JobFamily,
   type NineBoxFactor,
   type NineBoxMode,
+  type NineBoxOrientation,
   type PerformanceFactor,
   type PotentialFactor,
   type SalaryGridCell,
   type SalaryPosition,
 } from "../../domain/compensationReference/models";
+import { NINE_BOX_ORIENTATIONS } from "../../domain/compensationReference/nineBoxOrientation";
 import type {
   GradeRow,
   JobFamilyRow,
@@ -29,9 +31,15 @@ export function mapReferenceConfig(
   if (!isNineBoxMode(row.nine_box_mode)) {
     throw new Error(`Mode 9-Box inconnu : ${row.nine_box_mode}`);
   }
+  if (!isNineBoxOrientation(row.nine_box_orientation)) {
+    throw new Error(
+      `Orientation 9-Box inconnue : ${row.nine_box_orientation}`,
+    );
+  }
   return {
     campaignId: row.campaign_id,
     nineBoxMode: row.nine_box_mode,
+    nineBoxOrientation: row.nine_box_orientation,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -170,6 +178,10 @@ export function assembleReferenceSet(
 
 function isNineBoxMode(value: string): value is NineBoxMode {
   return (NINE_BOX_MODES as readonly string[]).includes(value);
+}
+
+function isNineBoxOrientation(value: string): value is NineBoxOrientation {
+  return (NINE_BOX_ORIENTATIONS as readonly string[]).includes(value);
 }
 
 function isFactorLevel(value: string): value is FactorLevel {

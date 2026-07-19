@@ -322,3 +322,38 @@ SheetJS n’est chargé qu’au moment de l’analyse d’un fichier (import dyn
 - Fichier source non conservé après import.
 - Pas de chiffrement ni sauvegarde automatique.
 - La complétude du référentiel n’empêche pas l’import (avertissement seulement).
+
+## 2026-07-19 — Lot 2A-1 : contrat sémantique 9-Box et orientation
+
+### Objectif
+
+Solidifier le modèle 9-Box avant le moteur de calcul : orientation
+paramétrable, clé métier Performance/Potentiel, sans calcul d’augmentation.
+
+### Choix
+
+- Mapping case → (performance, potentiel, facteur) déduit des seeds Lot 1B /
+  migration 0002 (non ambigu).
+- Orientation stockée dans `campaign_reference_config.nine_box_orientation`
+  (défaut Orange = `performance_rows_potential_columns`).
+- Index unique `ux_campaign_nine_box_semantic` sur le couple sémantique.
+- Ordre d’axes centralisé dans `nineBoxOrientation.ts` (lignes high→low,
+  colonnes low→high).
+- Lookup pur `getNineBoxFactor` indépendant de l’orientation et du box_code.
+- Écriture d’orientation : un seul `UPDATE` atomique (pas de BEGIN via le pool).
+
+### Migration
+
+`0004_compensation_calculation.sql` — 0001/0002/0003 inchangées.
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0003 : diff silencieux
+
+### Limites
+
+- Pas encore de calcul d’augmentation, budget, calibrage, etc.
+- Recette manuelle UI (redémarrage / archivage) à valider sur AppData.

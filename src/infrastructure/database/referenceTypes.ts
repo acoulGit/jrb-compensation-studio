@@ -5,6 +5,7 @@ import type { FactorLevel, NineBoxMode } from "../../domain/compensationReferenc
 export interface ReferenceConfigRow {
   campaign_id: number;
   nine_box_mode: string;
+  nine_box_orientation: string;
   created_at: string;
   updated_at: string;
 }

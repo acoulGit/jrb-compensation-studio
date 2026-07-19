@@ -54,8 +54,11 @@ Persistés dans les tables `campaign_reference_*`. Voir
 | Champ domaine | Colonne SQLite | Nature |
 | --- | --- | --- |
 | — | `nine_box_mode` (`campaign_reference_config`) | Paramètre de campagne |
+| — | `nine_box_orientation` (`campaign_reference_config`) | Présentation matrice (Lot 2A-1) |
 
-Valeurs : `none`, `performance_only`, `full_nine_box`, `performance_potential`.
+Valeurs mode : `none`, `performance_only`, `full_nine_box`, `performance_potential`.
+Valeurs orientation : `performance_rows_potential_columns` (défaut Orange),
+`performance_columns_potential_rows`.
 
 ### JobFamily
 
@@ -125,14 +128,14 @@ Tables : `campaign_performance_factors`, `campaign_potential_factors`.
 | Champ domaine | Colonne SQLite | Nature |
 | --- | --- | --- |
 | `campaignId` | `campaign_id` | Rattachement campagne |
-| `boxCode` | `box_code` | Code case (1–9) |
-| `performanceLevel` | `performance_level` | Niveau performance associé |
-| `potentialLevel` | `potential_level` | Niveau potentiel associé |
+| `boxCode` | `box_code` | Numéro de case historique / visuel (1–9), **pas** la clé moteur |
+| `performanceLevel` | `performance_level` | Clé sémantique performance |
+| `potentialLevel` | `potential_level` | Clé sémantique potentiel |
 | `factorMilli` | `factor_milli` | Coefficient reparamétrable en milli |
 | `createdAt` | `created_at` | Technique |
 | `updatedAt` | `updated_at` | Technique |
 
-Table : `campaign_nine_box_factors`.
+Table : `campaign_nine_box_factors`. Lookup métier : `getNineBoxFactor(factors, performance, potential)`.
 
 ### ReferenceCompleteness
 

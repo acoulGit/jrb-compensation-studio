@@ -35,6 +35,15 @@ consommées aux étapes 1 à 12 lors de l’implémentation du moteur. L’impor
 déjà la forme et la cohérence référentielle des entrées, mais ne produit aucun
 résultat calculé ni alerte métier de calcul (S7+, consommation budget, etc.).
 
+## Lot 2A-1 — contrat sémantique 9-Box (sans calcul)
+
+Le Lot 2A-1 solidifie le modèle 9-Box avant le moteur :
+
+- orientation de présentation persistée par campagne ;
+- lookup métier par couple Performance/Potentiel (`getNineBoxFactor`) ;
+- unicité SQLite du couple sémantique ;
+- aucun calcul d’augmentation.
+
 ## Principes
 
 - Une exécution utilise un instantané versionné des données et paramètres.
@@ -78,7 +87,26 @@ les cas Sout- ou Sout+.
 Appliquer le mode sélectionné et ses coefficients reparamétrables. Le
 sous-performant confirmé reçoit 0 % matriciel.
 
-**À implémenter dans un lot ultérieur.**
+Le futur moteur sélectionne le coefficient 9-Box exclusivement via le couple
+sémantique `(performance_level, potential_level)`. L’orientation de matrice
+(`nine_box_orientation`) et le numéro de case (`box_code`) sont hors clé de
+calcul : ce sont des données de présentation / compatibilité.
+
+Correspondance seed validée (Lot 1B / Lot 2A-1) :
+
+| Case | Performance | Potentiel | Facteur |
+| --- | --- | --- | --- |
+| 1 | low | low | 0,20 |
+| 2 | medium | low | 0,80 |
+| 3 | high | low | 1,10 |
+| 4 | low | medium | 0,25 |
+| 5 | medium | medium | 1,00 |
+| 6 | high | medium | 1,25 |
+| 7 | low | high | 0,30 |
+| 8 | medium | high | 1,10 |
+| 9 | high | high | 1,40 |
+
+**À implémenter dans un lot ultérieur (calcul).**
 
 ### 6. Détermination de la proposition matricielle
 
