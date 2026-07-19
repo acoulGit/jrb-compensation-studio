@@ -44,6 +44,56 @@ Le Lot 2A-1 solidifie le modèle 9-Box avant le moteur :
 - unicité SQLite du couple sémantique ;
 - aucun calcul d’augmentation.
 
+## Lot 2A-2 — moteur individuel pur (position + pondération)
+
+Module domaine `src/domain/compensationCalculation/` :
+
+- `resolveSalaryPosition` — ratio Salaire/S0, position, facteur de position ;
+- `resolveEvaluationFactor` — facteur d’évaluation selon le mode ;
+- `calculateIndividualMatrixWeight` — poids composite exact.
+
+**Produit** : poids individuel déterministe + trace structurée.
+**Hors périmètre** : montant d’augmentation, calibrage budget, arrondi final,
+ancienneté, promotion, correction, mesure sociale, persistance, UI, commande
+Tauri, migration.
+
+### Arithmétique
+
+- Aucun flottant binaire métier ; FCFA entiers, millièmes, `BigInt`.
+- Ratio affiché : basis points half-up, deux décimales ; classement via le
+  ratio rationnel exact uniquement.
+- Facteur d’évaluation : échelle **1 000 000**.
+- Poids : `positionFactorMilli × evaluationFactorScaled`, échelle
+  **1 000 000 000**.
+
+### Positionnement (convention JRB)
+
+Point de référence le plus proche (65…135) ; mi-chemin → ratio supérieur ;
+`< 65 %` → Sout- ; `> 135 %` → Sout+.
+
+### Modes d’évaluation
+
+| Mode | Formule (numérateur, échelle 1e6) | Données requises |
+| --- | --- | --- |
+| `none` | `1_000_000` | — |
+| `performance_only` | `performanceMilli × 1000` | Performance |
+| `full_nine_box` | `nineBoxMilli × 1000` | Performance + Potentiel |
+| `performance_potential` | `performanceMilli × potentialMilli` | Performance + Potentiel |
+
+Indépendant de l’orientation 9-Box et du `boxCode`.
+
+### Sous-performant confirmé
+
+Poids théorique calculé et tracé ; poids effectif = 0 ;
+`blockingReason = CONFIRMED_UNDERPERFORMER`.
+
+### Erreurs métier (codes stables)
+
+`INVALID_SALARY`, `INVALID_S0`, `EMPTY_POSITION_REFERENCE`,
+`DUPLICATE_POSITION`, `INCOHERENT_POSITION_THRESHOLDS`, `POSITION_NOT_FOUND`,
+`MISSING_PERFORMANCE_LEVEL`, `MISSING_POTENTIAL_LEVEL`, `DUPLICATE_FACTOR`,
+`FACTOR_NOT_FOUND`, `INVALID_FACTOR`, `UNSUPPORTED_EVALUATION_MODE`.
+
 ## Principes
 
 - Une exécution utilise un instantané versionné des données et paramètres.
@@ -80,17 +130,21 @@ d’emploi. Geler les actions en cas de disponibilité hors groupe.
 Rattacher famille, grade et médiane S0, puis déterminer la position salariale et
 les cas Sout- ou Sout+.
 
-**À implémenter dans un lot ultérieur.**
+**Lot 2A-2** : résolution pure `resolveSalaryPosition` (convention JRB du point
+le plus proche). Le calibrage population / budget reste ultérieur.
 
 ### 5. Application du mode 9-Box
 
 Appliquer le mode sélectionné et ses coefficients reparamétrables. Le
 sous-performant confirmé reçoit 0 % matriciel.
 
-Le futur moteur sélectionne le coefficient 9-Box exclusivement via le couple
+Le moteur sélectionne le coefficient 9-Box exclusivement via le couple
 sémantique `(performance_level, potential_level)`. L’orientation de matrice
 (`nine_box_orientation`) et le numéro de case (`box_code`) sont hors clé de
 calcul : ce sont des données de présentation / compatibilité.
+
+**Lot 2A-2** : `resolveEvaluationFactor` + poids
+`calculateIndividualMatrixWeight` (pas encore de montant FCFA).
 
 Correspondance seed validée (Lot 1B / Lot 2A-1) :
 
@@ -106,14 +160,15 @@ Correspondance seed validée (Lot 1B / Lot 2A-1) :
 | 8 | medium | high | 1,10 |
 | 9 | high | high | 1,40 |
 
-**À implémenter dans un lot ultérieur (calcul).**
+**À implémenter dans un lot ultérieur (montant / proposition calibrée).**
 
 ### 6. Détermination de la proposition matricielle
 
 Produire la cible individuelle à partir du positionnement et des coefficients,
 sans présumer qu’elle équivaut au taux budgétaire annoncé.
 
-**Formules à définir et à implémenter dans un lot ultérieur.**
+Le Lot 2A-2 fournit le **poids individuel** exact ; la conversion en montant
+FCFA et la répartition budgétaire restent à définir.
 
 ### 7. Traitement de la promotion
 

@@ -12,6 +12,11 @@
 - **Millièmes (`*_milli`)** : entiers ; `1000` = 1,000. Plage autorisée 0 à
   10 000 (soit 0 à 10 inclus). Utilisés pour les coefficients de position et
   de 9-Box. Aucun type `REAL` pour ces paramètres.
+- **Échelles moteur Lot 2A-2** : facteur d’évaluation sur **1 000 000** ;
+  poids individuel sur **1 000 000 000** (`positionFactorMilli ×
+  evaluationFactorScaled`). Calculs en entiers / `BigInt`, sans flottants.
+- **Ratio affiché** : basis points entiers (half-up), présentation à deux
+  décimales ; distinct du ratio rationnel exact utilisé pour classer.
 - Les dates métier utilisent le format ISO `YYYY-MM-DD`.
 - Les horodatages de persistance utilisent l’UTC ISO-8601 complet.
 - Les valeurs importées restent distinguées des paramètres, résultats calculés
@@ -235,15 +240,29 @@ de calcul ; ils sont désormais persistés par le Lot 1C :
 
 Les paramètres salariaux de campagne (budget annoncé, enveloppe, scénarios) ne
 sont pas encore stockés. Les référentiels par campagne (Lot 1B) et la population
-importée (Lot 1C) le sont ; le moteur de calcul les consommera ultérieurement
-conformément à `CALCULATION_CONTRACT.md`.
+importée (Lot 1C) le sont. Le Lot 2A-2 calcule en mémoire pure le
+positionnement, le facteur d’évaluation et le poids individuel ; la
+persistance des résultats et le calibrage budgétaire restent ultérieurs
+(`CALCULATION_CONTRACT.md`).
 
 ## Données calculées
 
-Les données calculées seront produites par le moteur et ne devront pas être
-écrasées par l’import : éligibilité, position dans la grille, proposition
-matricielle, complément de promotion, ancienneté, total final, consommation et
-alertes. Le schéma sera aligné sur `CALCULATION_CONTRACT.md`.
+### Lot 2A-2 (non persisté)
+
+Résultats de domaine purs (non stockés) :
+
+| Concept | Nature |
+| --- | --- |
+| `ratioBasisPoints` | Ratio Salaire/S0 affiché (bps half-up) |
+| `positionCode` / `positionFactorMilli` | Position et facteur |
+| `exactFactorNumerator` | Facteur d’évaluation (échelle 1e6) |
+| `exactWeightNumerator` | Poids individuel effectif (échelle 1e9, `BigInt`) |
+| `theoreticalWeightNumerator` | Poids avant blocage sous-performant |
+| `blockingReason` | Ex. `CONFIRMED_UNDERPERFORMER` |
+| `explanationSteps` | Trace structurée déterministe |
+
+Éligibilité, montant matriciel FCFA, promotion, ancienneté, consommation et
+alertes budgétaires restent à produire dans des lots ultérieurs.
 
 ## Décisions RH
 

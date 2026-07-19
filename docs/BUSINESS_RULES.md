@@ -19,11 +19,26 @@ stockage sont décrites dans `docs/COMPENSATION_REFERENCES.md` et
 - Les directeurs sont hors grille.
 - La médiane de référence est S0.
 - Les positions sont S1- à S7- et S1+ à S7+.
-- Le pas entre positions est de 5 %.
+- Le pas entre positions de référence est de 5 %.
 - S7- correspond à 65 % de S0.
 - S7+ correspond à 135 % de S0.
 - Sout- désigne une position inférieure à 65 %.
 - Sout+ désigne une position supérieure à 135 %.
+
+### Classement en position (convention JRB Compensation Studio)
+
+Règle produit du Lot 2A-2 (moteur individuel), indépendante de toute
+convention historique non documentée :
+
+- classer au **point de référence le plus proche** parmi 65 %, 70 %, …, 135 % ;
+- comparaison exacte par produits croisés / distances en `BigInt`
+  (`|salary × 10000 − s0 × R|`) ;
+- en cas d’égalité à mi-chemin, retenir le **ratio supérieur** ;
+- ratio strictement `< 65 %` → Sout- ;
+- ratio strictement `> 135 %` → Sout+ ;
+- en particulier, 132,5 % à 135 % inclus → S7+ ;
+- le ratio **affiché** (basis points, arrondi half-up, deux décimales) ne
+  sert jamais au classement.
 
 ## 9-Box
 
@@ -47,6 +62,27 @@ stockage sont décrites dans `docs/COMPENSATION_REFERENCES.md` et
 - Ordre d’affichage (non paramétrable au Lot 2A-1) :
   - lignes : haut = high, milieu = medium, bas = low ;
   - colonnes : gauche = low, centre = medium, droite = high.
+
+### Facteur d’évaluation et poids individuel (Lot 2A-2)
+
+- **Facteur** ≠ **montant** : le facteur module la pondération ; le montant
+  d’augmentation n’est pas calculé dans ce sous-lot.
+- Échelle uniforme du facteur d’évaluation : **1 000 000** (= 1,000) :
+  - `none` → 1 000 000 ;
+  - `performance_only` → `performanceMilli × 1000` ;
+  - `full_nine_box` → `nineBoxMilli × 1000` ;
+  - `performance_potential` → `performanceMilli × potentialMilli`.
+- Données individuelles requises :
+  - `none` : aucune ;
+  - `performance_only` : Performance ;
+  - `full_nine_box` : Performance + Potentiel ;
+  - `performance_potential` : Performance + Potentiel.
+- **Poids individuel** = `positionFactorMilli × evaluationFactorScaled`,
+  échelle uniforme **1 000 000 000**, sans arrondi prématuré.
+- Sous-performant confirmé : poids théorique conservé dans la trace ;
+  poids effectif = 0 ; `blockingReason = CONFIRMED_UNDERPERFORMER` ;
+  les données du mode restent obligatoires.
+- Salaire `≤ 0` → erreur `INVALID_SALARY` ; S0 absent ou `≤ 0` → `INVALID_S0`.
 
 ## Budget
 

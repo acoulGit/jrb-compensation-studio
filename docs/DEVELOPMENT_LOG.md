@@ -357,3 +357,34 @@ paramétrable, clé métier Performance/Potentiel, sans calcul d’augmentation.
 
 - Pas encore de calcul d’augmentation, budget, calibrage, etc.
 - Recette manuelle UI (redémarrage / archivage) à valider sur AppData.
+
+## 2026-07-19 — Lot 2A-2 : moteur individuel position + pondération
+
+### Objectif
+
+Produire, pour un salarié, le ratio Salaire/S0, la position, le facteur
+d’évaluation, le poids composite et une trace déterministe — sans montant
+d’augmentation ni calibrage budget.
+
+### Convention JRB retenue
+
+- Position : point de référence le plus proche (65…135), `BigInt`, mi-chemin →
+  ratio supérieur ; `< 65 %` Sout- ; `> 135 %` Sout+.
+- Modes : `none` = 1,000 ; `performance_potential` = produit ; échelle
+  évaluation 1e6 ; poids 1e9.
+- Sous-performant confirmé : poids effectif 0, trace théorique conservée.
+
+### Livrables
+
+- Module `src/domain/compensationCalculation/`
+- Tests `src/tests/compensationCalculation.test.ts`
+- Docs : BUSINESS_RULES, CALCULATION_CONTRACT, ARCHITECTURE, DATA_DICTIONARY,
+  DEVELOPMENT_LOG
+- Aucune migration, UI, persistance ni commande Tauri
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux

@@ -20,7 +20,8 @@ télémétrie. Le serveur Vite local est exclusivement un outil de développemen
 - `src/config` conserve les valeurs initiales de référence (identité client).
 - `src/pages` compose les écrans fonctionnels.
 - `src/domain` expose les modèles métier purs, dont
-  `src/domain/compensationReference` (Lot 1B + orientation 9-Box Lot 2A-1) et
+  `src/domain/compensationReference` (Lot 1B + orientation 9-Box Lot 2A-1),
+  `src/domain/compensationCalculation` (Lot 2A-2 — moteur individuel pur) et
   `src/domain/hrImport` (Lot 1C).
 - `src/services` orchestre validations et cas d’usage, sans dépendre de React,
   notamment `compensationReferenceService`, `campaignService` et
@@ -57,6 +58,22 @@ sans moteur de calcul ni données salariés.
   de mise à jour à la page Référentiels et au bandeau de contexte campagne.
 
 Voir `docs/COMPENSATION_REFERENCES.md` pour le périmètre fonctionnel détaillé.
+
+## Couche moteur individuel (Lot 2A-2)
+
+Module pur `src/domain/compensationCalculation/` : aucune dépendance React,
+SQLite, Tauri, navigateur, filesystem, date courante, locale ou réseau.
+
+- `resolveSalaryPosition` — classement Salaire/S0 → position + facteur ;
+- `resolveEvaluationFactor` — facteur selon le mode de campagne ;
+- `calculateIndividualMatrixWeight` — poids composite exact + trace ;
+- erreurs typées `CompensationCalculationError` (codes stables).
+
+Le moteur ne duplique pas en Rust. Il ne persiste rien, n’expose aucune
+commande Tauri et ne modifie pas l’UI. Le calibrage budgétaire et le montant
+d’augmentation restent des lots ultérieurs.
+
+Voir `docs/CALCULATION_CONTRACT.md` et `docs/BUSINESS_RULES.md`.
 
 ## Couche import RH (Lot 1C)
 
