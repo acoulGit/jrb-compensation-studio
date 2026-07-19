@@ -117,6 +117,26 @@ Répartition théorique : `part = budget × poids / Σpoids` ; somme exacte des
 parts = budget cible. Poids nuls → part nulle. Pas de méthode des plus forts
 restes ni de réconciliation forcée.
 
+### Base de répartition budgétaire (Lot 2A-4 — convention JRB)
+
+Le poids transmis à l’allocation n’est **pas** le poids matriciel seul :
+
+`allocationWeight = salaryFcfa × effectiveMatrixWeight`
+
+Conséquence : deux salariés au même poids matriciel effectif reçoivent le même
+**taux** théorique d’augmentation ; leurs montants sont proportionnels à leurs
+salaires.
+
+Formules équivalentes (fractions BigInt exactes, sans arrondi) :
+
+- `totalAllocationWeight = Σ(salary × effectiveMatrixWeight)`
+- `calibrationCoefficient = budgetTarget / totalAllocationWeight`
+- `theoreticalIncreaseRate = calibrationCoefficient × effectiveMatrixWeight`
+- `theoreticalIncreaseAmount = salary × theoreticalIncreaseRate`
+  (= `budget × allocationWeight / totalAllocationWeight`)
+
+Identique pour `manual_amount` et `percentage_of_eligible_payroll`.
+
 Arrondi individuel : politique explicite (`nearest_half_up`, `stepFcfa`
 paramétrable : 1, 5, 10, 100, 1000… — **pas figé à 5 FCFA**).
 Montant réel = Σ montants arrondis ; écart total = montant réel − budget cible

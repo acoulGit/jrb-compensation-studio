@@ -277,6 +277,19 @@ Résultats de domaine purs (non stockés) :
 | `totalRoundingDelta` | `réel − budget` (fraction exacte) |
 | `RoundingPolicy` | `nearest_half_up` + `stepFcfa` explicite |
 
+### Lot 2A-4 (non persisté)
+
+| Concept | Nature |
+| --- | --- |
+| `PreparedEmployeeCalculationInput` | Salarié préparé (hors import RH) |
+| `allocationWeight` | `salary × effectiveMatrixWeight` (ExactAmount) |
+| `calibrationCoefficient` | `budget / Σ allocationWeight` |
+| `theoreticalIncreaseRate` | `calibration × effectiveMatrixWeight` |
+| `theoreticalIncreaseAmount` | Part théorique exacte |
+| `finalRoundedIncreaseAmountFcfa` | Montant matriciel final |
+| `PopulationCalculationSummary` | Synthèse population |
+| `POPULATION_CALCULATION_FAILED` | Échec atomique + `issues[]` |
+
 Éligibilité, masse auto, promotion, ancienneté, persistance des résultats et
 alertes budgétaires restent à produire dans des lots ultérieurs.
 

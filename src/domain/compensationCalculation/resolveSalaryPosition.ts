@@ -19,14 +19,21 @@ interface AnchorPosition {
   ratioBps: number;
 }
 
-function assertPositiveInteger(
-  value: number,
+function toPositiveBigInt(
+  value: number | bigint,
   code: "INVALID_SALARY" | "INVALID_S0",
   message: string,
-): void {
-  if (!Number.isInteger(value) || value <= 0) {
+): bigint {
+  if (typeof value === "bigint") {
+    if (value <= 0n) {
+      throw new CompensationCalculationError(code, message);
+    }
+    return value;
+  }
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
     throw new CompensationCalculationError(code, message);
   }
+  return BigInt(value);
 }
 
 function normalizeCode(code: string): string {
@@ -210,12 +217,12 @@ function boundaryForAnchor(
 export function resolveSalaryPosition(
   input: SalaryPositionInput,
 ): SalaryPositionResult {
-  assertPositiveInteger(
+  const salaryBig = toPositiveBigInt(
     input.salaryFcfa,
     "INVALID_SALARY",
     "Le salaire doit être un entier FCFA strictement positif.",
   );
-  assertPositiveInteger(
+  const s0Big = toPositiveBigInt(
     input.s0Fcfa,
     "INVALID_S0",
     "Le S0 doit être un entier FCFA strictement positif.",
@@ -225,24 +232,19 @@ export function resolveSalaryPosition(
   const minAnchor = anchors[0];
   const maxAnchor = anchors[anchors.length - 1];
 
-  const salaryBig = BigInt(input.salaryFcfa);
-  const s0Big = BigInt(input.s0Fcfa);
   const scaledSalary = salaryBig * 10_000n;
   const minThreshold = s0Big * BigInt(minAnchor.ratioBps);
   const maxThreshold = s0Big * BigInt(maxAnchor.ratioBps);
 
-  const ratioBasisPoints = computeDisplayRatioBasisPoints(
-    input.salaryFcfa,
-    input.s0Fcfa,
-  );
+  const ratioBasisPoints = computeDisplayRatioBasisPoints(salaryBig, s0Big);
 
   const explanation: CalculationExplanationStep[] = [
     {
       code: "INPUT_SALARY_S0",
       label: "Entrées salaire et S0",
       inputValues: {
-        salaryFcfa: input.salaryFcfa,
-        s0Fcfa: input.s0Fcfa,
+        salaryFcfa: salaryBig.toString(),
+        s0Fcfa: s0Big.toString(),
       },
       outputValue: null,
       formula: "ratio = salaryFcfa / s0Fcfa",
@@ -252,8 +254,8 @@ export function resolveSalaryPosition(
       code: "DISPLAY_RATIO_BPS",
       label: "Ratio affiché (basis points, half-up)",
       inputValues: {
-        salaryFcfa: input.salaryFcfa,
-        s0Fcfa: input.s0Fcfa,
+        salaryFcfa: salaryBig.toString(),
+        s0Fcfa: s0Big.toString(),
       },
       outputValue: ratioBasisPoints,
       formula: "round_half_up(salaryFcfa * 10000 / s0Fcfa)",
@@ -345,8 +347,8 @@ export function resolveSalaryPosition(
   });
 
   return {
-    salaryFcfa: input.salaryFcfa,
-    s0Fcfa: input.s0Fcfa,
+    salaryFcfa: typeof input.salaryFcfa === "bigint" ? salaryBig : Number(salaryBig),
+    s0Fcfa: typeof input.s0Fcfa === "bigint" ? s0Big : Number(s0Big),
     ratioBasisPoints,
     positionCode: selected.code,
     positionLabel: selected.label,

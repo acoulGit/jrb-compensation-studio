@@ -128,6 +128,24 @@ Politique explicite : `nearest_half_up` + `stepFcfa > 0`. Montant réel =
 Éligibilité, masse auto, UI, persistance, Tauri, migration, ancienneté,
 promotion, correction, mesure sociale, min/max individuels.
 
+## Lot 2A-4 — orchestrateur population préparée
+
+Fonction pure `calculatePreparedPopulationCompensation` :
+
+1. valider la population préparée (erreurs structurées, atomicité) ;
+2. résoudre le S0 (`resolveEmployeeS0`) ;
+3. chaîner 2A-2 (position, évaluation, poids matriciel) ;
+4. construire `allocationWeight = salary × effectiveMatrixWeight` ;
+5. résoudre le budget (2A-3) ;
+6. allouer théoriquement puis arrondir individuellement (2A-3).
+
+La population est déjà préparée : **aucune** dépendance au module d’import RH.
+Résultats salariés triés par `employeeId` (ordre lexicographique UTF-16, sans
+locale). Échec global `POPULATION_CALCULATION_FAILED` si une erreur bloquante.
+
+Hors périmètre : UI, persistance, éligibilité, ancienneté, promotion,
+correction, mesure sociale, export, scénarios.
+
 ## Principes
 
 - Une exécution utilise un instantané versionné des données et paramètres.
@@ -204,6 +222,9 @@ sans présumer qu’elle équivaut au taux budgétaire annoncé.
 
 **Lot 2A-3** : allocation théorique exacte `budget × poids / Σpoids`, puis
 arrondi individuel paramétrable. Pas de forçage du total au budget cible.
+
+**Lot 2A-4** : orchestrateur population ; poids d’allocation =
+`salary × effectiveMatrixWeight` (même taux pour même poids matriciel).
 
 ### 7. Traitement de la promotion
 

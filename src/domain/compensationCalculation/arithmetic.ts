@@ -26,8 +26,8 @@ export function absBigInt(value: bigint): bigint {
  * Ne sert qu’à l’affichage ; le classement utilise le ratio rationnel exact.
  */
 export function computeDisplayRatioBasisPoints(
-  salaryFcfa: number,
-  s0Fcfa: number,
+  salaryFcfa: number | bigint,
+  s0Fcfa: number | bigint,
 ): number {
   const bps = divRoundHalfUp(
     BigInt(salaryFcfa) * 10_000n,

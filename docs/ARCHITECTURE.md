@@ -76,7 +76,15 @@ SQLite, Tauri, navigateur, filesystem, date courante, locale ou réseau.
 - `resolveBudgetTarget` — budget manuel ou % d’assiette (sans arrondi) ;
 - `allocateTheoreticalPopulationBudget` — parts exactes au prorata des poids ;
 - `roundPopulationAllocations` — arrondi individuel paramétrable ;
-- `calculatePopulationBudgetAllocation` — orchestrateur optionnel.
+- `calculatePopulationBudgetAllocation` — orchestrateur budget optionnel.
+
+**Lot 2A-4 — orchestrateur end-to-end**
+
+- `resolveEmployeeS0` — lookup S0 par famille/grade ;
+- `validatePreparedPopulationCalculationInput` ;
+- `calculatePreparedEmployeeCompensation` ;
+- `calculatePreparedPopulationCompensation` — assemble 2A-2 + 2A-3 ;
+- convention `allocationWeight = salary × effectiveMatrixWeight`.
 
 Erreurs typées `CompensationCalculationError` (codes stables). Pas de
 duplication Rust, ni UI, ni persistance, ni commande Tauri.

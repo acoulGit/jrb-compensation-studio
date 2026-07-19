@@ -1,4 +1,4 @@
-/** Moteur de calcul pur — Lots 2A-2 (individuel) et 2A-3 (budget population). */
+/** Moteur de calcul pur — Lots 2A-2, 2A-3 et 2A-4 (orchestrateur population). */
 
 export {
   absBigInt,
@@ -14,11 +14,17 @@ export {
   type ResolvedBudgetTarget,
 } from "./budgetTargetModels";
 export { calculateIndividualMatrixWeight } from "./calculateIndividualMatrixWeight";
+export {
+  buildAllocationWeight,
+  calculatePreparedEmployeeCompensation,
+} from "./calculatePreparedEmployeeCompensation";
+export { calculatePreparedPopulationCompensation } from "./calculatePreparedPopulationCompensation";
 export { calculatePopulationBudgetAllocation } from "./calculatePopulationBudgetAllocation";
 export {
   CompensationCalculationError,
   isCompensationCalculationError,
   type CompensationCalculationErrorCode,
+  type PopulationCalculationIssueLike,
 } from "./errors";
 export {
   addFractions,
@@ -68,7 +74,27 @@ export {
   type TheoreticalPopulationAllocationInput,
   type TheoreticalPopulationAllocationResult,
 } from "./populationAllocationModels";
+export {
+  ALLOCATION_BASIS_SALARY_TIMES_MATRIX_WEIGHT,
+  compareEmployeeIdAsc,
+  type AllocationBasis,
+  type EmployeeCompensationCalculationResult,
+  type EmployeeS0Resolution,
+  type PopulationCalculationIssue,
+  type PopulationCalculationReferences,
+  type PopulationCalculationSummary,
+  type PopulationCalculationValidationResult,
+  type PreparedEmployeeCalculationInput,
+  type PreparedEmployeeCalculationResult,
+  type PreparedPopulationCalculationInput,
+  type PreparedPopulationCalculationResult,
+  type PreparedSalaryGridCell,
+} from "./preparedPopulationModels";
 export { resolveBudgetTarget } from "./resolveBudgetTarget";
+export { resolveEmployeeS0 } from "./resolveEmployeeS0";
 export { resolveEvaluationFactor } from "./resolveEvaluationFactor";
 export { resolveSalaryPosition } from "./resolveSalaryPosition";
 export { roundPopulationAllocations } from "./roundPopulationAllocations";
+export {
+  validatePreparedPopulationCalculationInput,
+} from "./validatePreparedPopulationCalculationInput";

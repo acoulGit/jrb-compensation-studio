@@ -419,3 +419,29 @@ individuel paramétrable — sans forcer le total réel au budget cible.
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
 - `git diff --check`
 - migrations 0001–0004 : diff silencieux
+
+## 2026-07-19 — Lot 2A-4 : orchestrateur population préparée
+
+### Objectif
+
+Assembler 2A-2 + 2A-3 pour une population préparée (S0 → poids → budget →
+allocation → arrondi), sans UI ni persistance.
+
+### Convention JRB
+
+`allocationWeight = salaryFcfa × effectiveMatrixWeight`
+même poids matriciel ⇒ même taux théorique ; montants ∝ salaires.
+
+### Livrables
+
+- `resolveEmployeeS0`, validation, calcul salarié, orchestrateur
+- Tests `preparedPopulationCompensation.test.ts`
+- Docs mises à jour
+- Aucune migration / UI / Rust / persistance
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux

@@ -1,4 +1,4 @@
-/** Erreurs typées du moteur de calcul (Lots 2A-2 / 2A-3). */
+/** Erreurs typées du moteur de calcul (Lots 2A-2 / 2A-3 / 2A-4). */
 
 export type CompensationCalculationErrorCode =
   // Lot 2A-2 — individuel
@@ -35,16 +35,42 @@ export type CompensationCalculationErrorCode =
   // Lot 2A-3 — arrondi
   | "MISSING_ROUNDING_POLICY"
   | "UNSUPPORTED_ROUNDING_MODE"
-  | "INVALID_ROUNDING_STEP";
+  | "INVALID_ROUNDING_STEP"
+  // Lot 2A-4 — orchestrateur
+  | "S0_REFERENCE_NOT_FOUND"
+  | "DUPLICATE_S0_REFERENCE"
+  | "INVALID_FAMILY_CODE"
+  | "INVALID_GRADE_CODE"
+  | "EMPLOYEE_CALCULATION_FAILED"
+  | "POPULATION_CALCULATION_FAILED"
+  | "INVALID_ALLOCATION_WEIGHT"
+  | "INCOMPLETE_CALCULATION_REFERENCES";
 
 export class CompensationCalculationError extends Error {
   readonly code: CompensationCalculationErrorCode;
+  /** Issues structurées (population / salarié). */
+  readonly issues?: readonly PopulationCalculationIssueLike[];
 
-  constructor(code: CompensationCalculationErrorCode, message: string) {
+  constructor(
+    code: CompensationCalculationErrorCode,
+    message: string,
+    issues?: readonly PopulationCalculationIssueLike[],
+  ) {
     super(message);
     this.name = "CompensationCalculationError";
     this.code = code;
+    this.issues = issues;
   }
+}
+
+/** Forme minimale d’une issue (évite cycle d’import avec les modèles). */
+export interface PopulationCalculationIssueLike {
+  employeeId?: string;
+  code: string;
+  field?: string;
+  message: string;
+  step?: string;
+  details?: Readonly<Record<string, string | number | boolean | null>>;
 }
 
 export function isCompensationCalculationError(

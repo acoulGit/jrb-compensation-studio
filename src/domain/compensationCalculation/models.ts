@@ -53,14 +53,14 @@ export interface NineBoxFactorRef {
 }
 
 export interface SalaryPositionInput {
-  salaryFcfa: number;
-  s0Fcfa: number;
+  salaryFcfa: number | bigint;
+  s0Fcfa: number | bigint;
   salaryPositions: readonly SalaryPositionInputRow[];
 }
 
 export interface SalaryPositionResult {
-  salaryFcfa: number;
-  s0Fcfa: number;
+  salaryFcfa: number | bigint;
+  s0Fcfa: number | bigint;
   /** Ratio Salaire/S0 en basis points entiers (half-up), pour affichage. */
   ratioBasisPoints: number;
   positionCode: string;
