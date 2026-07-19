@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-replace-current-population"
+description = "Autorise le remplacement atomique de la population RH via transaction SQLite."
+commands.allow = ["replace_current_population"]

@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-campaign-write"
+description = "Autorise l’archivage, la restauration et l’activation de campagne via connexion SQLite dédiée."
+commands.allow = ["archive_campaign", "restore_campaign", "activate_campaign"]

@@ -48,10 +48,11 @@ export const pageDefinitions: Record<PageId, FeatureDefinition> = {
   },
   imports: {
     title: "Import RH",
-    description: "Préparez l’intégration contrôlée des données de population.",
-    emptyTitle: "Aucun import disponible",
+    description:
+      "Importez localement une population RH Excel ou CSV pour une campagne.",
+    emptyTitle: "Aucune campagne",
     emptyDescription:
-      "L’import de fichiers RH sera ajouté dans un lot ultérieur, avec validations et rapport d’anomalies.",
+      "Créez une campagne pour importer et versionner une population RH fictive.",
     plannedFeatures: [
       "Import local de fichiers Excel",
       "Contrôle des colonnes et des formats",

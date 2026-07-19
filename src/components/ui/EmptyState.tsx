@@ -17,12 +17,18 @@ export function EmptyState({
       <div>
         <h2>{title}</h2>
         <p>{description}</p>
-        <p className="empty-state__planned">Fonctions prévues ultérieurement</p>
-        <ul>
-          {plannedFeatures.map((feature) => (
-            <li key={feature}>{feature}</li>
-          ))}
-        </ul>
+        {plannedFeatures.length > 0 ? (
+          <>
+            <p className="empty-state__planned">
+              Fonctions prévues ultérieurement
+            </p>
+            <ul>
+              {plannedFeatures.map((feature) => (
+                <li key={feature}>{feature}</li>
+              ))}
+            </ul>
+          </>
+        ) : null}
       </div>
     </div>
   );

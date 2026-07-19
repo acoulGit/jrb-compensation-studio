@@ -4,15 +4,18 @@ Application Windows locale et confidentielle destinée au pilotage des campagnes
 d’augmentation salariale.
 
 Le dépôt contient le socle desktop, le Lot 1A (persistance organisation /
-campagnes) et le Lot 1B (référentiels de rémunération par campagne) :
+campagnes), le Lot 1B (référentiels de rémunération par campagne) et le Lot 1C
+(import RH versionné par campagne) :
 
 - shell navigable ;
 - identité de l’organisation persistée ;
 - gestion des campagnes (création, activation unique, archivage, restauration) ;
 - référentiels par campagne (familles, grades, grille S0, positions, 9-Box) ;
+- import local de population (.xlsx, .xls, .csv) avec prévisualisation et
+  historique des lots ;
 - documentation métier et schéma de base.
 
-Il ne contient encore ni données RH, ni import Excel, ni moteur de calcul.
+Il ne contient encore ni moteur de calcul, ni budget, ni simulation.
 
 ## Prérequis
 
@@ -43,8 +46,10 @@ pnpm tauri build
 
 - Base : `sqlite:jrb-compensation-studio.db`
 - Emplacement : répertoire applicatif Tauri (AppConfig), hors Git
-- Migrations : `0001_initial_persistence`, `0002_compensation_references`
-- Détails : `docs/DATABASE_SCHEMA.md`, `docs/COMPENSATION_REFERENCES.md`
+- Migrations : `0001_initial_persistence`, `0002_compensation_references`,
+  `0003_hr_import`
+- Détails : `docs/DATABASE_SCHEMA.md`, `docs/COMPENSATION_REFERENCES.md`,
+  `docs/HR_IMPORT.md`
 
 ## Confidentialité
 

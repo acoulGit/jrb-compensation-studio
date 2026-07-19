@@ -1,10 +1,12 @@
 import { useAppData } from "../../app/AppDataProvider";
 import { useCompensationReference } from "../../app/CompensationReferenceProvider";
+import { useHrImport } from "../../app/HrImportProvider";
 import { StatusBadge } from "../ui/StatusBadge";
 
 export function CampaignContext() {
   const { activeCampaign } = useAppData();
   const { activeCampaignCompleteness } = useCompensationReference();
+  const { activeCampaignPopulationCount } = useHrImport();
 
   return (
     <aside className="campaign-context" aria-label="Campagne active">
@@ -23,6 +25,11 @@ export function CampaignContext() {
         {activeCampaign ? (
           <span data-testid="active-campaign-reference">
             Référentiel : {activeCampaignCompleteness?.badge ?? "À compléter"}
+          </span>
+        ) : null}
+        {activeCampaign ? (
+          <span data-testid="active-campaign-population">
+            Population : {activeCampaignPopulationCount ?? 0}
           </span>
         ) : null}
         <StatusBadge tone={activeCampaign ? "success" : "neutral"}>

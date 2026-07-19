@@ -131,39 +131,29 @@ export class SqliteCompensationReferenceRepository
     const db = await getDatabase();
     const now = utcNowIso();
 
-    try {
-      await db.execute("BEGIN IMMEDIATE");
-      for (const family of jobFamilies) {
-        await db.execute(
-          `UPDATE campaign_job_families
-           SET code = $1, label = $2, updated_at = $3
-           WHERE id = $4 AND campaign_id = $5`,
-          [family.code, family.label, now, family.id, campaignId],
-        );
-      }
-      for (const grade of grades) {
-        await db.execute(
-          `UPDATE campaign_grades
-           SET code = $1, label = $2, updated_at = $3
-           WHERE id = $4 AND campaign_id = $5`,
-          [grade.code, grade.label, now, grade.id, campaignId],
-        );
-      }
+    // Pas de BEGIN via le pool plugin SQL (risque de transaction orpheline).
+    for (const family of jobFamilies) {
       await db.execute(
-        `UPDATE campaign_reference_config
-         SET updated_at = $1
-         WHERE campaign_id = $2`,
-        [now, campaignId],
+        `UPDATE campaign_job_families
+         SET code = $1, label = $2, updated_at = $3
+         WHERE id = $4 AND campaign_id = $5`,
+        [family.code, family.label, now, family.id, campaignId],
       );
-      await db.execute("COMMIT");
-    } catch (error) {
-      try {
-        await db.execute("ROLLBACK");
-      } catch {
-        // connexion déjà hors transaction
-      }
-      throw error;
     }
+    for (const grade of grades) {
+      await db.execute(
+        `UPDATE campaign_grades
+         SET code = $1, label = $2, updated_at = $3
+         WHERE id = $4 AND campaign_id = $5`,
+        [grade.code, grade.label, now, grade.id, campaignId],
+      );
+    }
+    await db.execute(
+      `UPDATE campaign_reference_config
+       SET updated_at = $1
+       WHERE campaign_id = $2`,
+      [now, campaignId],
+    );
 
     const set = await this.getReferenceSet(campaignId);
     if (!set) {
@@ -179,33 +169,22 @@ export class SqliteCompensationReferenceRepository
     const db = await getDatabase();
     const now = utcNowIso();
 
-    try {
-      await db.execute("BEGIN IMMEDIATE");
-      for (const cell of cells) {
-        await db.execute(
-          `UPDATE campaign_salary_grid
-           SET s0_amount = $1, updated_at = $2
-           WHERE campaign_id = $3
-             AND job_family_id = $4
-             AND grade_id = $5`,
-          [cell.s0Amount, now, campaignId, cell.jobFamilyId, cell.gradeId],
-        );
-      }
+    for (const cell of cells) {
       await db.execute(
-        `UPDATE campaign_reference_config
-         SET updated_at = $1
-         WHERE campaign_id = $2`,
-        [now, campaignId],
+        `UPDATE campaign_salary_grid
+         SET s0_amount = $1, updated_at = $2
+         WHERE campaign_id = $3
+           AND job_family_id = $4
+           AND grade_id = $5`,
+        [cell.s0Amount, now, campaignId, cell.jobFamilyId, cell.gradeId],
       );
-      await db.execute("COMMIT");
-    } catch (error) {
-      try {
-        await db.execute("ROLLBACK");
-      } catch {
-        // connexion déjà hors transaction
-      }
-      throw error;
     }
+    await db.execute(
+      `UPDATE campaign_reference_config
+       SET updated_at = $1
+       WHERE campaign_id = $2`,
+      [now, campaignId],
+    );
 
     const set = await this.getReferenceSet(campaignId);
     if (!set) {
@@ -221,31 +200,20 @@ export class SqliteCompensationReferenceRepository
     const db = await getDatabase();
     const now = utcNowIso();
 
-    try {
-      await db.execute("BEGIN IMMEDIATE");
-      for (const update of updates) {
-        await db.execute(
-          `UPDATE campaign_salary_positions
-           SET position_factor_milli = $1, updated_at = $2
-           WHERE id = $3 AND campaign_id = $4`,
-          [update.positionFactorMilli, now, update.id, campaignId],
-        );
-      }
+    for (const update of updates) {
       await db.execute(
-        `UPDATE campaign_reference_config
-         SET updated_at = $1
-         WHERE campaign_id = $2`,
-        [now, campaignId],
+        `UPDATE campaign_salary_positions
+         SET position_factor_milli = $1, updated_at = $2
+         WHERE id = $3 AND campaign_id = $4`,
+        [update.positionFactorMilli, now, update.id, campaignId],
       );
-      await db.execute("COMMIT");
-    } catch (error) {
-      try {
-        await db.execute("ROLLBACK");
-      } catch {
-        // connexion déjà hors transaction
-      }
-      throw error;
     }
+    await db.execute(
+      `UPDATE campaign_reference_config
+       SET updated_at = $1
+       WHERE campaign_id = $2`,
+      [now, campaignId],
+    );
 
     const set = await this.getReferenceSet(campaignId);
     if (!set) {
@@ -261,31 +229,20 @@ export class SqliteCompensationReferenceRepository
     const db = await getDatabase();
     const now = utcNowIso();
 
-    try {
-      await db.execute("BEGIN IMMEDIATE");
-      for (const update of updates) {
-        await db.execute(
-          `UPDATE campaign_performance_factors
-           SET factor_milli = $1, updated_at = $2
-           WHERE campaign_id = $3 AND level = $4`,
-          [update.factorMilli, now, campaignId, update.level],
-        );
-      }
+    for (const update of updates) {
       await db.execute(
-        `UPDATE campaign_reference_config
-         SET updated_at = $1
-         WHERE campaign_id = $2`,
-        [now, campaignId],
+        `UPDATE campaign_performance_factors
+         SET factor_milli = $1, updated_at = $2
+         WHERE campaign_id = $3 AND level = $4`,
+        [update.factorMilli, now, campaignId, update.level],
       );
-      await db.execute("COMMIT");
-    } catch (error) {
-      try {
-        await db.execute("ROLLBACK");
-      } catch {
-        // connexion déjà hors transaction
-      }
-      throw error;
     }
+    await db.execute(
+      `UPDATE campaign_reference_config
+       SET updated_at = $1
+       WHERE campaign_id = $2`,
+      [now, campaignId],
+    );
 
     const set = await this.getReferenceSet(campaignId);
     if (!set) {
@@ -303,31 +260,20 @@ export class SqliteCompensationReferenceRepository
     const db = await getDatabase();
     const now = utcNowIso();
 
-    try {
-      await db.execute("BEGIN IMMEDIATE");
-      for (const update of updates) {
-        await db.execute(
-          `UPDATE campaign_potential_factors
-           SET factor_milli = $1, updated_at = $2
-           WHERE campaign_id = $3 AND level = $4`,
-          [update.factorMilli, now, campaignId, update.level],
-        );
-      }
+    for (const update of updates) {
       await db.execute(
-        `UPDATE campaign_reference_config
-         SET updated_at = $1
-         WHERE campaign_id = $2`,
-        [now, campaignId],
+        `UPDATE campaign_potential_factors
+         SET factor_milli = $1, updated_at = $2
+         WHERE campaign_id = $3 AND level = $4`,
+        [update.factorMilli, now, campaignId, update.level],
       );
-      await db.execute("COMMIT");
-    } catch (error) {
-      try {
-        await db.execute("ROLLBACK");
-      } catch {
-        // connexion déjà hors transaction
-      }
-      throw error;
     }
+    await db.execute(
+      `UPDATE campaign_reference_config
+       SET updated_at = $1
+       WHERE campaign_id = $2`,
+      [now, campaignId],
+    );
 
     const set = await this.getReferenceSet(campaignId);
     if (!set) {
@@ -343,31 +289,20 @@ export class SqliteCompensationReferenceRepository
     const db = await getDatabase();
     const now = utcNowIso();
 
-    try {
-      await db.execute("BEGIN IMMEDIATE");
-      for (const update of updates) {
-        await db.execute(
-          `UPDATE campaign_nine_box_factors
-           SET factor_milli = $1, updated_at = $2
-           WHERE campaign_id = $3 AND box_code = $4`,
-          [update.factorMilli, now, campaignId, update.boxCode],
-        );
-      }
+    for (const update of updates) {
       await db.execute(
-        `UPDATE campaign_reference_config
-         SET updated_at = $1
-         WHERE campaign_id = $2`,
-        [now, campaignId],
+        `UPDATE campaign_nine_box_factors
+         SET factor_milli = $1, updated_at = $2
+         WHERE campaign_id = $3 AND box_code = $4`,
+        [update.factorMilli, now, campaignId, update.boxCode],
       );
-      await db.execute("COMMIT");
-    } catch (error) {
-      try {
-        await db.execute("ROLLBACK");
-      } catch {
-        // connexion déjà hors transaction
-      }
-      throw error;
     }
+    await db.execute(
+      `UPDATE campaign_reference_config
+       SET updated_at = $1
+       WHERE campaign_id = $2`,
+      [now, campaignId],
+    );
 
     const set = await this.getReferenceSet(campaignId);
     if (!set) {
