@@ -58,6 +58,33 @@ stockage sont décrites dans `docs/COMPENSATION_REFERENCES.md` et
 - Elle est appliquée à la date anniversaire.
 - Elle est hors enveloppe annoncée.
 
+## Import de population (Lot 1C)
+
+Le Lot 1C ne calcule ni éligibilité ni augmentation. Il persiste un instantané
+salarié par campagne, aligné sur les règles ci-dessous pour alimenter le futur
+moteur.
+
+- **Périmètre contrats** : CDI et CDD importables ; intérimaires (`temporary`)
+  et prestataires (`contractor`) enregistrés mais exclus de l’éligibilité future
+  conformément aux règles validées.
+- **Statut d’emploi** : la disponibilité hors groupe (`external_availability`)
+  doit être identifiable pour le gel d’actions prévu au calcul.
+- **Unicité** : un matricule par salarié et par lot ; doublon dans le fichier
+  = rejet global de l’import.
+- **Famille et grade** : codes parmi le référentiel Lot 1B de la campagne ;
+  comparaison insensible à la casse.
+- **Salaire décembre N-1** : entier FCFA strictement positif ; sert de base au
+  futur périmètre budgétaire.
+- **Champs optionnels** : code 9-Box (1–9), sous-performant confirmé, montants
+  de promotion, correction et mesure RH/sociale (≥ 0 FCFA).
+- **Intégrité** : aucun import partiel ; remplacement atomique de la population
+  courante ; historique des lots conservé (`current` / `superseded`).
+- **Campagne archivée** : import bloqué (lecture seule).
+- **Fichier source** : non conservé sur disque après import ; seules les données
+  normalisées et métadonnées du lot sont persistées.
+
+Détails techniques : `docs/HR_IMPORT.md`.
+
 ## Autres règles
 
 - Un sous-performant confirmé reçoit 0 % matriciel.

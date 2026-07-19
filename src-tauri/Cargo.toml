@@ -22,4 +22,8 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 tauri = { version = "2", features = [] }
 tauri-plugin-sql = { version = "2.4.0", features = ["sqlite"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
+[dev-dependencies]
+tempfile = "3"

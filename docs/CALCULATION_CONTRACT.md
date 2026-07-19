@@ -22,6 +22,19 @@ Les étapes **4. Positionnement dans la grille** et **5. Application du mode
 `campaign_nine_box_factors`) comme instantané versionné des paramètres de la
 campagne.
 
+## Lot 1C — import population sans calcul
+
+Le Lot 1C importe et versionne la population salariée par campagne (tables
+`hr_import_batches`, `hr_import_employees`). **Aucune étape de ce contrat
+n’est exécutée** : pas de détermination d’éligibilité, pas de positionnement,
+pas de proposition matricielle, pas de consolidation budgétaire.
+
+Les données importées (contrat, statut, date d’embauche, salaire décembre N-1,
+9-Box, sous-performant confirmé, montants promotion/correction/mesure) seront
+consommées aux étapes 1 à 12 lors de l’implémentation du moteur. L’import valide
+déjà la forme et la cohérence référentielle des entrées, mais ne produit aucun
+résultat calculé ni alerte métier de calcul (S7+, consommation budget, etc.).
+
 ## Principes
 
 - Une exécution utilise un instantané versionné des données et paramètres.
@@ -123,4 +136,4 @@ et écarts budgétaires. Produire les éléments de preuve associés.
 Le futur résultat devra distinguer proposition matricielle, complément de
 promotion, correction, mesure sociale, ancienneté, total final, alertes et
 consommation budgétaire. Aucun de ces éléments n’est calculé dans les lots
-fondation (1A) ni référentiels (1B).
+fondation (1A), référentiels (1B) ni import population (1C).

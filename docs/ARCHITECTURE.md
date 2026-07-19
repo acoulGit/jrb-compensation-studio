@@ -20,9 +20,11 @@ télémétrie. Le serveur Vite local est exclusivement un outil de développemen
 - `src/config` conserve les valeurs initiales de référence (identité client).
 - `src/pages` compose les écrans fonctionnels.
 - `src/domain` expose les modèles métier purs, dont
-  `src/domain/compensationReference` (Lot 1B).
+  `src/domain/compensationReference` (Lot 1B) et `src/domain/hrImport`
+  (Lot 1C).
 - `src/services` orchestre validations et cas d’usage, sans dépendre de React,
-  notamment `compensationReferenceService` et `campaignService`.
+  notamment `compensationReferenceService`, `campaignService` et
+  `hrImportService`.
 - `src/infrastructure/database` gère la connexion SQLite, les mappers et les
   repositories (SQLite et mémoire pour les tests).
 - `src/tests` contient les tests du front.
@@ -53,6 +55,32 @@ sans moteur de calcul ni données salariés.
   de mise à jour à la page Référentiels et au bandeau de contexte campagne.
 
 Voir `docs/COMPENSATION_REFERENCES.md` pour le périmètre fonctionnel détaillé.
+
+## Couche import RH (Lot 1C)
+
+Le Lot 1C ajoute l’import local de population par campagne, sans moteur de
+calcul ni conservation du fichier source.
+
+- **Domaine** (`src/domain/hrImport`) : modèles de lot (`HrImportBatch`,
+  statuts `current` / `superseded`), colonnes obligatoires et optionnelles,
+  types contrat et statut d’emploi, mapping, prévisualisation, population
+  paginée.
+- **Infrastructure imports** (`src/infrastructure/imports`) : parseur
+  classeur/CSV via SheetJS (`spreadsheetParser`), détection d’en-tête, alias de
+  colonnes, mapping automatique, normalisation des lignes et lecteurs de cellules
+  (dates ISO, FCFA entiers, formules refusées). Lecture via `ArrayBuffer` depuis
+  l’input fichier HTML, sans permission Tauri filesystem.
+- **Repositories** : contrat `HrImportRepository` avec implémentations SQLite
+  (`sqliteHrImportRepository`) et mémoire (`memoryHrImportRepository`). Le
+  remplacement de population s’effectue en transaction `BEGIN IMMEDIATE`
+  (bascule `current` → `superseded`, insertion du nouveau lot).
+- **Services** : `HrImportService` orchestre analyse, prévisualisation sans
+  écriture et confirmation atomique (refus si erreur ou mapping invalide).
+- **Provider React** : `HrImportProvider` expose l’assistant d’import, la
+  population courante paginée et l’historique des lots à la page Import et au
+  bandeau de contexte campagne.
+
+Voir `docs/HR_IMPORT.md` pour le périmètre fonctionnel détaillé.
 
 ## Persistance SQLite
 
@@ -96,6 +124,8 @@ distincts des règles métier.
 ## Décisions à venir
 
 - Protection des données et sauvegardes.
-- Contrats d’import et d’export Excel.
-- Représentation exacte des montants et conventions d’arrondi.
-- Tables salariés.
+- Export Excel et scénarios de calcul.
+- Représentation exacte des montants et conventions d’arrondi au-delà de
+  l’import (arrondi final matriciel).
+- Extension éventuelle du modèle salarié (résultats calculés, décisions RH
+  tracées).

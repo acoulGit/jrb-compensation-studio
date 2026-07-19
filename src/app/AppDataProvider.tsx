@@ -18,6 +18,7 @@ import {
   type AppServices,
 } from "../services/createAppServices";
 import { toUserMessage } from "../services/errors";
+import { sanitizeTechnicalError } from "../services/sanitizeTechnicalError";
 
 export type AppDataStatus = "loading" | "ready" | "error";
 
@@ -190,6 +191,15 @@ export function AppDataProvider({
         await refreshAfterMutation();
         return campaign;
       } catch (error) {
+        if (import.meta.env.DEV) {
+          const sanitized = sanitizeTechnicalError(error);
+          console.error("[CAMPAIGN_ARCHIVE_FAILED]", {
+            type: sanitized.detectedType,
+            name: sanitized.name,
+            message: sanitized.message,
+            code: sanitized.code,
+          });
+        }
         throw new Error(
           toUserMessage(error, "L’archivage de la campagne a échoué."),
         );

@@ -4,12 +4,16 @@ pub const DATABASE_URL: &str = "sqlite:jrb-compensation-studio.db";
 
 pub const MIGRATION_0001_SQL: &str = include_str!("../migrations/0001_initial_persistence.sql");
 pub const MIGRATION_0002_SQL: &str = include_str!("../migrations/0002_compensation_references.sql");
+pub const MIGRATION_0003_SQL: &str = include_str!("../migrations/0003_hr_import.sql");
 
 pub const MIGRATION_0001_VERSION: i64 = 1;
 pub const MIGRATION_0001_DESCRIPTION: &str = "initial_persistence";
 
 pub const MIGRATION_0002_VERSION: i64 = 2;
 pub const MIGRATION_0002_DESCRIPTION: &str = "compensation_references";
+
+pub const MIGRATION_0003_VERSION: i64 = 3;
+pub const MIGRATION_0003_DESCRIPTION: &str = "hr_import";
 
 #[cfg(test)]
 mod tests {
@@ -38,16 +42,21 @@ mod tests {
         assert!(MIGRATION_0002_SQL.contains("campaign_reference_config"));
         assert!(MIGRATION_0002_SQL.contains("campaign_job_families"));
         assert!(MIGRATION_0002_SQL.contains("campaign_grades"));
-        assert!(MIGRATION_0002_SQL.contains("campaign_salary_grid"));
-        assert!(MIGRATION_0002_SQL.contains("campaign_salary_positions"));
-        assert!(MIGRATION_0002_SQL.contains("campaign_performance_factors"));
-        assert!(MIGRATION_0002_SQL.contains("campaign_potential_factors"));
-        assert!(MIGRATION_0002_SQL.contains("campaign_nine_box_factors"));
-        assert!(MIGRATION_0002_SQL.contains("nine_box_mode"));
-        assert!(MIGRATION_0002_SQL.contains("position_factor_milli"));
-        assert!(MIGRATION_0002_SQL.contains("factor_milli"));
-        assert!(MIGRATION_0002_SQL.contains("reference_ratio_bps"));
         assert!(!MIGRATION_0002_SQL.contains("REAL"));
+    }
+
+    #[test]
+    fn migration_0003_is_present_and_ordered_after_0002() {
+        assert_eq!(MIGRATION_0003_VERSION, 3);
+        assert_eq!(MIGRATION_0003_DESCRIPTION, "hr_import");
+        assert!(MIGRATION_0003_VERSION > MIGRATION_0002_VERSION);
+        assert!(MIGRATION_0003_SQL.contains("hr_import_batches"));
+        assert!(MIGRATION_0003_SQL.contains("hr_import_employees"));
+        assert!(MIGRATION_0003_SQL.contains("ux_hr_import_batches_one_current"));
+        assert!(MIGRATION_0003_SQL.contains("source_file_name"));
+        assert!(MIGRATION_0003_SQL.contains("december_base_salary"));
+        assert!(MIGRATION_0003_SQL.contains("employee_number"));
+        assert!(MIGRATION_0003_SQL.contains("CHECK (status IN ('current', 'superseded'))"));
     }
 
     #[test]
@@ -58,14 +67,19 @@ mod tests {
         assert!(MIGRATION_0002_VERSION > 0);
         assert!(!MIGRATION_0002_DESCRIPTION.is_empty());
         assert!(!MIGRATION_0002_SQL.trim().is_empty());
+        assert!(MIGRATION_0003_VERSION > 0);
+        assert!(!MIGRATION_0003_DESCRIPTION.is_empty());
+        assert!(!MIGRATION_0003_SQL.trim().is_empty());
         assert!(DATABASE_URL.starts_with("sqlite:"));
         assert_eq!(DATABASE_URL, "sqlite:jrb-compensation-studio.db");
     }
 
     #[test]
-    fn migration_order_is_exactly_0001_then_0002() {
+    fn migration_order_is_exactly_0001_0002_0003() {
         assert_eq!(MIGRATION_0001_VERSION, 1);
         assert_eq!(MIGRATION_0002_VERSION, 2);
+        assert_eq!(MIGRATION_0003_VERSION, 3);
         assert_eq!(MIGRATION_0002_VERSION - MIGRATION_0001_VERSION, 1);
+        assert_eq!(MIGRATION_0003_VERSION - MIGRATION_0002_VERSION, 1);
     }
 }

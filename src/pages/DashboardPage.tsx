@@ -1,5 +1,7 @@
+import { formatDateTime } from "../app/formatters";
 import { useAppData } from "../app/AppDataProvider";
 import { useCompensationReference } from "../app/CompensationReferenceProvider";
+import { useHrImport } from "../app/HrImportProvider";
 import { EmptyState } from "../components/ui/EmptyState";
 import { MetricCard } from "../components/ui/MetricCard";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -9,10 +11,21 @@ import { pageDefinitions } from "./pageDefinitions";
 export function DashboardPage() {
   const { activeCampaign } = useAppData();
   const { activeCampaignCompleteness } = useCompensationReference();
+  const { activeCampaignPopulationCount, activeCampaignLastImportAt } =
+    useHrImport();
   const definition = pageDefinitions.dashboard;
   const referenceLabel = activeCampaign
     ? (activeCampaignCompleteness?.badge ?? "À compléter")
     : "Non configuré";
+  const populationCount = activeCampaign
+    ? (activeCampaignPopulationCount ?? 0)
+    : 0;
+  const populationDetail =
+    populationCount > 0
+      ? activeCampaignLastImportAt
+        ? `Dernier import : ${formatDateTime(activeCampaignLastImportAt)}`
+        : "Lot courant de la campagne active"
+      : "Aucune donnée RH chargée";
   const metrics = [
     [
       "Campagne active",
@@ -31,7 +44,12 @@ export function DashboardPage() {
       "R",
     ],
     ["Budget annoncé", "Non configuré", "Masse salariale de référence", "%"],
-    ["Population importée", "0", "Aucune donnée RH chargée", "P"],
+    [
+      "Population importée",
+      String(populationCount),
+      populationDetail,
+      "P",
+    ],
     ["Scénarios", "0", "Aucune simulation créée", "S"],
     ["Alertes", "0", "Aucun contrôle à signaler", "!"],
   ] as const;

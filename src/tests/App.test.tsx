@@ -55,7 +55,11 @@ describe("socle applicatif", () => {
     ]) {
       await user.click(screen.getByRole("button", { name: page }));
       const headingName =
-        page === "Référentiels" ? "Référentiels de rémunération" : page;
+        page === "Référentiels"
+          ? "Référentiels de rémunération"
+          : page === "Import RH"
+            ? "Import RH"
+            : page;
       expect(
         screen.getByRole("heading", { name: headingName, level: 1 }),
       ).toBeInTheDocument();

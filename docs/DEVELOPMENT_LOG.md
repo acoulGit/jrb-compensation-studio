@@ -207,3 +207,118 @@ pnpm tauri build
 - Aucun moteur de calcul : paramètres stockés et validés uniquement.
 - La complétude du référentiel n’empêche pas l’activation d’une campagne.
 - Pas de chiffrement, sauvegarde automatique, export ni simulation.
+
+## 2026-07-18 — Lot 1C : import RH versionné par campagne
+
+### Objectif
+
+Importer localement la population salariée d’une campagne depuis un fichier
+Excel ou CSV, avec prévisualisation, validation stricte et remplacement atomique
+de la population courante. Hors périmètre : calcul, budget, simulation,
+conservation du binaire source.
+
+### Dépendance SheetJS
+
+- Package : `xlsx@0.20.3`
+- Source npm : `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`
+- Déclaration dans `package.json` (URL tarball CDN SheetJS, bundlé au build ;
+  aucun chargement réseau à l’exécution)
+
+### Migration 0003
+
+- Fichier : `src-tauri/migrations/0003_hr_import.sql`
+- Tables : `hr_import_batches`, `hr_import_employees`
+- Enregistrement Rust : constantes `MIGRATION_0003_*` dans
+  `src-tauri/src/persistence.rs`, ordre strict après `0002`
+- Index unique partiel `ux_hr_import_batches_one_current` (un lot `current` par
+  campagne)
+- Tests Rust : présence du SQL, ordre 0001 → 0002 → 0003, contraintes CHECK
+
+### Décision input fichier + ArrayBuffer
+
+L’import utilise l’API web standard `File.arrayBuffer()` depuis un input
+`<input type="file">` dans le webview Tauri. Le buffer est passé au parseur
+SheetJS sans écriture intermédiaire sur disque applicatif. **Aucune nouvelle
+permission Tauri** (filesystem, dialog, shell) n’a été ajoutée ; les capabilities
+restent `core:default`, `sql:default`, `sql:allow-execute`.
+
+### Modèle versionné
+
+- Un lot `current` par campagne ; les confirmations suivantes basculent l’ancien
+  lot en `superseded`
+- Historique consultable ; lignes salariés conservées par lot
+- Métadonnées source (nom, format, feuille, taille, compteurs) sans binaire
+
+### Transaction
+
+`replace_current_population` (commande Tauri Rust) ouvre une **connexion SQLite
+dédiée**, démarre une **vraie transaction SQLx** (`Connection::begin`), exécute
+vérifications + supersede + insert batch + inserts salariés + contrôle de
+count, puis `commit`. En cas d’erreur : `rollback` — aucune compensation
+applicative côté JavaScript. Le plugin `@tauri-apps/plugin-sql` reste utilisé pour
+migrations, lectures et écritures simples.
+
+Capability : `allow-replace-current-population` (en plus de `core:default`,
+`sql:default`, `sql:allow-execute`). Aucune permission filesystem/shell/dialog.
+
+### Architecture applicative
+
+- Domaine `src/domain/hrImport`, infrastructure `src/infrastructure/imports`
+- Repositories SQLite + mémoire ; service `hrImportService` ; provider
+  `HrImportProvider` ; page Import
+
+### Tests
+
+- **Vitest** : `src/tests/hrImport.test.ts` (parseur, mapping, normalisation,
+  service, remplacement atomique, campagne archivée, limites taille/lignes)
+- **Rust** : `cargo test --manifest-path src-tauri/Cargo.toml --locked`
+  (migration 0003)
+
+### Recette
+
+Fichiers de démonstration locaux (hors Git) :
+
+`%TEMP%\jrb-compensation-import-demo`
+
+Scénarios manuels recommandés : import nominal FR/EN, mapping manuel, rejet
+formules, doublon matricule, famille/grade inconnu, remplacement population,
+historique des lots, campagne archivée en lecture seule.
+
+### Emplacement de la base (inchangé)
+
+`%APPDATA%\com.jrbxsolutions.compensationstudio\jrb-compensation-studio.db`
+
+Chemin absolu constaté :
+
+`C:\Users\HP\AppData\Roaming\com.jrbxsolutions.compensationstudio\jrb-compensation-studio.db`
+
+La migration `0003` s’applique sur la base existante sans recréation.
+
+### Commandes de build
+
+Identiques aux lots précédents. Si l’espace disque de `C:` est insuffisant :
+
+```text
+$env:CARGO_TARGET_DIR="D:\dev\jrb-compensation-studio\src-tauri\target"
+pnpm tauri build
+```
+
+### Impact SheetJS sur le bundle (constaté)
+
+Après `pnpm build`, le chunk dynamique SheetJS est séparé du bundle principal :
+
+| Artefact | Taille | Gzip |
+| --- | --- | --- |
+| `dist/assets/index-*.js` | ~316 kB | ~91 kB |
+| `dist/assets/xlsx-*.js` | ~500 kB | ~163 kB |
+
+SheetJS n’est chargé qu’au moment de l’analyse d’un fichier (import dynamique
+`await import("xlsx")`). Aucune ressource CDN à l’exécution.
+
+### Limites connues
+
+- Aucun moteur de calcul ni budget.
+- Import tout-ou-rien : une erreur bloque la confirmation.
+- Fichier source non conservé après import.
+- Pas de chiffrement ni sauvegarde automatique.
+- La complétude du référentiel n’empêche pas l’import (avertissement seulement).

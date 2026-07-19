@@ -152,68 +152,88 @@ S0 30/30, positions, exigences du mode 9-Box sélectionné).
 | `nineBoxMode` | Mode actif évalué |
 | `issues` | Liste de codes et messages de validation |
 
-## Données importées (lots ultérieurs)
+## Données importées — population RH (Lot 1C)
 
-### `employeeNumber`
+Persistées dans `hr_import_batches` (métadonnées de lot) et
+`hr_import_employees` (lignes salariés). Voir `docs/HR_IMPORT.md` pour le
+périmètre fonctionnel et les règles de validation.
 
-Identifiant technique salarié issu de la source RH. Texte obligatoire, unique
-dans une campagne. Ne doit pas être affiché comme une donnée nominative dans les
-jeux de test.
+### HrImportBatch
 
-### `employeeLabel`
+| Champ domaine | Colonne SQLite | Nature |
+| --- | --- | --- |
+| `id` | `id` | Technique |
+| `campaignId` | `campaign_id` | Rattachement campagne |
+| `status` | `status` | `current` ou `superseded` |
+| `sourceFileName` | `source_file_name` | Métadonnée source (nom fichier) |
+| `sourceFormat` | `source_format` | `xlsx` / `xls` / `csv` |
+| `sourceSheetName` | `source_sheet_name` | Feuille importée ou `null` (CSV) |
+| `fileSizeBytes` | `file_size_bytes` | Taille fichier lue à l’import |
+| `sourceRowCount` | `source_row_count` | Lignes de données analysées |
+| `importedRowCount` | `imported_row_count` | Lignes salariés persistées |
+| `warningCount` | `warning_count` | Avertissements au moment de l’import |
+| `importedAt` | `imported_at` | Horodatage confirmation |
+| `createdAt` | `created_at` | Technique |
 
-Libellé d’affichage du salarié. Texte sensible importé. Les tests et
-documentations utilisent exclusivement des libellés fictifs ou anonymisés.
+### EmployeeSnapshot (salarié importé)
 
-### `jobFamily`
+| Champ domaine | Colonne SQLite | Nature |
+| --- | --- | --- |
+| `id` | `id` | Technique |
+| `importBatchId` | `import_batch_id` | Lot d’import |
+| `campaignId` | `campaign_id` | Rattachement campagne |
+| `employeeNumber` | `employee_number` | Donnée importée (identifiant) |
+| `employeeLabel` | `employee_label` | Donnée importée (sensible) |
+| `jobFamilyId` | `job_family_id` | FK référentiel Lot 1B |
+| `gradeId` | `grade_id` | FK référentiel Lot 1B |
+| `contractType` | `contract_type` | Donnée importée |
+| `employmentStatus` | `employment_status` | Donnée importée |
+| `hireDate` | `hire_date` | Donnée importée (ISO date) |
+| `decemberBaseSalary` | `december_base_salary` | Donnée importée (FCFA entier > 0) |
+| `nineBoxCode` | `nine_box_code` | Donnée importée (1–9 ou `null`) |
+| `confirmedUnderperformer` | `confirmed_underperformer` | Donnée importée (booléen 0/1) |
+| `promotionAmount` | `promotion_amount` | Donnée importée (FCFA ≥ 0) |
+| `correctionAmount` | `correction_amount` | Donnée importée (FCFA ≥ 0) |
+| `socialMeasureAmount` | `social_measure_amount` | Donnée importée (FCFA ≥ 0) |
+| `sourceRowNumber` | `source_row_number` | Traçabilité ligne fichier |
+| `createdAt` | `created_at` | Technique |
 
-Famille de métiers rattachée au salarié. Valeur attendue parmi les 5 familles
-du référentiel configuré.
+### ContractType
 
-### `grade`
+Valeurs : `cdi`, `cdd`, `temporary`, `contractor`, `other`. Libellés FR dans
+`CONTRACT_TYPE_LABELS` (`src/domain/hrImport/models.ts`).
 
-Grade du salarié. Valeur attendue parmi les 6 grades, avec traitement distinct
-des directeurs hors grille.
+### EmploymentStatus
 
-### `contractType`
+Valeurs : `active`, `group_detachment`, `legal_leave`, `external_availability`,
+`suspended`, `departed`, `other`. Libellés FR dans `EMPLOYMENT_STATUS_LABELS`.
 
-Type de contrat. Valeurs métier attendues au minimum : `CDI`, `CDD`,
-`INTERIM`, `PRESTATAIRE`.
+### Champs importés — correspondance dictionnaire initial
 
-### `employmentStatus`
+Les termes ci-dessous désignent les mêmes concepts que dans les lots ultérieurs
+de calcul ; ils sont désormais persistés par le Lot 1C :
 
-Statut d’emploi à la date de référence. Doit permettre d’identifier notamment
-la disponibilité hors groupe et les situations actives.
-
-### `hireDate`
-
-Date d’entrée utilisée pour l’évaluation de l’ancienneté au 31 décembre N-1.
-
-### `decemberBaseSalary`
-
-Salaire de base payé en décembre N-1, montant FCFA non négatif. Sert de
-référence au budget pour la population incluse.
-
-### `nineBoxCode`
-
-Code 9-Box entier de 1 à 9. Son effet dépend du mode de campagne sélectionné.
-
-### `confirmedUnderperformer`
-
-Booléen indiquant un statut de sous-performant confirmé.
-
-### `promotionAmount`
-
-Montant d’augmentation de promotion déjà reçu, en FCFA. Il sert à déterminer
-un éventuel complément, sans être confondu avec celui-ci.
+| Terme | Champ domaine / colonne | Remarque |
+| --- | --- | --- |
+| `employeeNumber` | `employee_number` | Unique par lot |
+| `employeeLabel` | `employee_label` | Libellé sensible |
+| Famille / grade | `job_family_id`, `grade_id` | Résolus depuis codes référentiel |
+| `contractType` | `contract_type` | Voir valeurs ci-dessus |
+| `employmentStatus` | `employment_status` | Voir valeurs ci-dessus |
+| `hireDate` | `hire_date` | ISO `YYYY-MM-DD` |
+| `decemberBaseSalary` | `december_base_salary` | FCFA entier strictement positif |
+| `nineBoxCode` | `nine_box_code` | Optionnel |
+| `confirmedUnderperformer` | `confirmed_underperformer` | Optionnel, défaut false |
+| `promotionAmount` | `promotion_amount` | Optionnel, défaut 0 |
+| `correctionAmount` | `correction_amount` | Optionnel, défaut 0 |
+| `socialMeasureAmount` | `social_measure_amount` | Optionnel, défaut 0 |
 
 ## Paramètres métier futurs
 
-Les paramètres salariaux de campagne (budget annoncé, enveloppe, scénarios) et
-les données salariés ne sont pas encore stockés. Les référentiels par campagne
-(grille, positions, coefficients, mode 9-Box) le sont depuis le Lot 1B ; le
-moteur de calcul les consommera ultérieurement conformément à
-`CALCULATION_CONTRACT.md`.
+Les paramètres salariaux de campagne (budget annoncé, enveloppe, scénarios) ne
+sont pas encore stockés. Les référentiels par campagne (Lot 1B) et la population
+importée (Lot 1C) le sont ; le moteur de calcul les consommera ultérieurement
+conformément à `CALCULATION_CONTRACT.md`.
 
 ## Données calculées
 

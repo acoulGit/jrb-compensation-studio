@@ -1,4 +1,4 @@
-# Schéma de base de données — Lots 1A et 1B
+# Schéma de base de données — Lots 1A, 1B et 1C
 
 ## Emplacement logique
 
@@ -169,6 +169,60 @@ Neuf coefficients 9-Box par campagne (cases 1 à 9).
 
 Clé primaire : `(campaign_id, box_code)`.
 
+### `hr_import_batches` (Lot 1C)
+
+Versions de population importée par campagne. Un seul lot `current` par campagne
+(index unique partiel).
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| `campaign_id` | INTEGER | NOT NULL, FK → `campaigns(id)` |
+| `status` | TEXT | NOT NULL, CHECK (`current` / `superseded`) |
+| `source_file_name` | TEXT | NOT NULL (nom original, sans binaire) |
+| `source_format` | TEXT | NOT NULL, CHECK (`xlsx` / `xls` / `csv`) |
+| `source_sheet_name` | TEXT | NULL |
+| `file_size_bytes` | INTEGER | NOT NULL, > 0 |
+| `source_row_count` | INTEGER | NOT NULL, ≥ 0 |
+| `imported_row_count` | INTEGER | NOT NULL, > 0 |
+| `warning_count` | INTEGER | NOT NULL, ≥ 0 |
+| `imported_at` | TEXT | NOT NULL (UTC ISO-8601) |
+| `created_at` | TEXT | NOT NULL (UTC ISO-8601) |
+
+Index : `ux_hr_import_batches_one_current` (unique partiel `status = 'current'`
+par `campaign_id`), `ix_hr_import_batches_campaign`.
+
+### `hr_import_employees` (Lot 1C)
+
+Snapshot salarié rattaché à un lot d’import. Les clés étrangères
+`job_family_id` et `grade_id` pointent vers le référentiel Lot 1B de la
+campagne.
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| `import_batch_id` | INTEGER | NOT NULL, FK → `hr_import_batches(id)` |
+| `campaign_id` | INTEGER | NOT NULL, FK → `campaigns(id)` |
+| `employee_number` | TEXT | NOT NULL |
+| `employee_label` | TEXT | NOT NULL |
+| `job_family_id` | INTEGER | NOT NULL, FK → `campaign_job_families(id)` |
+| `grade_id` | INTEGER | NOT NULL, FK → `campaign_grades(id)` |
+| `contract_type` | TEXT | NOT NULL, CHECK (`cdi` / `cdd` / `temporary` / `contractor` / `other`) |
+| `employment_status` | TEXT | NOT NULL, CHECK (statuts Lot 1C) |
+| `hire_date` | TEXT | NOT NULL, ISO `YYYY-MM-DD` (longueur 10) |
+| `december_base_salary` | INTEGER | NOT NULL, > 0 (FCFA entier) |
+| `nine_box_code` | INTEGER | NULL ou 1–9 |
+| `confirmed_underperformer` | INTEGER | NOT NULL DEFAULT 0, CHECK (0 / 1) |
+| `promotion_amount` | INTEGER | NOT NULL DEFAULT 0, ≥ 0 |
+| `correction_amount` | INTEGER | NOT NULL DEFAULT 0, ≥ 0 |
+| `social_measure_amount` | INTEGER | NOT NULL DEFAULT 0, ≥ 0 |
+| `source_row_number` | INTEGER | NOT NULL, > 0 |
+| `created_at` | TEXT | NOT NULL (UTC ISO-8601) |
+
+Index : unicité `(import_batch_id, employee_number COLLATE NOCASE)` ; index
+sur `campaign_id`, `import_batch_id`, `employee_number`, `job_family_id`,
+`grade_id`.
+
 ## Index
 
 - `ux_campaigns_one_active` : index unique partiel sur `status` lorsque
@@ -182,13 +236,12 @@ le statut à `draft` et `archived_at` à NULL.
 
 ## Données absentes de ce lot
 
-- aucune table salariés ;
-- aucun import RH ;
 - aucun budget calculé ;
-- aucune simulation.
+- aucune simulation ;
+- aucun résultat de calcul individuel (éligibilité, proposition, consommation).
 
-Les référentiels de rémunération par campagne (Lot 1B) sont persistés ; ils ne
-contiennent ni effectifs ni résultats de calcul individuel.
+Les référentiels de rémunération (Lot 1B) et la population importée (Lot 1C)
+sont persistés ; ils ne produisent ni montants calculés ni scénarios.
 
 ## Stratégie de migrations
 
@@ -201,6 +254,7 @@ Le préchargement est déclaré dans `tauri.conf.json` (`plugins.sql.preload`).
 | --- | --- | --- |
 | 1 | `0001_initial_persistence.sql` | `organization_profile`, `campaigns` |
 | 2 | `0002_compensation_references.sql` | huit tables `campaign_reference_*` et seed idempotent |
+| 3 | `0003_hr_import.sql` | tables `hr_import_batches`, `hr_import_employees` |
 
 La migration `0002` active `PRAGMA foreign_keys = ON`, crée les huit tables
 Lot 1B, puis initialise toutes les campagnes déjà présentes via
@@ -208,5 +262,11 @@ Lot 1B, puis initialise toutes les campagnes déjà présentes via
 facteurs Performance / Potentiel / 9-Box). Les valeurs déjà configurées ne sont
 pas écrasées lors d’une réapplication.
 
-Évolution : ajouter un fichier `0003_....sql`, une constante associée et une
+La migration `0003` crée les tables d’import RH, l’index unique partiel garantissant
+un seul lot `current` par campagne, et les contraintes CHECK sur formats,
+statuts de lot, types de contrat, statuts d’emploi et montants FCFA entiers.
+Aucune donnée seed : les lots apparaissent uniquement après confirmation d’import
+dans l’application.
+
+Évolution : ajouter un fichier `0004_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.
