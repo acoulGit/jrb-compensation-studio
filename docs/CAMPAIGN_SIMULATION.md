@@ -10,8 +10,9 @@ d’augmentation.
 | --- | --- |
 | **2B-1** | Préparation / readiness — rapport structuré, sans calcul |
 | **2B-2** | Page Simulation + configuration budgétaire / arrondi en mémoire |
-| **2B-3** (ce document étendu) | Exécution en mémoire + consultation des résultats |
-| **2B-4** (prévu) | Persistance / historique des configurations et résultats |
+| **2B-3** | Exécution en mémoire + consultation des résultats |
+| **2B-4A** | Persistance transactionnelle immuable (sans UI Historique) |
+| **2B-4B** (prévu) | Interface Historique / bouton Enregistrer |
 
 ## Séparation import / préparation / configuration / calcul
 
@@ -25,6 +26,9 @@ Configuration UI (Lot 2B-2)
 Exécution (Lot 2B-3)
   → executeCampaignSimulation → calculatePreparedPopulationCompensation (1×)
   → CampaignSimulationExecutionResult (vue consultable, mémoire)
+Persistance (Lot 2B-4A)
+  → saveCurrentCampaignSimulation → save_simulation_run (Rust TX)
+  → compensation_simulation_runs (+ lignes salariés)
 ```
 
 Les Lots **2B-1 et 2B-2 n’appellent pas** le moteur d’allocation.
@@ -123,9 +127,21 @@ Un `staleResult` peut rester en mémoire pour diagnostic uniquement.
 Consultation lecture seule d’un résultat déjà en mémoire possible ; pas de
 nouvelle validation ni nouveau lancement.
 
-## Reporté au Lot 2B-4
+## Persistance (Lot 2B-4A)
 
-- Persistance SQLite / historique des runs ;
-- export ;
+Voir `docs/SIMULATION_PERSISTENCE.md`.
+
+- Snapshot immuable append-only ; sauvegarde **explicite** uniquement.
+- Tables `compensation_simulation_runs` /
+  `compensation_simulation_employee_results`.
+- Commande Rust `save_simulation_run` (connexion dédiée, WAL, rollback).
+- Repositories lecture/écriture prêts pour le Lot 2B-4B.
+- **Pas d’UI** Historique ni bouton Enregistrer dans 2B-4A.
+
+## Reporté au Lot 2B-4B
+
+- bouton « Enregistrer la simulation » ;
+- page / liste Historique ;
+- comparaison, export ;
 - workflow de validation métier ;
 - édition manuelle salarié par salarié.

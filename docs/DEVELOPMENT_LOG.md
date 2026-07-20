@@ -539,3 +539,26 @@ sans persistance.
 - `git diff --check`
 - migrations 0001–0004 : diff silencieux
 - aucun fichier `src-tauri/` modifié
+
+## 2026-07-20 — Lot 2B-4A : persistance transactionnelle des simulations
+
+### Objectif
+
+Enregistrer durablement un snapshot immuable d’une simulation réussie
+(SQLite + commande Rust atomique), sans UI Historique.
+
+### Livrables
+
+- Migration `0005_campaign_simulations.sql`
+- `simulation_persistence.rs` + permission `allow-save-simulation-run`
+- Service `saveCurrentCampaignSimulation`, DTO / mappers TEXT canonique
+- `SimulationHistoryRepository` memory + sqlite
+- Docs + tests Rust / TypeScript
+- Aucune UI Enregistrer / Historique
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 inchangées ; seule 0005 ajoutée

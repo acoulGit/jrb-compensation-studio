@@ -316,6 +316,13 @@ budget exact, allocation théorique ou arrondi final.
 Échec structuré si le moteur lève `CompensationCalculationError` ou si le
 résultat est incomplet — aucun total partiel « valide ».
 
+## Lot 2B-4A — persistance snapshot (sans recalcul)
+
+Le service `saveCurrentCampaignSimulation` mappe le résultat mémoire vers
+`SaveSimulationRunDto` (chaînes décimales) puis appelle la commande Rust.
+La commande **ne recalcule pas** les formules : elle valide la cohérence du
+snapshot et l’inscrit transactionnellement.
+
 ## Sorties attendues
 
 Le futur résultat devra distinguer proposition matricielle, complément de

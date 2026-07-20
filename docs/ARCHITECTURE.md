@@ -137,6 +137,15 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
 - Formatage exact : `formatFcfaInteger`, `formatExactAmountAsFcfa`,
   `formatExactRateAsPercent`, `formatFactorMilli`, `formatExactWeight`.
 
+## Couche persistance de simulation (Lot 2B-4A)
+
+- Migration `0005_campaign_simulations.sql`.
+- Commande Rust `save_simulation_run` (transaction SQLx dédiée).
+- Service `saveCurrentCampaignSimulation` + DTO chaînes canoniques.
+- `SimulationHistoryRepository` (memory / sqlite) — lecture paginée prête
+  pour 2B-4B ; **aucune UI Historique** dans 2B-4A.
+- Voir `docs/SIMULATION_PERSISTENCE.md`.
+
 Voir `docs/CAMPAIGN_SIMULATION.md`.
 
 ## Couche import RH (Lot 1C)

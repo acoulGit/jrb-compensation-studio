@@ -224,7 +224,15 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
 - Isolation mémoire par campagne ; rien après redémarrage.
 - `finalSalaryFcfa` = affichage dérivé BigInt (`salaire + augmentation finale`),
   hors mutation du résultat moteur.
-- Persistance / historique / export reportés au Lot 2B-4.
+- Persistance / historique UI / export reportés au Lot 2B-4B.
+
+## Persistance de simulation (Lot 2B-4A)
+
+- Enregistrement **explicite** d’un snapshot immuable (append-only).
+- Pas d’enregistrement automatique après calcul.
+- Vérification fingerprints / lot courant / statut avant sauvegarde.
+- Grands entiers et fractions en TEXT canonique (pas de REAL / Number).
+- Aucune mise à jour ni suppression métier des runs enregistrés.
 
 ## Autres règles
 

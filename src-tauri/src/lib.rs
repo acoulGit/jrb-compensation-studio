@@ -1,6 +1,7 @@
 mod campaign_write;
 mod hr_import;
 mod persistence;
+mod simulation_persistence;
 mod sqlite_local;
 
 use tauri_plugin_sql::{Migration, MigrationKind};
@@ -32,6 +33,12 @@ pub fn run() {
             sql: persistence::MIGRATION_0004_SQL,
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: persistence::MIGRATION_0005_VERSION,
+            description: persistence::MIGRATION_0005_DESCRIPTION,
+            sql: persistence::MIGRATION_0005_SQL,
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -45,6 +52,7 @@ pub fn run() {
             campaign_write::archive_campaign,
             campaign_write::restore_campaign,
             campaign_write::activate_campaign,
+            simulation_persistence::save_simulation_run,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

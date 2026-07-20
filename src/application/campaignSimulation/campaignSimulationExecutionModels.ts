@@ -64,14 +64,22 @@ export interface EmployeeSimulationResultView {
   evaluationMode: NineBoxMode;
   performanceLevel: string | null;
   potentialLevel: string | null;
+  /** Fractions exactes (persistance Lot 2B-4A) — hors recalcul moteur. */
+  evaluationFactor: ExactAmount;
+  theoreticalMatrixWeight: ExactAmount;
+  effectiveMatrixWeight: ExactAmount;
+  allocationWeight: ExactAmount;
   evaluationFactorLabel: string;
   theoreticalMatrixWeightLabel: string;
   effectiveMatrixWeightLabel: string;
   allocationWeightLabel: string;
   blockingReason: string | null;
+  theoreticalIncreaseRate: ExactAmount;
+  theoreticalIncreaseAmount: ExactAmount;
   theoreticalIncreaseRateLabel: string;
   theoreticalIncreaseAmountLabel: string;
   finalRoundedIncreaseAmountFcfa: bigint;
+  individualRoundingDelta: ExactAmount;
   individualRoundingDeltaLabel: string;
   finalSalaryFcfa: bigint;
   explanationSteps: readonly {

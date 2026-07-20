@@ -8,6 +8,7 @@
     "sql:default",
     "sql:allow-execute",
     "allow-replace-current-population",
-    "allow-campaign-write"
+    "allow-campaign-write",
+    "allow-save-simulation-run"
   ]
 }

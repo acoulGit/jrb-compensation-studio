@@ -74,3 +74,24 @@ export {
   type ValidatedCampaignSimulationConfiguration,
   type BudgetTargetModeChoice,
 } from "./simulationConfigurationModels";
+export {
+  bigintToCanonicalText,
+  exactAmountToCanonicalTexts,
+  isCanonicalIntegerText,
+  isCanonicalPositiveDenominatorText,
+  parseCanonicalExactAmount,
+  parseCanonicalIntegerText,
+} from "./canonicalDecimalText";
+export { mapExecutionResultToSaveDto } from "./mapExecutionResultToSaveDto";
+export { saveCurrentCampaignSimulation } from "./saveCurrentCampaignSimulation";
+export type { SimulationPersistenceCode } from "./simulationPersistenceCodes";
+export type {
+  PaginatedSimulationRuns,
+  PersistedSimulationEmployeeResult,
+  PersistedSimulationRunDetail,
+  PersistedSimulationRunSummary,
+  SaveCampaignSimulationOutcome,
+  SaveSimulationRunCommandResult,
+  SaveSimulationRunDto,
+  SimulationHistoryListOptions,
+} from "./simulationPersistenceModels";

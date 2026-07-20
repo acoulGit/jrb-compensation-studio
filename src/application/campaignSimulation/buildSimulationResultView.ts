@@ -39,15 +39,6 @@ function mapExplanationSteps(
   }));
 }
 
-function formatEvaluationFactor(
-  employee: EmployeeCompensationCalculationResult,
-): string {
-  return formatExactWeight({
-    numerator: BigInt(employee.evaluationFactorNumerator),
-    denominator: BigInt(employee.evaluationFactorScale),
-  });
-}
-
 function mapEmployee(
   employee: EmployeeCompensationCalculationResult,
   labels: ReadonlyMap<string, string>,
@@ -57,6 +48,10 @@ function mapEmployee(
   const salary = BigInt(employee.salaryFcfa);
   const increase = BigInt(employee.finalRoundedIncreaseAmountFcfa);
   const displayName = labels.get(employee.employeeId) ?? null;
+  const evaluationFactor = {
+    numerator: BigInt(employee.evaluationFactorNumerator),
+    denominator: BigInt(employee.evaluationFactorScale),
+  };
   return {
     employeeId: employee.employeeId,
     employeeDisplayName: displayName,
@@ -73,13 +68,19 @@ function mapEmployee(
     evaluationMode: employee.evaluationMode,
     performanceLevel: employee.performanceLevel ?? null,
     potentialLevel: employee.potentialLevel ?? null,
-    evaluationFactorLabel: formatEvaluationFactor(employee),
+    evaluationFactor,
+    theoreticalMatrixWeight: employee.theoreticalMatrixWeight,
+    effectiveMatrixWeight: employee.effectiveMatrixWeight,
+    allocationWeight: employee.allocationWeight,
+    evaluationFactorLabel: formatExactWeight(evaluationFactor),
     theoreticalMatrixWeightLabel: formatExactWeight(
       employee.theoreticalMatrixWeight,
     ),
     effectiveMatrixWeightLabel: formatExactWeight(employee.effectiveMatrixWeight),
     allocationWeightLabel: formatExactWeight(employee.allocationWeight),
     blockingReason: employee.blockingReason ?? null,
+    theoreticalIncreaseRate: employee.theoreticalIncreaseRate,
+    theoreticalIncreaseAmount: employee.theoreticalIncreaseAmount,
     theoreticalIncreaseRateLabel: formatExactRateAsPercent(
       employee.theoreticalIncreaseRate,
     ),
@@ -87,6 +88,7 @@ function mapEmployee(
       employee.theoreticalIncreaseAmount,
     ),
     finalRoundedIncreaseAmountFcfa: increase,
+    individualRoundingDelta: employee.individualRoundingDelta,
     individualRoundingDeltaLabel: formatExactAmountAsFcfa(
       employee.individualRoundingDelta,
     ),

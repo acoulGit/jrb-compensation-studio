@@ -1,4 +1,4 @@
-# Schéma de base de données — Lots 1A, 1B et 1C
+# Schéma de base de données — Lots 1A à 2B-4A
 
 ## Emplacement logique
 
@@ -227,10 +227,38 @@ Index : unicité `(import_batch_id, employee_number COLLATE NOCASE)` ; index
 sur `campaign_id`, `import_batch_id`, `employee_number`, `job_family_id`,
 `grade_id`.
 
+### `compensation_simulation_runs` (Lot 2B-4A)
+
+Snapshot immuable d’une simulation réussie. Montants / fractions en **TEXT**
+décimal canonique (pas de `REAL`).
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| `campaign_id` | INTEGER | NOT NULL, FK → `campaigns(id)` |
+| `run_number` | INTEGER | NOT NULL, > 0, UNIQUE avec `campaign_id` |
+| `result_schema_version` | INTEGER | NOT NULL DEFAULT 1 |
+| `campaign_name` / `campaign_year` / `campaign_status_at_run` | TEXT/INT | snapshot campagne |
+| `evaluation_mode` | TEXT | CHECK modes 9-Box |
+| `source_import_batch_id` | INTEGER | FK → `hr_import_batches(id)` ON DELETE SET NULL |
+| `source_fingerprint` / `configuration_fingerprint` | TEXT | NOT NULL |
+| `budget_*_text` / `*_numerator_text` / `*_denominator_text` | TEXT | budget exact |
+| compteurs population | INTEGER | ≥ 0 |
+| `created_at` | TEXT | NOT NULL (UTC) |
+
+### `compensation_simulation_employee_results` (Lot 2B-4A)
+
+Lignes salariés du snapshot. FK `simulation_run_id` →
+`compensation_simulation_runs(id)` **ON DELETE CASCADE**.
+`UNIQUE(simulation_run_id, employee_id)`. Fractions et montants en TEXT.
+`explanation_steps_json` TEXT DEFAULT `'[]'`.
+
 ## Index
 
 - `ux_campaigns_one_active` : index unique partiel sur `status` lorsque
   `status = 'active'`, garantissant une seule campagne active.
+- Index Lot 2B-4A : `campaign_id`, `(campaign_id, created_at)`,
+  `source_import_batch_id`, `simulation_run_id`, `employee_id`.
 
 ## Règles de suppression
 
@@ -238,14 +266,14 @@ Aucune suppression physique des campagnes. L’archivage est une suppression
 logique (`status = archived`, `archived_at` renseigné). La restauration remet
 le statut à `draft` et `archived_at` à NULL.
 
-## Données absentes de ce lot
+Les simulations enregistrées sont **append-only** (pas d’UPDATE / DELETE métier
+dans le Lot 2B-4A).
 
-- aucun budget calculé ;
-- aucune simulation ;
-- aucun résultat de calcul individuel (éligibilité, proposition, consommation).
+## Données absentes de ce sous-lot UI
 
-Les référentiels de rémunération (Lot 1B) et la population importée (Lot 1C)
-sont persistés ; ils ne produisent ni montants calculés ni scénarios.
+- aucune interface Historique (reportée au Lot 2B-4B) ;
+- aucun export de simulation ;
+- aucune édition manuelle des lignes enregistrées.
 
 ## Stratégie de migrations
 
@@ -259,18 +287,8 @@ Le préchargement est déclaré dans `tauri.conf.json` (`plugins.sql.preload`).
 | 1 | `0001_initial_persistence.sql` | `organization_profile`, `campaigns` |
 | 2 | `0002_compensation_references.sql` | huit tables `campaign_reference_*` et seed idempotent |
 | 3 | `0003_hr_import.sql` | tables `hr_import_batches`, `hr_import_employees` |
+| 4 | `0004_compensation_calculation.sql` | `nine_box_orientation` + index sémantique 9-Box |
+| 5 | `0005_campaign_simulations.sql` | snapshots de simulations immuables |
 
-La migration `0002` active `PRAGMA foreign_keys = ON`, crée les huit tables
-Lot 1B, puis initialise toutes les campagnes déjà présentes via
-`INSERT OR IGNORE` (config, familles, grades, grille S0 à `NULL`, positions,
-facteurs Performance / Potentiel / 9-Box). Les valeurs déjà configurées ne sont
-pas écrasées lors d’une réapplication.
-
-La migration `0003` crée les tables d’import RH, l’index unique partiel garantissant
-un seul lot `current` par campagne, et les contraintes CHECK sur formats,
-statuts de lot, types de contrat, statuts d’emploi et montants FCFA entiers.
-Aucune donnée seed : les lots apparaissent uniquement après confirmation d’import
-dans l’application.
-
-Évolution : ajouter un fichier `0004_....sql`, une constante associée et une
+Évolution : ajouter un fichier `0006_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.

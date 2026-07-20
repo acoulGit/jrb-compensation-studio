@@ -325,7 +325,17 @@ alertes budgétaires restent à produire dans des lots ultérieurs.
 | `runSequence` | Compteur local de session par campagne |
 | `CampaignSimulationExecutionState` | idle/running/success/error/stale |
 
-Voir `docs/CAMPAIGN_SIMULATION.md`.
+### Lot 2B-4A (persisté — append-only)
+
+| Concept | Nature |
+| --- | --- |
+| `compensation_simulation_runs` | Snapshot run (empreintes, budget, synthèse) |
+| `compensation_simulation_employee_results` | Lignes salariés immuables |
+| `SaveSimulationRunDto` | DTO sans BigInt JS (chaînes) |
+| `PersistedSimulationRunSummary` / `Detail` | Modèles de lecture |
+| `run_number` | Séquence durable par campagne |
+
+Voir `docs/SIMULATION_PERSISTENCE.md` et `docs/CAMPAIGN_SIMULATION.md`.
 
 ## Décisions RH
 
