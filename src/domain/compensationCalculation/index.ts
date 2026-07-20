@@ -26,6 +26,20 @@ export {
   RESULT_SCHEMA_VERSION_LEGACY,
 } from "./calculationContract";
 export { calculatePreparedPopulationCompensation } from "./calculatePreparedPopulationCompensation";
+export {
+  CAMPAIGN_YEAR_MAX,
+  CAMPAIGN_YEAR_MIN,
+  TECHNICAL_APPLICATION_MONTH_LABELS_FR,
+  TECHNICAL_APPLICATION_MONTH_MAX,
+  TECHNICAL_APPLICATION_MONTH_MIN,
+  computeBaseSalaryReminderBreakdown,
+  technicalApplicationMonthLabelFr,
+  validateApplicationCalendar,
+  validateCampaignYear,
+  validateTechnicalApplicationMonth,
+  type ApplicationCalendarInput,
+  type BaseSalaryReminderBreakdown,
+} from "./baseSalaryReminder";
 export { calculatePopulationBudgetAllocation } from "./calculatePopulationBudgetAllocation";
 export {
   CompensationCalculationError,

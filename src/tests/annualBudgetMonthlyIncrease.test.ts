@@ -103,6 +103,8 @@ function buildRecipeInput(): PreparedPopulationCalculationInput {
       mode: "nearest_half_up",
       stepFcfa: 5,
     },
+    campaignYear: 2026,
+    technicalApplicationMonth: 1,
   };
 }
 
@@ -227,6 +229,8 @@ describe("Lot 2A-H1 — budget annuel / augmentation mensuelle", () => {
         budgetRateBasisPoints: 400,
       },
       roundingPolicy: { mode: "nearest_half_up", stepFcfa: 1 },
+      campaignYear: 2026,
+      technicalApplicationMonth: 1,
     });
 
     expect(result.budgetTargetResult.exactAmount).toEqual({
@@ -267,6 +271,8 @@ describe("Lot 2A-H1 — budget annuel / augmentation mensuelle", () => {
       },
       budgetTarget: { mode: "manual_amount", manualBudgetFcfa: 12_000 },
       roundingPolicy: { mode: "nearest_half_up", stepFcfa: 1 },
+      campaignYear: 2026,
+      technicalApplicationMonth: 1,
     });
     expect(result.employees[0].salaryRatioBasisPoints).toBe(10_000);
     expect(result.employees[0].s0Fcfa).toBe(500_000n);

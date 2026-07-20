@@ -206,6 +206,71 @@ export function parseRoundingStepFcfa(
   return { ok: true, value };
 }
 
+/**
+ * Parse une année de campagne (entier 4 chiffres, plage raisonnable).
+ * Déterministe : aucune dépendance à Date.now().
+ */
+export function parseCampaignYearInput(
+  raw: string | null | undefined,
+): ParseResult<number> {
+  if (raw === null || raw === undefined || raw.trim() === "") {
+    return {
+      ok: false,
+      code: "MISSING_CAMPAIGN_YEAR",
+      message: "L’année de campagne est obligatoire.",
+    };
+  }
+  const compact = stripAllowedSpaces(raw.trim());
+  if (!/^\d{4}$/.test(compact)) {
+    return {
+      ok: false,
+      code: "INVALID_CAMPAIGN_YEAR",
+      message: "L’année de campagne doit être un entier sur 4 chiffres.",
+    };
+  }
+  const value = Number(compact);
+  if (!Number.isInteger(value) || value < 2000 || value > 2100) {
+    return {
+      ok: false,
+      code: "INVALID_CAMPAIGN_YEAR",
+      message: "L’année de campagne doit être comprise entre 2000 et 2100.",
+    };
+  }
+  return { ok: true, value };
+}
+
+/** Parse le mois d’application technique (1 = janvier … 12 = décembre). */
+export function parseTechnicalApplicationMonthInput(
+  raw: string | null | undefined,
+): ParseResult<number> {
+  if (raw === null || raw === undefined || raw.trim() === "") {
+    return {
+      ok: false,
+      code: "MISSING_TECHNICAL_APPLICATION_MONTH",
+      message: "Le mois d’application technique est obligatoire.",
+    };
+  }
+  const compact = stripAllowedSpaces(raw.trim());
+  if (!/^\d{1,2}$/.test(compact)) {
+    return {
+      ok: false,
+      code: "INVALID_TECHNICAL_APPLICATION_MONTH",
+      message:
+        "Le mois d’application technique doit être un entier entre 1 et 12.",
+    };
+  }
+  const value = Number(compact);
+  if (!Number.isInteger(value) || value < 1 || value > 12) {
+    return {
+      ok: false,
+      code: "INVALID_TECHNICAL_APPLICATION_MONTH",
+      message:
+        "Le mois d’application technique doit être un entier entre 1 et 12.",
+    };
+  }
+  return { ok: true, value };
+}
+
 export type BudgetTargetModeChoice =
   | "manual_amount"
   | "percentage_of_eligible_payroll";
@@ -217,11 +282,17 @@ export interface SimulationConfigurationDraftFields {
   budgetRatePercentInput: string;
   roundingMode: "nearest_half_up" | null;
   roundingStepInput: string;
+  /** Année de campagne (saisie UI — jamais Date.now() côté moteur). */
+  campaignYearInput: string;
+  /** Mois d’application technique 1–12 (saisie UI). */
+  technicalApplicationMonthInput: string;
 }
 
 export interface ParsedSimulationConfiguration {
   budgetTarget: BudgetTargetInput | null;
   roundingPolicy: RoundingPolicy | null;
+  campaignYear: number | null;
+  technicalApplicationMonth: number | null;
   fieldErrors: Partial<
     Record<
       | "budgetTargetMode"
@@ -229,12 +300,15 @@ export interface ParsedSimulationConfiguration {
       | "eligiblePayrollInput"
       | "budgetRatePercentInput"
       | "roundingMode"
-      | "roundingStepInput",
+      | "roundingStepInput"
+      | "campaignYearInput"
+      | "technicalApplicationMonthInput",
       ParseFailure
     >
   >;
   isBudgetComplete: boolean;
   isRoundingComplete: boolean;
+  isApplicationCalendarComplete: boolean;
   isConfigurationComplete: boolean;
 }
 
@@ -322,12 +396,40 @@ export function parseSimulationConfigurationDraft(
     isRoundingComplete = true;
   }
 
+  let campaignYear: number | null = null;
+  let technicalApplicationMonth: number | null = null;
+  let isApplicationCalendarComplete = false;
+
+  const year = parseCampaignYearInput(draft.campaignYearInput);
+  if (!year.ok) {
+    fieldErrors.campaignYearInput = year;
+  } else {
+    campaignYear = year.value;
+  }
+
+  const month = parseTechnicalApplicationMonthInput(
+    draft.technicalApplicationMonthInput,
+  );
+  if (!month.ok) {
+    fieldErrors.technicalApplicationMonthInput = month;
+  } else {
+    technicalApplicationMonth = month.value;
+  }
+
+  if (campaignYear !== null && technicalApplicationMonth !== null) {
+    isApplicationCalendarComplete = true;
+  }
+
   return {
     budgetTarget,
     roundingPolicy,
+    campaignYear,
+    technicalApplicationMonth,
     fieldErrors,
     isBudgetComplete,
     isRoundingComplete,
-    isConfigurationComplete: isBudgetComplete && isRoundingComplete,
+    isApplicationCalendarComplete,
+    isConfigurationComplete:
+      isBudgetComplete && isRoundingComplete && isApplicationCalendarComplete,
   };
 }

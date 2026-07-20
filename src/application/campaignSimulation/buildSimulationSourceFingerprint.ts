@@ -32,6 +32,8 @@ export interface SimulationSourceFingerprintInput {
   preparedReferences: PopulationCalculationReferences | null;
   budgetTarget: BudgetTargetInput;
   roundingPolicy: RoundingPolicy;
+  campaignYear: number;
+  technicalApplicationMonth: number;
 }
 
 /**
@@ -104,6 +106,8 @@ export function buildSimulationSourceFingerprint(
         : undefined,
     roundingMode: input.roundingPolicy.mode,
     roundingStep: BigInt(input.roundingPolicy.stepFcfa),
+    campaignYear: input.campaignYear,
+    technicalApplicationMonth: input.technicalApplicationMonth,
   });
 
   const canonical = [

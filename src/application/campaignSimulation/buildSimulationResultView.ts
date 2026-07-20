@@ -102,6 +102,14 @@ function mapEmployee(
       employee.annualRoundingDelta,
     ),
     monthlyFinalSalaryFcfa: employee.monthlyFinalSalaryFcfa,
+    campaignYear: employee.campaignYear,
+    technicalApplicationMonth: employee.technicalApplicationMonth,
+    retroactiveMonths: employee.retroactiveMonths,
+    remainingDirectPaymentMonths: employee.remainingDirectPaymentMonths,
+    baseSalaryReminderFcfa: employee.baseSalaryReminderFcfa,
+    remainingYearDirectIncreaseCostFcfa:
+      employee.remainingYearDirectIncreaseCostFcfa,
+    annualActualBaseIncreaseCostFcfa: employee.annualActualBaseIncreaseCostFcfa,
     explanationSteps: mapExplanationSteps(employee.explanationSteps),
   };
 }
@@ -171,6 +179,13 @@ export function buildSimulationResultView(input: {
     annualTotalRoundingDelta: summary.annualTotalRoundingDelta,
     isTheoreticalBudgetExactlyAllocated:
       summary.isTheoreticalBudgetExactlyAllocated,
+    campaignYear: summary.campaignYear,
+    technicalApplicationMonth: summary.technicalApplicationMonth,
+    totalBaseSalaryReminderFcfa: summary.totalBaseSalaryReminderFcfa,
+    totalRemainingYearDirectIncreaseCostFcfa:
+      summary.totalRemainingYearDirectIncreaseCostFcfa,
+    totalAnnualActualBaseIncreaseCostFcfa:
+      summary.totalAnnualActualBaseIncreaseCostFcfa,
   };
 
   const familyLabels = input.familyLabelsByCode ?? new Map<string, string>();
@@ -189,6 +204,7 @@ export function buildSimulationResultView(input: {
     campaignId: input.campaignId,
     campaignName: input.campaignName,
     campaignYear: input.campaignYear,
+    technicalApplicationMonth: engineResult.technicalApplicationMonth,
     campaignStatus: input.campaignStatus,
     evaluationMode: input.evaluationMode,
     currentImportBatchId: input.currentImportBatchId,

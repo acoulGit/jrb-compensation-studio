@@ -140,6 +140,8 @@ export async function saveCurrentCampaignSimulation(
     preparedReferences: readiness.preparedReferences,
     budgetTarget: validatedConfiguration.budgetTarget,
     roundingPolicy: validatedConfiguration.roundingPolicy,
+    campaignYear: validatedConfiguration.campaignYear,
+    technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
   });
 
   if (currentFingerprint !== result.sourceFingerprint) {

@@ -127,6 +127,38 @@ export function validatePreparedPopulationCalculationInput(
     );
   }
 
+  if (
+    !Number.isInteger(input.campaignYear) ||
+    input.campaignYear < 2000 ||
+    input.campaignYear > 2100
+  ) {
+    issues.push(
+      issue({
+        code: "INVALID_CAMPAIGN_YEAR",
+        message:
+          "L’année de campagne doit être un entier entre 2000 et 2100.",
+        field: "campaignYear",
+        step: "validate_input",
+      }),
+    );
+  }
+
+  if (
+    !Number.isInteger(input.technicalApplicationMonth) ||
+    input.technicalApplicationMonth < 1 ||
+    input.technicalApplicationMonth > 12
+  ) {
+    issues.push(
+      issue({
+        code: "INVALID_TECHNICAL_APPLICATION_MONTH",
+        message:
+          "Le mois d’application technique doit être un entier entre 1 et 12.",
+        field: "technicalApplicationMonth",
+        step: "validate_input",
+      }),
+    );
+  }
+
   const seenIds = new Set<string>();
   for (const employee of input.employees ?? []) {
     if (

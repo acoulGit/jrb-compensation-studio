@@ -606,3 +606,32 @@ Limiter l’affichage UI des taux et montants théoriques à 2 décimales
 
 - `pnpm test` / `pnpm build` / cargo / migrations inchangées
 - stash intact ; aucun commit
+
+## 2026-07-20 — Lot 2A-H2A : calendrier d’application et rappel
+
+### Objectif
+
+Ajouter mois d’application technique, effet rétroactif au 1er janvier,
+rappel de salaire de base et ventilation du coût annuel (rappel vs paiement
+direct), sans anticiper H2B (ancienneté / charges).
+
+### Livrables
+
+- Domaine `baseSalaryReminder.ts` + champs salarié / population
+- Config UI : `campaignYear`, `technicalApplicationMonth` (liste FR)
+- Fingerprints étendus ; moteur sans `Date.now()`
+- Affichage synthèse / tableau / détail
+- Tests janvier / juillet / décembre / invariants / validations / fingerprint
+- Docs BUSINESS_RULES, CALCULATION_CONTRACT, CAMPAIGN_SIMULATION,
+  DATA_DICTIONARY, DEVELOPMENT_LOG
+- `result_schema_version` inchangé (= 2) ; pas de migration 0006
+- Persistance colonnes rappel : **différée** (mémoire d’abord)
+- Stash 2B-4B **non appliqué**
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0005 inchangées
+- stash intact ; aucun commit

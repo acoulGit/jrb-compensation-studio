@@ -75,6 +75,8 @@ interface SimulationConfigurationContextValue {
   setBudgetRatePercentInput: (value: string) => void;
   setRoundingStepInput: (value: string) => void;
   applyRoundingStepSuggestion: (value: string) => void;
+  setCampaignYearInput: (value: string) => void;
+  setTechnicalApplicationMonthInput: (value: string) => void;
   validateConfiguration: () => Promise<boolean>;
   refreshReadiness: () => Promise<void>;
   /** Marque le snapshot validé de la campagne courante comme stale. */
@@ -153,9 +155,11 @@ export function SimulationConfigurationProvider({
     if (selectedCampaignId === null) return null;
     return (
       draftsByCampaignId[selectedCampaignId] ??
-      createEmptyConfigurationDraft(selectedCampaignId)
+      createEmptyConfigurationDraft(selectedCampaignId, {
+        campaignYear: selectedCampaign?.referenceYear,
+      })
     );
-  }, [draftsByCampaignId, selectedCampaignId]);
+  }, [draftsByCampaignId, selectedCampaign?.referenceYear, selectedCampaignId]);
 
   const parsed = useMemo(
     () => (draft ? parseSimulationConfigurationDraft(draft) : null),
@@ -172,15 +176,21 @@ export function SimulationConfigurationProvider({
       ? (validationStatusByCampaignId[selectedCampaignId] ?? "none")
       : "none";
 
-  const ensureDraft = useCallback((campaignId: number) => {
-    setDraftsByCampaignId((prev) => {
-      if (prev[campaignId]) return prev;
-      return {
-        ...prev,
-        [campaignId]: createEmptyConfigurationDraft(campaignId),
-      };
-    });
-  }, []);
+  const ensureDraft = useCallback(
+    (campaignId: number) => {
+      const campaign = campaigns.find((item) => item.id === campaignId);
+      setDraftsByCampaignId((prev) => {
+        if (prev[campaignId]) return prev;
+        return {
+          ...prev,
+          [campaignId]: createEmptyConfigurationDraft(campaignId, {
+            campaignYear: campaign?.referenceYear,
+          }),
+        };
+      });
+    },
+    [campaigns],
+  );
 
   useEffect(() => {
     if (appStatus !== "ready") return;
@@ -216,7 +226,9 @@ export function SimulationConfigurationProvider({
       setDraftsByCampaignId((prev) => {
         const current =
           prev[selectedCampaignId] ??
-          createEmptyConfigurationDraft(selectedCampaignId);
+          createEmptyConfigurationDraft(selectedCampaignId, {
+            campaignYear: selectedCampaign?.referenceYear,
+          });
         return {
           ...prev,
           [selectedCampaignId]: updater(cloneDraft(current)),
@@ -229,7 +241,7 @@ export function SimulationConfigurationProvider({
         return prev;
       });
     },
-    [selectedCampaignId],
+    [selectedCampaign?.referenceYear, selectedCampaignId],
   );
 
   const setBudgetTargetMode = useCallback(
@@ -281,6 +293,23 @@ export function SimulationConfigurationProvider({
     [setRoundingStepInput],
   );
 
+  const setCampaignYearInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({ ...current, campaignYearInput: value }));
+    },
+    [patchDraft],
+  );
+
+  const setTechnicalApplicationMonthInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({
+        ...current,
+        technicalApplicationMonthInput: value,
+      }));
+    },
+    [patchDraft],
+  );
+
   const draftFingerprint = draft
     ? [
         draft.campaignId,
@@ -290,6 +319,8 @@ export function SimulationConfigurationProvider({
         draft.budgetRatePercentInput,
         draft.roundingMode ?? "",
         draft.roundingStepInput,
+        draft.campaignYearInput,
+        draft.technicalApplicationMonthInput,
       ].join("|")
     : "";
 
@@ -319,7 +350,9 @@ export function SimulationConfigurationProvider({
     try {
       const currentDraft =
         draftsByCampaignId[selectedCampaignId] ??
-        createEmptyConfigurationDraft(selectedCampaignId);
+        createEmptyConfigurationDraft(selectedCampaignId, {
+          campaignYear: selectedCampaign?.referenceYear,
+        });
       const currentParsed = parseSimulationConfigurationDraft(currentDraft);
       const ports = createCampaignSimulationReadinessPortsFromServices(services);
       const report = await buildCampaignSimulationReadiness(
@@ -348,7 +381,7 @@ export function SimulationConfigurationProvider({
         ),
       );
     }
-  }, [draftsByCampaignId, selectedCampaignId, services]);
+  }, [draftsByCampaignId, selectedCampaign?.referenceYear, selectedCampaignId, services]);
 
   useEffect(() => {
     if (selectedCampaignId === null) {
@@ -383,6 +416,8 @@ export function SimulationConfigurationProvider({
       preparedReferences: readinessReport.preparedReferences,
       budgetTarget: validatedConfiguration.budgetTarget,
       roundingPolicy: validatedConfiguration.roundingPolicy,
+      campaignYear: validatedConfiguration.campaignYear,
+      technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
     });
 
     if (currentFingerprint !== validatedConfiguration.sourceFingerprint) {
@@ -445,9 +480,17 @@ export function SimulationConfigurationProvider({
     await refreshReadiness();
     const currentDraft =
       draftsByCampaignId[selectedCampaignId] ??
-      createEmptyConfigurationDraft(selectedCampaignId);
+      createEmptyConfigurationDraft(selectedCampaignId, {
+        campaignYear: selectedCampaign.referenceYear,
+      });
     const currentParsed = parseSimulationConfigurationDraft(currentDraft);
-    if (!currentParsed.isConfigurationComplete || !currentParsed.budgetTarget || !currentParsed.roundingPolicy) {
+    if (
+      !currentParsed.isConfigurationComplete ||
+      !currentParsed.budgetTarget ||
+      !currentParsed.roundingPolicy ||
+      currentParsed.campaignYear === null ||
+      currentParsed.technicalApplicationMonth === null
+    ) {
       return false;
     }
 
@@ -486,6 +529,8 @@ export function SimulationConfigurationProvider({
           : undefined,
       roundingMode: currentParsed.roundingPolicy.mode,
       roundingStep: BigInt(currentParsed.roundingPolicy.stepFcfa),
+      campaignYear: currentParsed.campaignYear,
+      technicalApplicationMonth: currentParsed.technicalApplicationMonth,
     });
     const sourceFingerprint = buildSimulationSourceFingerprint({
       campaignId: selectedCampaignId,
@@ -496,12 +541,16 @@ export function SimulationConfigurationProvider({
       preparedReferences: report.preparedReferences,
       budgetTarget: currentParsed.budgetTarget,
       roundingPolicy: currentParsed.roundingPolicy,
+      campaignYear: currentParsed.campaignYear,
+      technicalApplicationMonth: currentParsed.technicalApplicationMonth,
     });
 
     const snapshot: ValidatedCampaignSimulationConfiguration = {
       campaignId: selectedCampaignId,
       budgetTarget: currentParsed.budgetTarget,
       roundingPolicy: currentParsed.roundingPolicy,
+      campaignYear: currentParsed.campaignYear,
+      technicalApplicationMonth: currentParsed.technicalApplicationMonth,
       readinessReport: report,
       validatedAtSessionSequence: nextSequence,
       configurationFingerprint: fingerprint,
@@ -559,6 +608,8 @@ export function SimulationConfigurationProvider({
       setBudgetRatePercentInput,
       setRoundingStepInput,
       applyRoundingStepSuggestion,
+      setCampaignYearInput,
+      setTechnicalApplicationMonthInput,
       validateConfiguration,
       refreshReadiness,
       markValidationStale,
@@ -581,9 +632,11 @@ export function SimulationConfigurationProvider({
       selectedCampaignId,
       setBudgetRatePercentInput,
       setBudgetTargetMode,
+      setCampaignYearInput,
       setEligiblePayrollInput,
       setManualBudgetInput,
       setRoundingStepInput,
+      setTechnicalApplicationMonthInput,
       validateConfiguration,
       validatedConfiguration,
       validationStatus,

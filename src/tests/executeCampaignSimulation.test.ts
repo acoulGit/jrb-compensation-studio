@@ -274,6 +274,8 @@ async function buildValidated(options?: {
     preparedReferences: references,
     budgetTarget,
     roundingPolicy,
+    campaignYear: 2027,
+    technicalApplicationMonth: 1,
   });
 
   const configurationFingerprint = buildConfigurationFingerprint({
@@ -293,12 +295,16 @@ async function buildValidated(options?: {
         : undefined,
     roundingMode: roundingPolicy.mode,
     roundingStep: BigInt(roundingPolicy.stepFcfa),
+    campaignYear: 2027,
+    technicalApplicationMonth: 1,
   });
 
   const validated: ValidatedCampaignSimulationConfiguration = {
     campaignId: campaign?.id ?? 1,
     budgetTarget,
     roundingPolicy,
+    campaignYear: 2027,
+    technicalApplicationMonth: 1,
     readinessReport: await readinessModule.buildCampaignSimulationReadiness(
       { campaignId: campaign?.id ?? 1 },
       ports,

@@ -54,6 +54,11 @@ export interface SimulationPopulationSummaryView {
   annualActualOperationCostFcfa: bigint;
   annualTotalRoundingDelta: ExactAmount;
   isTheoreticalBudgetExactlyAllocated: boolean;
+  campaignYear: number;
+  technicalApplicationMonth: number;
+  totalBaseSalaryReminderFcfa: bigint;
+  totalRemainingYearDirectIncreaseCostFcfa: bigint;
+  totalAnnualActualBaseIncreaseCostFcfa: bigint;
 }
 
 export interface EmployeeSimulationResultView {
@@ -104,6 +109,13 @@ export interface EmployeeSimulationResultView {
   annualRoundingDeltaLabel: string;
   /** Nouveau salaire mensuel. */
   monthlyFinalSalaryFcfa: bigint;
+  campaignYear: number;
+  technicalApplicationMonth: number;
+  retroactiveMonths: number;
+  remainingDirectPaymentMonths: number;
+  baseSalaryReminderFcfa: bigint;
+  remainingYearDirectIncreaseCostFcfa: bigint;
+  annualActualBaseIncreaseCostFcfa: bigint;
   explanationSteps: readonly {
     step: string;
     formula?: string;
@@ -115,6 +127,7 @@ export interface CampaignSimulationExecutionResult {
   campaignId: number;
   campaignName: string | null;
   campaignYear: number | null;
+  technicalApplicationMonth: number | null;
   campaignStatus: CampaignStatus | "unknown";
   evaluationMode: NineBoxMode;
   currentImportBatchId: number | null;

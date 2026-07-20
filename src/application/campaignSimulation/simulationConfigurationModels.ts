@@ -24,6 +24,10 @@ export interface ValidatedCampaignSimulationConfiguration {
   campaignId: number;
   budgetTarget: BudgetTargetInput;
   roundingPolicy: RoundingPolicy;
+  /** Année de campagne explicite (déterministe). */
+  campaignYear: number;
+  /** Mois d’application technique (1–12). */
+  technicalApplicationMonth: number;
   readinessReport: CampaignSimulationReadinessReport;
   /** Compteur de session (non temporel) incrémenté à chaque validation. */
   validatedAtSessionSequence: number;
@@ -32,9 +36,15 @@ export interface ValidatedCampaignSimulationConfiguration {
   sourceFingerprint: string;
 }
 
+/**
+ * Brouillon vide. L’année courante n’est utilisée qu’ici (UI), jamais dans le moteur.
+ */
 export function createEmptyConfigurationDraft(
   campaignId: number,
+  options?: { campaignYear?: number },
 ): CampaignSimulationConfigurationDraft {
+  const uiDefaultYear =
+    options?.campaignYear ?? new Date().getFullYear();
   return {
     campaignId,
     budgetTargetMode: null,
@@ -43,6 +53,8 @@ export function createEmptyConfigurationDraft(
     budgetRatePercentInput: "",
     roundingMode: "nearest_half_up",
     roundingStepInput: "",
+    campaignYearInput: String(uiDefaultYear),
+    technicalApplicationMonthInput: "1",
   };
 }
 

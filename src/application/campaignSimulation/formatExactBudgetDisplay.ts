@@ -166,6 +166,10 @@ export function buildConfigurationFingerprint(parts: {
   calculationContractVersion?: number;
   annualBudgetPeriodMonths?: bigint;
   employerChargesIncluded?: boolean;
+  /** Année de campagne explicite (Lot 2A-H2A). */
+  campaignYear?: number;
+  /** Mois d’application technique 1–12 (Lot 2A-H2A). */
+  technicalApplicationMonth?: number;
 }): string {
   return [
     `contract:v${parts.calculationContractVersion ?? 2}`,
@@ -178,5 +182,7 @@ export function buildConfigurationFingerprint(parts: {
     parts.budgetRateBps?.toString() ?? "",
     parts.roundingMode,
     parts.roundingStep.toString(),
+    `year:${parts.campaignYear ?? ""}`,
+    `appMonth:${parts.technicalApplicationMonth ?? ""}`,
   ].join("|");
 }

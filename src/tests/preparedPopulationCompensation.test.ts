@@ -120,6 +120,8 @@ function buildInput(
       mode: "nearest_half_up",
       stepFcfa: 100,
     },
+    campaignYear: overrides.campaignYear ?? 2026,
+    technicalApplicationMonth: overrides.technicalApplicationMonth ?? 1,
   };
 }
 

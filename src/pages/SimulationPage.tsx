@@ -10,6 +10,7 @@ import { useHrImport } from "../app/HrImportProvider";
 import { useSimulationConfiguration } from "../app/SimulationConfigurationProvider";
 import { useSimulationExecution } from "../app/SimulationExecutionProvider";
 import { ROUNDING_STEP_SUGGESTIONS } from "../application/campaignSimulation/simulationConfigurationModels";
+import { TECHNICAL_APPLICATION_MONTH_LABELS_FR } from "../domain/compensationCalculation";
 import type { CampaignSimulationReadinessIssue } from "../application/campaignSimulation/campaignSimulationModels";
 import type { ReadinessScope } from "../application/campaignSimulation/campaignSimulationCodes";
 import { nineBoxModeLabel } from "../domain/compensationReference/conversions";
@@ -104,6 +105,8 @@ export function SimulationPage() {
     setBudgetRatePercentInput,
     setRoundingStepInput,
     applyRoundingStepSuggestion,
+    setCampaignYearInput,
+    setTechnicalApplicationMonthInput,
     validateConfiguration,
     refreshReadiness,
   } = useSimulationConfiguration();
@@ -498,6 +501,68 @@ export function SimulationPage() {
               })
             )}
           </div>
+        ) : null}
+      </SectionCard>
+
+      <SectionCard title="Calendrier d’application">
+        <p className="form-help">
+          L’effet financier commence au 1<sup>er</sup> janvier de l’année de
+          campagne. Le rappel de salaire de base est un décalage de paiement, pas
+          un coût additionnel au budget annuel.
+        </p>
+        <div className="form-grid">
+          <label
+            className="field field--full"
+            htmlFor="simulation-campaign-year"
+          >
+            Année de campagne
+            <input
+              id="simulation-campaign-year"
+              data-testid="simulation-campaign-year"
+              inputMode="numeric"
+              autoComplete="off"
+              disabled={isReadOnly}
+              value={draft.campaignYearInput}
+              aria-invalid={Boolean(parsed?.fieldErrors.campaignYearInput)}
+              onChange={(event) => {
+                setCampaignYearInput(event.target.value);
+              }}
+            />
+          </label>
+          <label
+            className="field field--full"
+            htmlFor="simulation-technical-application-month"
+          >
+            Mois d’application technique
+            <select
+              id="simulation-technical-application-month"
+              data-testid="simulation-technical-application-month"
+              disabled={isReadOnly}
+              value={draft.technicalApplicationMonthInput}
+              aria-invalid={Boolean(
+                parsed?.fieldErrors.technicalApplicationMonthInput,
+              )}
+              onChange={(event) => {
+                setTechnicalApplicationMonthInput(event.target.value);
+              }}
+            >
+              {TECHNICAL_APPLICATION_MONTH_LABELS_FR.map((label, index) => (
+                <option key={label} value={String(index + 1)}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {parsed?.fieldErrors.campaignYearInput ? (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {parsed.fieldErrors.campaignYearInput.message}
+          </p>
+        ) : null}
+        {parsed?.fieldErrors.technicalApplicationMonthInput ? (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {parsed.fieldErrors.technicalApplicationMonthInput.message}
+          </p>
         ) : null}
       </SectionCard>
 

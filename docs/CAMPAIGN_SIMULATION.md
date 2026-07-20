@@ -53,16 +53,17 @@ Le Lot **2B-3** l’appelle **uniquement** après un clic explicite
 - un **snapshot validé** immuable par campagne (invalidé dès modification
   de brouillon ou d’empreinte des sources) ;
 - `configurationFingerprint` + `sourceFingerprint` au moment de la validation ;
+- champs calendrier (2A-H2A) : `campaignYear`, `technicalApplicationMonth` ;
 - aucun `localStorage`, `sessionStorage`, SQLite, AppData ni fichier.
 
-### Empreinte des sources (Lot 2B-3)
+### Empreinte des sources (Lot 2B-3 / H2A)
 
-`buildSimulationSourceFingerprint` couvre au minimum : campaignId, statut,
-mode d’évaluation, lot RH courant, population préparée (salaire, famille,
-grade, Performance/Potentiel, sous-performant), référentiels (S0, positions,
-facteurs), budget et arrondi. Hash FNV-1a déterministe sans dépendance externe.
-Les salaires ne sont pas journalisés en clair hors de la chaîne canonique
-interne.
+`buildSimulationSourceFingerprint` / `buildConfigurationFingerprint` couvrent
+au minimum : campaignId, statut, mode d’évaluation, lot RH courant, population
+préparée (salaire, famille, grade, Performance/Potentiel, sous-performant),
+référentiels (S0, positions, facteurs), budget, arrondi, **`campaignYear`**,
+**`technicalApplicationMonth`**. Hash FNV-1a déterministe sans dépendance
+externe. Deux mois d’application distincts ⇒ fingerprints distincts.
 
 Si les sources changent après validation :
 
@@ -115,13 +116,15 @@ Un `staleResult` peut rester en mémoire pour diagnostic uniquement.
 
 - Synthèse : budget **annuel** cible, allocation théorique annuelle,
   augmentation mensuelle théorique totale, coût **annuel** réel, écart **annuel**
-  d’arrondi (signe conservé), compteurs population.
+  d’arrondi (signe conservé), compteurs population, **mois d’application
+  technique**, **rappel total**, **coût direct reste d’année** (2A-H2A).
 - Tableau : matricule, nom, famille/grade, salaire/S0 **mensuels**, position,
   évaluation, taux mensuel, allocation annuelle, augmentations mensuelles,
-  nouveau salaire mensuel, coût annuel réel.
+  mois de rappel, rappel, mois restants, coût direct, nouveau salaire mensuel,
+  coût annuel réel.
 - Recherche matricule/nom, tri `employeeId`, pagination 25/50/100.
 - Détail drawer : facteurs, poids, allocation annuelle, mensuel théorique /
-  final, écarts mensuel et annuel, étapes d’explication.
+  final, calendrier / rappel, écarts mensuel et annuel, étapes d’explication.
 
 ### Campagne archivée
 

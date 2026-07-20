@@ -141,7 +141,9 @@ Fonction pure `calculatePreparedPopulationCompensation` :
 6. allouer les parts **annuelles** exactes ;
 7. convertir en augmentation **mensuelle** (`÷ 12`) ;
 8. arrondir uniquement l’augmentation mensuelle ;
-9. coût annuel réel = Σ (mensuel arrondi × 12).
+9. coût annuel réel = Σ (mensuel arrondi × 12) ;
+10. ventiler le coût annuel (rappel vs paiement direct) selon le mois
+    d’application technique (2A-H2A) — sans modifier l’allocation.
 
 ## Correctif 2A-H1 — budget annuel / augmentation mensuelle
 
@@ -161,6 +163,27 @@ Fonction pure `calculatePreparedPopulationCompensation` :
 
 Équivalence : `annualRoundingDelta = monthlyRoundingDelta × 12`.
 
+## Lot 2A-H2A — calendrier d’application / rappel
+
+Champs obligatoires d’entrée population : `campaignYear`,
+`technicalApplicationMonth` (1–12).
+
+| Concept | Formule / règle |
+| --- | --- |
+| Mois de rappel | `technicalApplicationMonth - 1` (0–11) |
+| Mois restants | `13 - technicalApplicationMonth` (1–12) |
+| Rappel salaire de base | `monthlyFinalIncrease × retroactiveMonths` |
+| Coût direct reste d’année | `monthlyFinalIncrease × remainingDirectPaymentMonths` |
+| Coût annuel base | `monthlyFinalIncrease × 12` (= `annualActualCostFcfa`) |
+
+Invariant salarié et population : `rappel + direct = annuel`.
+
+Le rappel **ne modifie pas** l’allocation annuelle ni le budget cible ; il
+ventile uniquement le calendrier de versement.
+
+**Persistance H2A** : modèles moteur / UI en mémoire ; colonnes snapshot 0005
+et `result_schema_version` **inchangés** (pas de migration 0006 dans ce lot).
+
 **Persistance** : `result_schema_version = 2` (colonnes 0005 réinterprétées ;
 pas de migration 0006). Version 1 = sémantique obsolète — ne pas recalculer ni
 présenter comme conforme H1.
@@ -170,7 +193,7 @@ Résultats salariés triés par `employeeId` (ordre lexicographique UTF-16, sans
 locale). Échec global `POPULATION_CALCULATION_FAILED` si une erreur bloquante.
 
 Hors périmètre : UI, persistance, éligibilité, ancienneté, promotion,
-correction, mesure sociale, export, scénarios.
+correction, mesure sociale, export, scénarios, TPA/CNSS/charges (H2B).
 
 ## Principes
 

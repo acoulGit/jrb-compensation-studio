@@ -61,6 +61,10 @@ export interface PreparedPopulationCalculationInput {
   references: PopulationCalculationReferences;
   budgetTarget: BudgetTargetInput;
   roundingPolicy: RoundingPolicy;
+  /** Année de campagne explicite (déterministe — jamais Date.now() dans le moteur). */
+  campaignYear: number;
+  /** Mois d’application technique (1 = janvier … 12 = décembre). */
+  technicalApplicationMonth: number;
 }
 
 export interface PopulationCalculationIssue {
@@ -146,6 +150,23 @@ export interface EmployeeCompensationCalculationResult {
   annualRoundingDelta: ExactAmount;
   /** Nouveau salaire mensuel = salaire mensuel + augmentation mensuelle finale. */
   monthlyFinalSalaryFcfa: bigint;
+  /** Année de campagne (calendrier d’application). */
+  campaignYear: number;
+  /** Mois d’application technique (1–12). */
+  technicalApplicationMonth: number;
+  /** Mois de rappel = technicalApplicationMonth - 1 (0–11). */
+  retroactiveMonths: number;
+  /** Mois restants payés directement = 13 - technicalApplicationMonth (1–12). */
+  remainingDirectPaymentMonths: number;
+  /** Rappel de salaire de base versé au mois d’application. */
+  baseSalaryReminderFcfa: bigint;
+  /** Coût des augmentations payées directement sur le reste de l’année. */
+  remainingYearDirectIncreaseCostFcfa: bigint;
+  /**
+   * Coût annuel réel de l’augmentation de base (= monthlyFinal × 12).
+   * Alias sémantique de annualActualCostFcfa (même valeur).
+   */
+  annualActualBaseIncreaseCostFcfa: bigint;
   blockingReason?: MatrixBlockingReason;
   explanationSteps: CalculationExplanationStep[];
 }
@@ -173,6 +194,11 @@ export interface PopulationCalculationSummary {
   isTheoreticalBudgetExactlyAllocated: boolean;
   /** Somme des salaires MENSUELS de la population (trace informative). */
   populationSalarySumFcfa: bigint;
+  campaignYear: number;
+  technicalApplicationMonth: number;
+  totalBaseSalaryReminderFcfa: bigint;
+  totalRemainingYearDirectIncreaseCostFcfa: bigint;
+  totalAnnualActualBaseIncreaseCostFcfa: bigint;
 }
 
 export interface PreparedPopulationCalculationResult {
@@ -190,6 +216,11 @@ export interface PreparedPopulationCalculationResult {
   annualTheoreticalAllocatedTotal: ExactAmount;
   annualActualOperationCostFcfa: bigint;
   annualTotalRoundingDelta: ExactAmount;
+  campaignYear: number;
+  technicalApplicationMonth: number;
+  totalBaseSalaryReminderFcfa: bigint;
+  totalRemainingYearDirectIncreaseCostFcfa: bigint;
+  totalAnnualActualBaseIncreaseCostFcfa: bigint;
   populationSummary: PopulationCalculationSummary;
   explanationSteps: CalculationExplanationStep[];
 }

@@ -12,6 +12,7 @@ import {
   formatFcfaInteger,
   formatFactorMilli,
 } from "../../application/campaignSimulation/formatExactBudgetDisplay";
+import { technicalApplicationMonthLabelFr } from "../../domain/compensationCalculation";
 import { nineBoxModeLabel } from "../../domain/compensationReference/conversions";
 import { SectionCard } from "../../components/ui/SectionCard";
 import { StatusBadge } from "../../components/ui/StatusBadge";
@@ -242,6 +243,10 @@ export function SimulationResultsPanel({
                 <th scope="col">Allocation théorique annuelle</th>
                 <th scope="col">Augmentation mensuelle théorique</th>
                 <th scope="col">Augmentation mensuelle finale</th>
+                <th scope="col">Mois de rappel</th>
+                <th scope="col">Rappel salaire de base</th>
+                <th scope="col">Mois restants</th>
+                <th scope="col">Coût direct reste d’année</th>
                 <th scope="col">Nouveau salaire mensuel</th>
                 <th scope="col">Coût annuel réel</th>
                 <th scope="col">Statut</th>
@@ -288,11 +293,25 @@ export function SimulationResultsPanel({
                   <td>
                     {formatFcfaInteger(employee.monthlyFinalRoundedIncreaseFcfa)}
                   </td>
+                  <td data-testid={`simulation-retro-months-${employee.employeeId}`}>
+                    {employee.retroactiveMonths}
+                  </td>
+                  <td data-testid={`simulation-base-reminder-${employee.employeeId}`}>
+                    {formatFcfaInteger(employee.baseSalaryReminderFcfa)}
+                  </td>
+                  <td data-testid={`simulation-remaining-months-${employee.employeeId}`}>
+                    {employee.remainingDirectPaymentMonths}
+                  </td>
+                  <td data-testid={`simulation-remaining-direct-${employee.employeeId}`}>
+                    {formatFcfaInteger(
+                      employee.remainingYearDirectIncreaseCostFcfa,
+                    )}
+                  </td>
                   <td data-testid={`simulation-final-salary-${employee.employeeId}`}>
                     {formatFcfaInteger(employee.monthlyFinalSalaryFcfa)}
                   </td>
                   <td data-testid={`simulation-annual-cost-${employee.employeeId}`}>
-                    {formatFcfaInteger(employee.annualActualCostFcfa)}
+                    {formatFcfaInteger(employee.annualActualBaseIncreaseCostFcfa)}
                   </td>
                   <td>
                     {employee.blockingReason === "CONFIRMED_UNDERPERFORMER" ? (
@@ -399,6 +418,36 @@ function SimulationSummary({
         <dt>Augmentation mensuelle théorique totale</dt>
         <dd data-testid="simulation-summary-monthly-theoretical">
           {budget.monthlyTheoreticalIncreaseTotalLabel}
+        </dd>
+      </div>
+      <div>
+        <dt>Mois d’application technique</dt>
+        <dd data-testid="simulation-summary-application-month">
+          {population.technicalApplicationMonth
+            ? technicalApplicationMonthLabelFr(
+                population.technicalApplicationMonth,
+              )
+            : "—"}
+        </dd>
+      </div>
+      <div>
+        <dt>Coût annuel réel de l’augmentation de base</dt>
+        <dd data-testid="simulation-summary-annual-base-increase">
+          {formatFcfaInteger(population.totalAnnualActualBaseIncreaseCostFcfa)}
+        </dd>
+      </div>
+      <div>
+        <dt>Rappel total de salaire de base</dt>
+        <dd data-testid="simulation-summary-base-reminder">
+          {formatFcfaInteger(population.totalBaseSalaryReminderFcfa)}
+        </dd>
+      </div>
+      <div>
+        <dt>Augmentations payées directement (reste de l’année)</dt>
+        <dd data-testid="simulation-summary-remaining-direct">
+          {formatFcfaInteger(
+            population.totalRemainingYearDirectIncreaseCostFcfa,
+          )}
         </dd>
       </div>
       <div>
@@ -657,6 +706,32 @@ function EmployeeDetailDrawer({
               </dd>
             </div>
             <div>
+              <dt>Mois de rappel</dt>
+              <dd data-testid="simulation-detail-retro-months">
+                {employee.retroactiveMonths}
+              </dd>
+            </div>
+            <div>
+              <dt>Rappel de salaire de base</dt>
+              <dd data-testid="simulation-detail-base-reminder">
+                {formatFcfaInteger(employee.baseSalaryReminderFcfa)}
+              </dd>
+            </div>
+            <div>
+              <dt>Mois restants (paiement direct)</dt>
+              <dd data-testid="simulation-detail-remaining-months">
+                {employee.remainingDirectPaymentMonths}
+              </dd>
+            </div>
+            <div>
+              <dt>Coût payé directement (reste de l’année)</dt>
+              <dd data-testid="simulation-detail-remaining-direct">
+                {formatFcfaInteger(
+                  employee.remainingYearDirectIncreaseCostFcfa,
+                )}
+              </dd>
+            </div>
+            <div>
               <dt>Écart mensuel d’arrondi</dt>
               <dd>{employee.monthlyRoundingDeltaLabel}</dd>
             </div>
@@ -667,9 +742,9 @@ function EmployeeDetailDrawer({
               </dd>
             </div>
             <div>
-              <dt>Coût annuel réel</dt>
+              <dt>Coût annuel total de l’augmentation de base</dt>
               <dd data-testid="simulation-detail-annual-cost">
-                {formatFcfaInteger(employee.annualActualCostFcfa)}
+                {formatFcfaInteger(employee.annualActualBaseIncreaseCostFcfa)}
               </dd>
             </div>
             <div>

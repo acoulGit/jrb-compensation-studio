@@ -233,6 +233,26 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
 - L’allocation est annuelle ; l’arrondi s’applique au **mensuel** uniquement.
 - Mode pourcentage : masse mensuelle saisie × 12 avant application du taux.
 
+## Calendrier d’application et rappel (2A-H2A)
+
+- `campaignYear` : année de campagne **explicite** (entier 4 chiffres).
+  Le moteur ne lit jamais `Date.now()` ; l’année système ne sert qu’à
+  initialiser le formulaire UI.
+- `technicalApplicationMonth` : mois d’application technique (1 = janvier …
+  12 = décembre), rattaché à `campaignYear`.
+- Effet financier rétroactif au **1er janvier** de l’année de campagne.
+- Formules (BigInt FCFA) :
+  - `retroactiveMonths = technicalApplicationMonth - 1`
+  - `remainingDirectPaymentMonths = 13 - technicalApplicationMonth`
+  - `baseSalaryReminderFcfa = monthlyFinalIncreaseFcfa × retroactiveMonths`
+  - `remainingYearDirectIncreaseCostFcfa = monthlyFinalIncreaseFcfa × remainingDirectPaymentMonths`
+  - `annualActualBaseIncreaseCostFcfa = monthlyFinalIncreaseFcfa × 12`
+- Invariant : `rappel + paiement direct = coût annuel`.
+- Le rappel est un **décalage de paiement**, pas un coût additionnel au
+  budget annuel (pas de double comptage).
+- Hors périmètre H2A : ancienneté, TPA, CNSS, charges patronales, autres
+  incidences, rappel d’ancienneté (Lot 2A-H2B).
+
 ## Persistance de simulation (Lot 2B-4A)
 
 - Enregistrement **explicite** d’un snapshot immuable (append-only).

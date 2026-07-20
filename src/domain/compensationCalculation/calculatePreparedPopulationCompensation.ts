@@ -1,6 +1,11 @@
 /** Orchestrateur end-to-end population préparée (Lot 2A-4 / correctif 2A-H1). */
 
 import { allocateTheoreticalPopulationBudget } from "./allocateTheoreticalPopulationBudget";
+import {
+  computeBaseSalaryReminderBreakdown,
+  technicalApplicationMonthLabelFr,
+  validateApplicationCalendar,
+} from "./baseSalaryReminder";
 import { calculatePreparedEmployeeCompensation } from "./calculatePreparedEmployeeCompensation";
 import { ANNUAL_BUDGET_PERIOD_MONTHS } from "./calculationContract";
 import { CompensationCalculationError } from "./errors";
@@ -126,6 +131,28 @@ export function calculatePreparedPopulationCompensation(
     );
   }
 
+  try {
+    validateApplicationCalendar({
+      campaignYear: input.campaignYear,
+      technicalApplicationMonth: input.technicalApplicationMonth,
+    });
+  } catch (error) {
+    if (error instanceof CompensationCalculationError) {
+      throw new CompensationCalculationError(
+        "POPULATION_CALCULATION_FAILED",
+        error.message,
+        toIssueLikes([
+          {
+            code: error.code,
+            message: error.message,
+            step: "application_calendar",
+          },
+        ]),
+      );
+    }
+    throw error;
+  }
+
   const annualBudgetTarget = budgetTargetResult.exactAmount;
 
   // Tri déterministe non mutable
@@ -247,6 +274,19 @@ export function calculatePreparedPopulationCompensation(
       const monthlyFinalSalaryFcfa =
         prepared.salaryFcfa + monthlyFinalRoundedIncreaseFcfa;
 
+      const reminder = computeBaseSalaryReminderBreakdown({
+        campaignYear: input.campaignYear,
+        technicalApplicationMonth: input.technicalApplicationMonth,
+        monthlyFinalIncreaseFcfa: monthlyFinalRoundedIncreaseFcfa,
+      });
+
+      if (reminder.annualActualBaseIncreaseCostFcfa !== annualActualCostFcfa) {
+        throw new CompensationCalculationError(
+          "BASE_SALARY_REMINDER_INVARIANT_FAILED",
+          `Incohérence coût annuel pour ${prepared.employeeId}.`,
+        );
+      }
+
       const employeeSteps: CalculationExplanationStep[] = [
         ...prepared.explanationSteps,
         {
@@ -319,6 +359,25 @@ export function calculatePreparedPopulationCompensation(
           reason: "Annualisation exacte de l’augmentation mensuelle arrondie.",
         },
         {
+          code: "EMPLOYEE_BASE_SALARY_REMINDER",
+          label: "Rappel de salaire de base",
+          inputValues: {
+            campaignYear: reminder.campaignYear,
+            technicalApplicationMonth: reminder.technicalApplicationMonth,
+            technicalApplicationMonthLabel: technicalApplicationMonthLabelFr(
+              reminder.technicalApplicationMonth,
+            ),
+            retroactiveMonths: reminder.retroactiveMonths,
+            remainingDirectPaymentMonths: reminder.remainingDirectPaymentMonths,
+            monthlyFinalIncreaseFcfa: monthlyFinalRoundedIncreaseFcfa.toString(),
+          },
+          outputValue: reminder.baseSalaryReminderFcfa.toString(),
+          formula:
+            "rappel = monthlyFinal × (moisApplication - 1) ; direct = monthlyFinal × (13 - moisApplication)",
+          reason:
+            "Décalage de paiement depuis le 1er janvier — pas de coût additionnel au budget annuel.",
+        },
+        {
           code: "EMPLOYEE_MONTHLY_FINAL_SALARY",
           label: "Nouveau salaire mensuel",
           inputValues: {
@@ -361,6 +420,15 @@ export function calculatePreparedPopulationCompensation(
         annualActualCostFcfa,
         annualRoundingDelta,
         monthlyFinalSalaryFcfa,
+        campaignYear: reminder.campaignYear,
+        technicalApplicationMonth: reminder.technicalApplicationMonth,
+        retroactiveMonths: reminder.retroactiveMonths,
+        remainingDirectPaymentMonths: reminder.remainingDirectPaymentMonths,
+        baseSalaryReminderFcfa: reminder.baseSalaryReminderFcfa,
+        remainingYearDirectIncreaseCostFcfa:
+          reminder.remainingYearDirectIncreaseCostFcfa,
+        annualActualBaseIncreaseCostFcfa:
+          reminder.annualActualBaseIncreaseCostFcfa,
         blockingReason: prepared.blockingReason,
         explanationSteps: employeeSteps,
       };
@@ -371,8 +439,16 @@ export function calculatePreparedPopulationCompensation(
   let positiveWeightEmployeeCount = 0;
   let zeroWeightEmployeeCount = 0;
   let confirmedUnderperformerCount = 0;
+  let totalBaseSalaryReminderFcfa = 0n;
+  let totalRemainingYearDirectIncreaseCostFcfa = 0n;
+  let totalAnnualActualBaseIncreaseCostFcfa = 0n;
   for (const employee of employees) {
     populationSalarySumFcfa += employee.salaryFcfa;
+    totalBaseSalaryReminderFcfa += employee.baseSalaryReminderFcfa;
+    totalRemainingYearDirectIncreaseCostFcfa +=
+      employee.remainingYearDirectIncreaseCostFcfa;
+    totalAnnualActualBaseIncreaseCostFcfa +=
+      employee.annualActualBaseIncreaseCostFcfa;
     if (isZeroFraction(employee.allocationWeight)) {
       zeroWeightEmployeeCount += 1;
     } else {
@@ -381,6 +457,22 @@ export function calculatePreparedPopulationCompensation(
     if (employee.blockingReason === "CONFIRMED_UNDERPERFORMER") {
       confirmedUnderperformerCount += 1;
     }
+  }
+
+  if (
+    totalBaseSalaryReminderFcfa + totalRemainingYearDirectIncreaseCostFcfa !==
+    totalAnnualActualBaseIncreaseCostFcfa
+  ) {
+    throw new CompensationCalculationError(
+      "BASE_SALARY_REMINDER_INVARIANT_FAILED",
+      "Incohérence population : rappel + paiement direct ≠ coût annuel.",
+    );
+  }
+  if (totalAnnualActualBaseIncreaseCostFcfa !== annualActualOperationCostFcfa) {
+    throw new CompensationCalculationError(
+      "BASE_SALARY_REMINDER_INVARIANT_FAILED",
+      "Incohérence population : coût annuel base ≠ coût annuel opération.",
+    );
   }
 
   const annualTheoreticalAllocatedTotal =
@@ -404,6 +496,11 @@ export function calculatePreparedPopulationCompensation(
     allocationBasis: ALLOCATION_BASIS_SALARY_TIMES_MATRIX_WEIGHT,
     isTheoreticalBudgetExactlyAllocated: theoreticalAnnual.isExactlyAllocated,
     populationSalarySumFcfa,
+    campaignYear: input.campaignYear,
+    technicalApplicationMonth: input.technicalApplicationMonth,
+    totalBaseSalaryReminderFcfa,
+    totalRemainingYearDirectIncreaseCostFcfa,
+    totalAnnualActualBaseIncreaseCostFcfa,
   };
 
   const explanationSteps: CalculationExplanationStep[] = [
@@ -471,6 +568,25 @@ export function calculatePreparedPopulationCompensation(
       reason: "Équivaut à Σ monthlyRoundingDelta × 12 ; peut être négatif, nul ou positif.",
     },
     {
+      code: "POPULATION_BASE_SALARY_REMINDER",
+      label: "Rappel de salaire de base (population)",
+      inputValues: {
+        campaignYear: input.campaignYear,
+        technicalApplicationMonth: input.technicalApplicationMonth,
+        technicalApplicationMonthLabel: technicalApplicationMonthLabelFr(
+          input.technicalApplicationMonth,
+        ),
+        totalBaseSalaryReminderFcfa: totalBaseSalaryReminderFcfa.toString(),
+        totalRemainingYearDirectIncreaseCostFcfa:
+          totalRemainingYearDirectIncreaseCostFcfa.toString(),
+      },
+      outputValue: totalAnnualActualBaseIncreaseCostFcfa.toString(),
+      formula:
+        "Σrappel + Σdirect = Σ(monthlyFinal × 12) — décalage de paiement, pas de coût additionnel",
+      reason:
+        "Le rappel ne double pas le budget annuel ; il ventile uniquement le calendrier de versement.",
+    },
+    {
       code: "NO_FORCED_RECONCILIATION",
       label: "Absence de réconciliation forcée",
       inputValues: { method: "none" },
@@ -519,6 +635,11 @@ export function calculatePreparedPopulationCompensation(
     annualTheoreticalAllocatedTotal,
     annualActualOperationCostFcfa,
     annualTotalRoundingDelta,
+    campaignYear: input.campaignYear,
+    technicalApplicationMonth: input.technicalApplicationMonth,
+    totalBaseSalaryReminderFcfa,
+    totalRemainingYearDirectIncreaseCostFcfa,
+    totalAnnualActualBaseIncreaseCostFcfa,
     populationSummary,
     explanationSteps,
   };

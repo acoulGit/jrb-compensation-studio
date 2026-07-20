@@ -162,6 +162,8 @@ export async function executeCampaignSimulation(
     preparedReferences: readinessReport.preparedReferences,
     budgetTarget: validatedConfiguration.budgetTarget,
     roundingPolicy: validatedConfiguration.roundingPolicy,
+    campaignYear: validatedConfiguration.campaignYear,
+    technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
   });
 
   const currentConfigFingerprint = buildConfigurationFingerprint({
@@ -181,6 +183,8 @@ export async function executeCampaignSimulation(
         : undefined,
     roundingMode: validatedConfiguration.roundingPolicy.mode,
     roundingStep: BigInt(validatedConfiguration.roundingPolicy.stepFcfa),
+    campaignYear: validatedConfiguration.campaignYear,
+    technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
   });
 
   if (
@@ -220,6 +224,8 @@ export async function executeCampaignSimulation(
     references: readinessReport.preparedReferences,
     budgetTarget: validatedConfiguration.budgetTarget,
     roundingPolicy: validatedConfiguration.roundingPolicy,
+    campaignYear: validatedConfiguration.campaignYear,
+    technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
   };
 
   let engineResult;
@@ -299,7 +305,7 @@ export async function executeCampaignSimulation(
   const result = buildSimulationResultView({
     campaignId,
     campaignName: campaign.name,
-    campaignYear: campaign.referenceYear,
+    campaignYear: validatedConfiguration.campaignYear,
     campaignStatus: campaign.status,
     evaluationMode: readinessReport.evaluationMode!,
     currentImportBatchId: readinessReport.currentImportBatchId,

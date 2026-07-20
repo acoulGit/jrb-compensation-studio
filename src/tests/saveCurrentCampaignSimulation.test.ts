@@ -25,6 +25,7 @@ function sampleResult(
     campaignId: 1,
     campaignName: "Sim 2027",
     campaignYear: 2027,
+    technicalApplicationMonth: 1,
     campaignStatus: "active",
     evaluationMode: "none",
     currentImportBatchId: 10,
@@ -60,6 +61,11 @@ function sampleResult(
       annualActualOperationCostFcfa: 25000000n,
       annualTotalRoundingDelta: { numerator: -3n, denominator: 1n },
       isTheoreticalBudgetExactlyAllocated: true,
+      campaignYear: 2027,
+      technicalApplicationMonth: 1,
+      totalBaseSalaryReminderFcfa: 0n,
+      totalRemainingYearDirectIncreaseCostFcfa: 24999600n,
+      totalAnnualActualBaseIncreaseCostFcfa: 24999600n,
     },
     employees: [
       {
@@ -103,6 +109,13 @@ function sampleResult(
         annualRoundingDelta: { numerator: -403n, denominator: 1n },
         annualRoundingDeltaLabel: "x",
         monthlyFinalSalaryFcfa: 30283300n,
+        campaignYear: 2027,
+        technicalApplicationMonth: 1,
+        retroactiveMonths: 0,
+        remainingDirectPaymentMonths: 12,
+        baseSalaryReminderFcfa: 0n,
+        remainingYearDirectIncreaseCostFcfa: 24999600n,
+        annualActualBaseIncreaseCostFcfa: 24999600n,
         explanationSteps: [
           { step: "alloc", formula: "a/b", outputValue: "1" },
         ],
@@ -266,6 +279,8 @@ async function setupSuccessContext(options?: {
     preparedReferences: references,
     budgetTarget,
     roundingPolicy,
+    campaignYear: 2027,
+    technicalApplicationMonth: 1,
   });
   const configurationFingerprint = buildConfigurationFingerprint({
     campaignId: campaign.id,
@@ -273,6 +288,8 @@ async function setupSuccessContext(options?: {
     manualBudget: budgetTarget.manualBudgetFcfa,
     roundingMode: roundingPolicy.mode,
     roundingStep: roundingPolicy.stepFcfa,
+    campaignYear: 2027,
+    technicalApplicationMonth: 1,
   });
 
   const readinessModule = await import(
@@ -338,6 +355,8 @@ async function setupSuccessContext(options?: {
     campaignId: campaign.id,
     budgetTarget,
     roundingPolicy,
+    campaignYear: 2027,
+    technicalApplicationMonth: 1,
     readinessReport: {
       campaignId: campaign.id,
       campaignName: campaign.name,

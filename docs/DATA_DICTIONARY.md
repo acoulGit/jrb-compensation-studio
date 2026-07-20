@@ -290,13 +290,24 @@ Résultats de domaine purs (non stockés) :
 | `monthlyFinalRoundedIncreaseFcfa` | Augmentation mensuelle arrondie |
 | `annualActualCostFcfa` | `monthlyFinalRounded × 12` |
 | `monthlyFinalSalaryFcfa` | Nouveau salaire mensuel |
-| `PopulationCalculationSummary` | Synthèse annuelle/mensuelle |
+| `campaignYear` | Année de campagne explicite (H2A) |
+| `technicalApplicationMonth` | Mois d’application technique 1–12 (H2A) |
+| `retroactiveMonths` | `technicalApplicationMonth - 1` |
+| `remainingDirectPaymentMonths` | `13 - technicalApplicationMonth` |
+| `baseSalaryReminderFcfa` | Rappel salaire de base (décalage, pas coût additionnel) |
+| `remainingYearDirectIncreaseCostFcfa` | Coût payé directement sur le reste de l’année |
+| `annualActualBaseIncreaseCostFcfa` | Alias de `annualActualCostFcfa` |
+| `totalBaseSalaryReminderFcfa` | Σ rappels population |
+| `totalRemainingYearDirectIncreaseCostFcfa` | Σ coûts directs population |
+| `totalAnnualActualBaseIncreaseCostFcfa` | Σ coûts annuels base (= coût opération) |
+| `PopulationCalculationSummary` | Synthèse annuelle/mensuelle + calendrier |
 | `CALCULATION_CONTRACT_VERSION` | `2` (H1) |
-| `RESULT_SCHEMA_VERSION` | `2` (snapshots) |
+| `RESULT_SCHEMA_VERSION` | `2` (snapshots ; inchangé en H2A) |
 | `POPULATION_CALCULATION_FAILED` | Échec atomique + `issues[]` |
 
-Éligibilité, masse auto, promotion, ancienneté, persistance des résultats et
-alertes budgétaires restent à produire dans des lots ultérieurs.
+Éligibilité, masse auto, promotion, ancienneté, TPA/CNSS/charges, rappel
+d’ancienneté, persistance des champs H2A en colonnes dédiées et alertes
+budgétaires restent à produire dans des lots ultérieurs.
 
 ### Lot 2B-1 (non persisté — readiness)
 
