@@ -59,6 +59,9 @@ export interface SimulationPopulationSummaryView {
   totalBaseSalaryReminderFcfa: bigint;
   totalRemainingYearDirectIncreaseCostFcfa: bigint;
   totalAnnualActualBaseIncreaseCostFcfa: bigint;
+  totalSeniorityReminderFcfa: bigint;
+  totalRemainingYearDirectSeniorityImpactFcfa: bigint;
+  totalAnnualSeniorityImpactFcfa: bigint;
 }
 
 export interface EmployeeSimulationResultView {
@@ -116,6 +119,17 @@ export interface EmployeeSimulationResultView {
   baseSalaryReminderFcfa: bigint;
   remainingYearDirectIncreaseCostFcfa: bigint;
   annualActualBaseIncreaseCostFcfa: bigint;
+  hireDate: string;
+  technicalApplicationMonthSeniorityRatePercent: number;
+  monthlySeniorityImpactSchedule: readonly {
+    month: number;
+    ratePercent: number;
+    monthlySeniorityImpactFcfa: bigint;
+    paymentTiming: "reminder" | "direct";
+  }[];
+  seniorityReminderFcfa: bigint;
+  remainingYearDirectSeniorityImpactFcfa: bigint;
+  annualSeniorityImpactFcfa: bigint;
   explanationSteps: readonly {
     step: string;
     formula?: string;

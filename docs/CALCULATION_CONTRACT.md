@@ -184,6 +184,26 @@ ventile uniquement le calendrier de versement.
 **Persistance H2A** : modèles moteur / UI en mémoire ; colonnes snapshot 0005
 et `result_schema_version` **inchangés** (pas de migration 0006 dans ce lot).
 
+## Lot 2A-H2B — incidence supplémentaire d’ancienneté
+
+Contrat `SENIORITY_IMPACT_CONTRACT_VERSION = 1` (empreintes).
+`CALCULATION_CONTRACT_VERSION` reste **2**.
+
+| Concept | Règle |
+| --- | --- |
+| Source date | `hireDate` ISO `YYYY-MM-DD` (import → préparé → moteur) |
+| Assiette | `monthlyFinalIncreaseFcfa` uniquement |
+| Taux | moins de 3 anniv. effectifs → 0 ; sinon `count + 2` (sans plafond) |
+| Effet | mois précédant l’anniversaire ; janvier → décembre N-1 |
+| Arrondi | plafond FCFA |
+| Totaux | `seniorityReminder` + `remainingYearDirect` = `annualSeniorityImpact` |
+
+Hors budget : aucun impact sur `annualBudgetTarget`, allocation théorique,
+`monthlyFinalIncrease` ni `annualActualBaseIncreaseCost`.
+
+**Persistance H2B** : mémoire uniquement ; pas de colonnes SQL ; pas de
+migration 0006 ; `result_schema_version = 2` inchangé.
+
 **Persistance** : `result_schema_version = 2` (colonnes 0005 réinterprétées ;
 pas de migration 0006). Version 1 = sémantique obsolète — ne pas recalculer ni
 présenter comme conforme H1.
@@ -192,8 +212,8 @@ La population est déjà préparée : **aucune** dépendance au module d’impor
 Résultats salariés triés par `employeeId` (ordre lexicographique UTF-16, sans
 locale). Échec global `POPULATION_CALCULATION_FAILED` si une erreur bloquante.
 
-Hors périmètre : UI, persistance, éligibilité, ancienneté, promotion,
-correction, mesure sociale, export, scénarios, TPA/CNSS/charges (H2B).
+Hors périmètre : UI, persistance SQL des champs H2A/H2B, éligibilité, promotion,
+correction, mesure sociale, export, scénarios, TPA/CNSS/charges.
 
 ## Principes
 

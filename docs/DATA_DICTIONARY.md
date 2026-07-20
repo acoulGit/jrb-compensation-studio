@@ -300,14 +300,24 @@ Résultats de domaine purs (non stockés) :
 | `totalBaseSalaryReminderFcfa` | Σ rappels population |
 | `totalRemainingYearDirectIncreaseCostFcfa` | Σ coûts directs population |
 | `totalAnnualActualBaseIncreaseCostFcfa` | Σ coûts annuels base (= coût opération) |
+| `hireDate` | Date d’embauche ISO (entrée préparée / résultat) |
+| `technicalApplicationMonthSeniorityRatePercent` | Taux au mois d’application |
+| `monthlySeniorityImpactSchedule` | Calendrier mensuel janvier–décembre |
+| `seniorityReminderFcfa` | Rappel d’incidence d’ancienneté (hors budget) |
+| `remainingYearDirectSeniorityImpactFcfa` | Incidence directe reste d’année |
+| `annualSeniorityImpactFcfa` | Incidence annuelle totale d’ancienneté |
+| `totalSeniorityReminderFcfa` | Σ rappels ancienneté population |
+| `totalRemainingYearDirectSeniorityImpactFcfa` | Σ directs ancienneté |
+| `totalAnnualSeniorityImpactFcfa` | Σ annuel ancienneté |
+| `SENIORITY_IMPACT_CONTRACT_VERSION` | `1` (H2B) |
 | `PopulationCalculationSummary` | Synthèse annuelle/mensuelle + calendrier |
 | `CALCULATION_CONTRACT_VERSION` | `2` (H1) |
-| `RESULT_SCHEMA_VERSION` | `2` (snapshots ; inchangé en H2A) |
+| `RESULT_SCHEMA_VERSION` | `2` (snapshots ; inchangé en H2A/H2B) |
 | `POPULATION_CALCULATION_FAILED` | Échec atomique + `issues[]` |
 
-Éligibilité, masse auto, promotion, ancienneté, TPA/CNSS/charges, rappel
-d’ancienneté, persistance des champs H2A en colonnes dédiées et alertes
-budgétaires restent à produire dans des lots ultérieurs.
+Éligibilité, masse auto, promotion, TPA/CNSS/charges, prime historique,
+persistance des champs H2A/H2B en colonnes dédiées et alertes budgétaires
+restent à produire dans des lots ultérieurs.
 
 ### Lot 2B-1 (non persisté — readiness)
 

@@ -635,3 +635,27 @@ direct), sans anticiper H2B (ancienneté / charges).
 - `git diff --check`
 - migrations 0001–0005 inchangées
 - stash intact ; aucun commit
+
+## 2026-07-20 — Lot 2A-H2B : incidence supplémentaire d’ancienneté
+
+### Objectif
+
+Calculer mois par mois l’incidence d’ancienneté sur l’augmentation mensuelle
+finale, hors budget, avec rappel/direct et date d’embauche importée.
+
+### Livrables
+
+- Domaine `seniorityImpact.ts` + `SENIORITY_IMPACT_CONTRACT_VERSION = 1`
+- Propagation `hireDate` : import → préparé → moteur → vues
+- Fingerprints : contrat ancienneté + `hireDate`
+- UI synthèse « Impacts hors budget », tableau et détail
+- Tests barème / cas 2023–2024 / validations / hors budget
+- Docs mises à jour ; `result_schema_version = 2` inchangé
+- Pas de migration 0006 ; persistance SQL inchangée
+- Stash 2B-4B **non appliqué**
+
+### Vérifications
+
+- `pnpm test` / `pnpm build` / cargo / `git diff --check`
+- migrations 0001–0005 et `simulation_persistence.rs` inchangés
+- stash intact ; aucun commit

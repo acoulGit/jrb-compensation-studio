@@ -55,6 +55,7 @@ function buildInput(
         familyCode: "F1",
         gradeCode: "G1",
         salaryFcfa: 1_000_000,
+        hireDate: "2020-07-15",
         confirmedUnderperformer: false,
       },
     ],
@@ -207,6 +208,7 @@ describe("Lot 2A-H2A — orchestrateur population", () => {
             familyCode: "F1",
             gradeCode: "G1",
             salaryFcfa: 1_000_000,
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
           {
@@ -214,6 +216,7 @@ describe("Lot 2A-H2A — orchestrateur population", () => {
             familyCode: "F1",
             gradeCode: "G1",
             salaryFcfa: 800_000,
+            hireDate: "2020-07-15",
             confirmedUnderperformer: true,
           },
         ],
@@ -239,6 +242,7 @@ describe("Lot 2A-H2A — orchestrateur population", () => {
             familyCode: "F1",
             gradeCode: "G1",
             salaryFcfa: 500_000,
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
           {
@@ -246,6 +250,7 @@ describe("Lot 2A-H2A — orchestrateur population", () => {
             familyCode: "F1",
             gradeCode: "G1",
             salaryFcfa: 700_000,
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
           {
@@ -253,6 +258,7 @@ describe("Lot 2A-H2A — orchestrateur population", () => {
             familyCode: "F1",
             gradeCode: "G1",
             salaryFcfa: 400_000,
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
         ],

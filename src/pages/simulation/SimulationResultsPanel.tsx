@@ -247,6 +247,9 @@ export function SimulationResultsPanel({
                 <th scope="col">Rappel salaire de base</th>
                 <th scope="col">Mois restants</th>
                 <th scope="col">Coût direct reste d’année</th>
+                <th scope="col">Taux ancienneté (mois appl.)</th>
+                <th scope="col">Rappel ancienneté</th>
+                <th scope="col">Incidence annuelle ancienneté</th>
                 <th scope="col">Nouveau salaire mensuel</th>
                 <th scope="col">Coût annuel réel</th>
                 <th scope="col">Statut</th>
@@ -306,6 +309,21 @@ export function SimulationResultsPanel({
                     {formatFcfaInteger(
                       employee.remainingYearDirectIncreaseCostFcfa,
                     )}
+                  </td>
+                  <td
+                    data-testid={`simulation-seniority-rate-${employee.employeeId}`}
+                  >
+                    {employee.technicalApplicationMonthSeniorityRatePercent} %
+                  </td>
+                  <td
+                    data-testid={`simulation-seniority-reminder-${employee.employeeId}`}
+                  >
+                    {formatFcfaInteger(employee.seniorityReminderFcfa)}
+                  </td>
+                  <td
+                    data-testid={`simulation-seniority-annual-${employee.employeeId}`}
+                  >
+                    {formatFcfaInteger(employee.annualSeniorityImpactFcfa)}
                   </td>
                   <td data-testid={`simulation-final-salary-${employee.employeeId}`}>
                     {formatFcfaInteger(employee.monthlyFinalSalaryFcfa)}
@@ -454,6 +472,37 @@ function SimulationSummary({
         <dt>Coût annuel réel après arrondi</dt>
         <dd data-testid="simulation-summary-actual">
           {budget.annualActualOperationCostLabel}
+        </dd>
+      </div>
+      <div data-testid="simulation-summary-off-budget">
+        <dt>Impacts hors budget</dt>
+        <dd>
+          <p className="form-help">
+            Incidence calculée uniquement sur l’augmentation du salaire de base.
+            Elle n’est pas incluse dans le budget de la mesure.
+          </p>
+          <dl className="detail-list">
+            <div>
+              <dt>Rappel total d’ancienneté</dt>
+              <dd data-testid="simulation-summary-seniority-reminder">
+                {formatFcfaInteger(population.totalSeniorityReminderFcfa)}
+              </dd>
+            </div>
+            <div>
+              <dt>Incidence d’ancienneté payée directement (reste de l’année)</dt>
+              <dd data-testid="simulation-summary-seniority-direct">
+                {formatFcfaInteger(
+                  population.totalRemainingYearDirectSeniorityImpactFcfa,
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Incidence annuelle totale d’ancienneté</dt>
+              <dd data-testid="simulation-summary-seniority-annual">
+                {formatFcfaInteger(population.totalAnnualSeniorityImpactFcfa)}
+              </dd>
+            </div>
+          </dl>
         </dd>
       </div>
       <div>
@@ -745,6 +794,56 @@ function EmployeeDetailDrawer({
               <dt>Coût annuel total de l’augmentation de base</dt>
               <dd data-testid="simulation-detail-annual-cost">
                 {formatFcfaInteger(employee.annualActualBaseIncreaseCostFcfa)}
+              </dd>
+            </div>
+            <div>
+              <dt>Date d’embauche</dt>
+              <dd data-testid="simulation-detail-hire-date">
+                {employee.hireDate}
+              </dd>
+            </div>
+            <div>
+              <dt>Taux d’ancienneté au mois d’application</dt>
+              <dd data-testid="simulation-detail-seniority-rate">
+                {employee.technicalApplicationMonthSeniorityRatePercent} %
+              </dd>
+            </div>
+            <div>
+              <dt>Calendrier mensuel des taux d’ancienneté</dt>
+              <dd data-testid="simulation-detail-seniority-schedule">
+                <ul>
+                  {employee.monthlySeniorityImpactSchedule.map((entry) => (
+                    <li key={entry.month}>
+                      {technicalApplicationMonthLabelFr(entry.month)} :{" "}
+                      {entry.ratePercent} % —{" "}
+                      {formatFcfaInteger(entry.monthlySeniorityImpactFcfa)} (
+                      {entry.paymentTiming === "reminder"
+                        ? "rappel"
+                        : "direct"}
+                      )
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+            <div>
+              <dt>Rappel d’ancienneté (hors budget)</dt>
+              <dd data-testid="simulation-detail-seniority-reminder">
+                {formatFcfaInteger(employee.seniorityReminderFcfa)}
+              </dd>
+            </div>
+            <div>
+              <dt>Incidence directe restante (hors budget)</dt>
+              <dd data-testid="simulation-detail-seniority-direct">
+                {formatFcfaInteger(
+                  employee.remainingYearDirectSeniorityImpactFcfa,
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Incidence annuelle totale d’ancienneté (hors budget)</dt>
+              <dd data-testid="simulation-detail-seniority-annual">
+                {formatFcfaInteger(employee.annualSeniorityImpactFcfa)}
               </dd>
             </div>
             <div>

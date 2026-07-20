@@ -170,6 +170,8 @@ export function buildConfigurationFingerprint(parts: {
   campaignYear?: number;
   /** Mois d’application technique 1–12 (Lot 2A-H2A). */
   technicalApplicationMonth?: number;
+  /** Version du contrat d’incidence d’ancienneté (Lot 2A-H2B). */
+  seniorityImpactContractVersion?: number;
 }): string {
   return [
     `contract:v${parts.calculationContractVersion ?? 2}`,
@@ -184,5 +186,6 @@ export function buildConfigurationFingerprint(parts: {
     parts.roundingStep.toString(),
     `year:${parts.campaignYear ?? ""}`,
     `appMonth:${parts.technicalApplicationMonth ?? ""}`,
+    `seniority:v${parts.seniorityImpactContractVersion ?? 1}`,
   ].join("|");
 }

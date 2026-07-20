@@ -6,6 +6,7 @@
 import type { BudgetTargetInput, RoundingPolicy } from "../../domain/compensationCalculation";
 import type { PreparedEmployeeCalculationInput } from "../../domain/compensationCalculation";
 import type { PopulationCalculationReferences } from "../../domain/compensationCalculation";
+import { SENIORITY_IMPACT_CONTRACT_VERSION } from "../../domain/compensationCalculation";
 import type { CampaignStatus } from "../../domain/campaign/models";
 import type { NineBoxMode } from "../../domain/compensationReference/models";
 import { buildConfigurationFingerprint } from "./formatExactBudgetDisplay";
@@ -49,6 +50,7 @@ export function buildSimulationSourceFingerprint(
       family: employee.familyCode,
       grade: employee.gradeCode,
       salary: salaryToken(employee.salaryFcfa),
+      hire: employee.hireDate,
       perf: employee.performanceLevel ?? "",
       pot: employee.potentialLevel ?? "",
       under: employee.confirmedUnderperformer ? "1" : "0",
@@ -108,6 +110,7 @@ export function buildSimulationSourceFingerprint(
     roundingStep: BigInt(input.roundingPolicy.stepFcfa),
     campaignYear: input.campaignYear,
     technicalApplicationMonth: input.technicalApplicationMonth,
+    seniorityImpactContractVersion: SENIORITY_IMPACT_CONTRACT_VERSION,
   });
 
   const canonical = [

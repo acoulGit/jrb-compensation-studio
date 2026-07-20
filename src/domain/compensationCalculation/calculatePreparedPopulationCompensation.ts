@@ -6,6 +6,7 @@ import {
   technicalApplicationMonthLabelFr,
   validateApplicationCalendar,
 } from "./baseSalaryReminder";
+import { computeSeniorityImpactBreakdown } from "./seniorityImpact";
 import { calculatePreparedEmployeeCompensation } from "./calculatePreparedEmployeeCompensation";
 import { ANNUAL_BUDGET_PERIOD_MONTHS } from "./calculationContract";
 import { CompensationCalculationError } from "./errors";
@@ -287,6 +288,33 @@ export function calculatePreparedPopulationCompensation(
         );
       }
 
+      let seniority;
+      try {
+        seniority = computeSeniorityImpactBreakdown({
+          hireDate: prepared.hireDate,
+          campaignYear: input.campaignYear,
+          technicalApplicationMonth: input.technicalApplicationMonth,
+          monthlyFinalIncreaseFcfa: monthlyFinalRoundedIncreaseFcfa,
+        });
+      } catch (error) {
+        if (error instanceof CompensationCalculationError) {
+          throw new CompensationCalculationError(
+            "POPULATION_CALCULATION_FAILED",
+            error.message,
+            toIssueLikes([
+              {
+                employeeId: prepared.employeeId,
+                code: error.code,
+                message: error.message,
+                field: "hireDate",
+                step: "seniority_impact",
+              },
+            ]),
+          );
+        }
+        throw error;
+      }
+
       const employeeSteps: CalculationExplanationStep[] = [
         ...prepared.explanationSteps,
         {
@@ -378,6 +406,24 @@ export function calculatePreparedPopulationCompensation(
             "Décalage de paiement depuis le 1er janvier — pas de coût additionnel au budget annuel.",
         },
         {
+          code: "EMPLOYEE_SENIORITY_IMPACT",
+          label: "Incidence supplémentaire d’ancienneté",
+          inputValues: {
+            hireDate: seniority.hireDate,
+            technicalApplicationMonthSeniorityRatePercent:
+              seniority.technicalApplicationMonthSeniorityRatePercent,
+            monthlyFinalIncreaseFcfa: monthlyFinalRoundedIncreaseFcfa.toString(),
+            seniorityReminderFcfa: seniority.seniorityReminderFcfa.toString(),
+            remainingYearDirectSeniorityImpactFcfa:
+              seniority.remainingYearDirectSeniorityImpactFcfa.toString(),
+          },
+          outputValue: seniority.annualSeniorityImpactFcfa.toString(),
+          formula:
+            "mensuel = plafond_fcfa(monthlyFinal × rate% / 100) ; annuel = Σ mois",
+          reason:
+            "Hors budget — approximation conventionnelle sur l’augmentation uniquement, sans prime historique.",
+        },
+        {
           code: "EMPLOYEE_MONTHLY_FINAL_SALARY",
           label: "Nouveau salaire mensuel",
           inputValues: {
@@ -429,6 +475,14 @@ export function calculatePreparedPopulationCompensation(
           reminder.remainingYearDirectIncreaseCostFcfa,
         annualActualBaseIncreaseCostFcfa:
           reminder.annualActualBaseIncreaseCostFcfa,
+        hireDate: seniority.hireDate,
+        technicalApplicationMonthSeniorityRatePercent:
+          seniority.technicalApplicationMonthSeniorityRatePercent,
+        monthlySeniorityImpactSchedule: seniority.monthlySeniorityImpactSchedule,
+        seniorityReminderFcfa: seniority.seniorityReminderFcfa,
+        remainingYearDirectSeniorityImpactFcfa:
+          seniority.remainingYearDirectSeniorityImpactFcfa,
+        annualSeniorityImpactFcfa: seniority.annualSeniorityImpactFcfa,
         blockingReason: prepared.blockingReason,
         explanationSteps: employeeSteps,
       };
@@ -442,6 +496,9 @@ export function calculatePreparedPopulationCompensation(
   let totalBaseSalaryReminderFcfa = 0n;
   let totalRemainingYearDirectIncreaseCostFcfa = 0n;
   let totalAnnualActualBaseIncreaseCostFcfa = 0n;
+  let totalSeniorityReminderFcfa = 0n;
+  let totalRemainingYearDirectSeniorityImpactFcfa = 0n;
+  let totalAnnualSeniorityImpactFcfa = 0n;
   for (const employee of employees) {
     populationSalarySumFcfa += employee.salaryFcfa;
     totalBaseSalaryReminderFcfa += employee.baseSalaryReminderFcfa;
@@ -449,6 +506,10 @@ export function calculatePreparedPopulationCompensation(
       employee.remainingYearDirectIncreaseCostFcfa;
     totalAnnualActualBaseIncreaseCostFcfa +=
       employee.annualActualBaseIncreaseCostFcfa;
+    totalSeniorityReminderFcfa += employee.seniorityReminderFcfa;
+    totalRemainingYearDirectSeniorityImpactFcfa +=
+      employee.remainingYearDirectSeniorityImpactFcfa;
+    totalAnnualSeniorityImpactFcfa += employee.annualSeniorityImpactFcfa;
     if (isZeroFraction(employee.allocationWeight)) {
       zeroWeightEmployeeCount += 1;
     } else {
@@ -472,6 +533,16 @@ export function calculatePreparedPopulationCompensation(
     throw new CompensationCalculationError(
       "BASE_SALARY_REMINDER_INVARIANT_FAILED",
       "Incohérence population : coût annuel base ≠ coût annuel opération.",
+    );
+  }
+  if (
+    totalSeniorityReminderFcfa +
+      totalRemainingYearDirectSeniorityImpactFcfa !==
+    totalAnnualSeniorityImpactFcfa
+  ) {
+    throw new CompensationCalculationError(
+      "SENIORITY_IMPACT_INVARIANT_FAILED",
+      "Incohérence population : rappel ancienneté + direct ≠ annuel.",
     );
   }
 
@@ -501,6 +572,9 @@ export function calculatePreparedPopulationCompensation(
     totalBaseSalaryReminderFcfa,
     totalRemainingYearDirectIncreaseCostFcfa,
     totalAnnualActualBaseIncreaseCostFcfa,
+    totalSeniorityReminderFcfa,
+    totalRemainingYearDirectSeniorityImpactFcfa,
+    totalAnnualSeniorityImpactFcfa,
   };
 
   const explanationSteps: CalculationExplanationStep[] = [
@@ -587,6 +661,19 @@ export function calculatePreparedPopulationCompensation(
         "Le rappel ne double pas le budget annuel ; il ventile uniquement le calendrier de versement.",
     },
     {
+      code: "POPULATION_SENIORITY_IMPACT",
+      label: "Incidence supplémentaire d’ancienneté (population)",
+      inputValues: {
+        totalSeniorityReminderFcfa: totalSeniorityReminderFcfa.toString(),
+        totalRemainingYearDirectSeniorityImpactFcfa:
+          totalRemainingYearDirectSeniorityImpactFcfa.toString(),
+      },
+      outputValue: totalAnnualSeniorityImpactFcfa.toString(),
+      formula: "Σrappel + Σdirect = Σ incidences mensuelles — hors budget",
+      reason:
+        "Ne modifie ni le budget cible, ni l’allocation théorique, ni le coût annuel de base.",
+    },
+    {
       code: "NO_FORCED_RECONCILIATION",
       label: "Absence de réconciliation forcée",
       inputValues: { method: "none" },
@@ -640,6 +727,9 @@ export function calculatePreparedPopulationCompensation(
     totalBaseSalaryReminderFcfa,
     totalRemainingYearDirectIncreaseCostFcfa,
     totalAnnualActualBaseIncreaseCostFcfa,
+    totalSeniorityReminderFcfa,
+    totalRemainingYearDirectSeniorityImpactFcfa,
+    totalAnnualSeniorityImpactFcfa,
     populationSummary,
     explanationSteps,
   };

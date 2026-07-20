@@ -75,6 +75,7 @@ function employeesScenario(): PreparedEmployeeCalculationInput[] {
       salaryFcfa: 1_000_000,
       performanceLevel: "high",
       potentialLevel: "medium",
+      hireDate: "2020-07-15",
       confirmedUnderperformer: false,
     },
     {
@@ -84,6 +85,7 @@ function employeesScenario(): PreparedEmployeeCalculationInput[] {
       salaryFcfa: 900_000,
       performanceLevel: "medium",
       potentialLevel: "high",
+      hireDate: "2020-07-15",
       confirmedUnderperformer: false,
     },
     {
@@ -93,6 +95,7 @@ function employeesScenario(): PreparedEmployeeCalculationInput[] {
       salaryFcfa: 1_100_000,
       performanceLevel: "low",
       potentialLevel: "low",
+      hireDate: "2020-07-15",
       confirmedUnderperformer: true,
     },
   ];
@@ -744,6 +747,7 @@ describe("Lot 2B-3 — executeCampaignSimulation", () => {
         salaryFcfa: 9_000_000_000_000n,
         performanceLevel: "high",
         potentialLevel: "high",
+        hireDate: "2020-07-15",
         confirmedUnderperformer: false,
       },
     ];

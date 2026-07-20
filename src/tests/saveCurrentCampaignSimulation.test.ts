@@ -66,6 +66,9 @@ function sampleResult(
       totalBaseSalaryReminderFcfa: 0n,
       totalRemainingYearDirectIncreaseCostFcfa: 24999600n,
       totalAnnualActualBaseIncreaseCostFcfa: 24999600n,
+      totalSeniorityReminderFcfa: 0n,
+      totalRemainingYearDirectSeniorityImpactFcfa: 0n,
+      totalAnnualSeniorityImpactFcfa: 0n,
     },
     employees: [
       {
@@ -116,6 +119,17 @@ function sampleResult(
         baseSalaryReminderFcfa: 0n,
         remainingYearDirectIncreaseCostFcfa: 24999600n,
         annualActualBaseIncreaseCostFcfa: 24999600n,
+        hireDate: "2020-07-15",
+        technicalApplicationMonthSeniorityRatePercent: 0,
+        monthlySeniorityImpactSchedule: Array.from({ length: 12 }, (_, i) => ({
+          month: i + 1,
+          ratePercent: 0,
+          monthlySeniorityImpactFcfa: 0n,
+          paymentTiming: "direct" as const,
+        })),
+        seniorityReminderFcfa: 0n,
+        remainingYearDirectSeniorityImpactFcfa: 0n,
+        annualSeniorityImpactFcfa: 0n,
         explanationSteps: [
           { step: "alloc", formula: "a/b", outputValue: "1" },
         ],
@@ -181,6 +195,7 @@ function sampleEmployee(): PreparedEmployeeCalculationInput {
     familyCode: "F1",
     gradeCode: "G1",
     salaryFcfa: 1_000_000,
+    hireDate: "2020-07-15",
     confirmedUnderperformer: false,
   };
 }

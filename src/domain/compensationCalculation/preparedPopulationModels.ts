@@ -42,6 +42,11 @@ export interface PreparedEmployeeCalculationInput {
   familyCode: string;
   gradeCode: string;
   salaryFcfa: number | bigint;
+  /**
+   * Date d’embauche canonique ISO `YYYY-MM-DD` (champ import `hireDate`).
+   * Obligatoire pour l’incidence d’ancienneté (Lot 2A-H2B).
+   */
+  hireDate: string;
   performanceLevel?: PerformanceLevel;
   potentialLevel?: PotentialLevel;
   confirmedUnderperformer: boolean;
@@ -95,6 +100,8 @@ export interface PreparedEmployeeCalculationResult {
   familyCode: string;
   gradeCode: string;
   salaryFcfa: bigint;
+  /** Date d’embauche ISO (propagée depuis l’entrée préparée). */
+  hireDate: string;
   s0Resolution: EmployeeS0Resolution;
   salaryPositionResult: SalaryPositionResult;
   evaluationFactorResult: EvaluationFactorResult;
@@ -167,6 +174,23 @@ export interface EmployeeCompensationCalculationResult {
    * Alias sémantique de annualActualCostFcfa (même valeur).
    */
   annualActualBaseIncreaseCostFcfa: bigint;
+  /** Date d’embauche ISO (Lot 2A-H2B). */
+  hireDate: string;
+  /** Taux d’ancienneté au mois d’application technique (%). */
+  technicalApplicationMonthSeniorityRatePercent: number;
+  /** Calendrier mensuel janvier–décembre (déterministe). */
+  monthlySeniorityImpactSchedule: readonly {
+    month: number;
+    ratePercent: number;
+    monthlySeniorityImpactFcfa: bigint;
+    paymentTiming: "reminder" | "direct";
+  }[];
+  /** Rappel d’incidence d’ancienneté (hors budget). */
+  seniorityReminderFcfa: bigint;
+  /** Incidence d’ancienneté payée directement sur le reste de l’année. */
+  remainingYearDirectSeniorityImpactFcfa: bigint;
+  /** Incidence annuelle totale d’ancienneté (hors budget). */
+  annualSeniorityImpactFcfa: bigint;
   blockingReason?: MatrixBlockingReason;
   explanationSteps: CalculationExplanationStep[];
 }
@@ -199,6 +223,10 @@ export interface PopulationCalculationSummary {
   totalBaseSalaryReminderFcfa: bigint;
   totalRemainingYearDirectIncreaseCostFcfa: bigint;
   totalAnnualActualBaseIncreaseCostFcfa: bigint;
+  /** Totaux incidence d’ancienneté (hors budget — Lot 2A-H2B). */
+  totalSeniorityReminderFcfa: bigint;
+  totalRemainingYearDirectSeniorityImpactFcfa: bigint;
+  totalAnnualSeniorityImpactFcfa: bigint;
 }
 
 export interface PreparedPopulationCalculationResult {
@@ -221,6 +249,9 @@ export interface PreparedPopulationCalculationResult {
   totalBaseSalaryReminderFcfa: bigint;
   totalRemainingYearDirectIncreaseCostFcfa: bigint;
   totalAnnualActualBaseIncreaseCostFcfa: bigint;
+  totalSeniorityReminderFcfa: bigint;
+  totalRemainingYearDirectSeniorityImpactFcfa: bigint;
+  totalAnnualSeniorityImpactFcfa: bigint;
   populationSummary: PopulationCalculationSummary;
   explanationSteps: CalculationExplanationStep[];
 }

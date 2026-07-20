@@ -110,6 +110,21 @@ function mapEmployee(
     remainingYearDirectIncreaseCostFcfa:
       employee.remainingYearDirectIncreaseCostFcfa,
     annualActualBaseIncreaseCostFcfa: employee.annualActualBaseIncreaseCostFcfa,
+    hireDate: employee.hireDate,
+    technicalApplicationMonthSeniorityRatePercent:
+      employee.technicalApplicationMonthSeniorityRatePercent,
+    monthlySeniorityImpactSchedule: employee.monthlySeniorityImpactSchedule.map(
+      (entry) => ({
+        month: entry.month,
+        ratePercent: entry.ratePercent,
+        monthlySeniorityImpactFcfa: entry.monthlySeniorityImpactFcfa,
+        paymentTiming: entry.paymentTiming,
+      }),
+    ),
+    seniorityReminderFcfa: employee.seniorityReminderFcfa,
+    remainingYearDirectSeniorityImpactFcfa:
+      employee.remainingYearDirectSeniorityImpactFcfa,
+    annualSeniorityImpactFcfa: employee.annualSeniorityImpactFcfa,
     explanationSteps: mapExplanationSteps(employee.explanationSteps),
   };
 }
@@ -186,6 +201,10 @@ export function buildSimulationResultView(input: {
       summary.totalRemainingYearDirectIncreaseCostFcfa,
     totalAnnualActualBaseIncreaseCostFcfa:
       summary.totalAnnualActualBaseIncreaseCostFcfa,
+    totalSeniorityReminderFcfa: summary.totalSeniorityReminderFcfa,
+    totalRemainingYearDirectSeniorityImpactFcfa:
+      summary.totalRemainingYearDirectSeniorityImpactFcfa,
+    totalAnnualSeniorityImpactFcfa: summary.totalAnnualSeniorityImpactFcfa,
   };
 
   const familyLabels = input.familyLabelsByCode ?? new Map<string, string>();

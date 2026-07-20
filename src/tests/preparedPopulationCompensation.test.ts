@@ -108,6 +108,7 @@ function buildInput(
         salaryFcfa: 1_000_000,
         performanceLevel: "high",
         potentialLevel: "medium",
+        hireDate: "2020-07-15",
         confirmedUnderperformer: false,
       },
     ],
@@ -229,6 +230,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_000_000,
           performanceLevel: "medium",
           potentialLevel: "medium",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
         {
@@ -238,6 +240,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 2_000_000,
           performanceLevel: "medium",
           potentialLevel: "medium",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
       ],
@@ -299,6 +302,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             mode === "none" || mode === "performance_only"
               ? undefined
               : "low",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
       ];
@@ -324,6 +328,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_000_000,
           performanceLevel: "high",
           potentialLevel: "low",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
       ],
@@ -388,6 +393,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             salaryFcfa: 1_000_000,
             performanceLevel: "high",
             potentialLevel: "high",
+            hireDate: "2020-07-15",
             confirmedUnderperformer: true,
           },
           {
@@ -397,6 +403,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             salaryFcfa: 1_000_000,
             performanceLevel: "medium",
             potentialLevel: "medium",
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
         ],
@@ -423,6 +430,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
               salaryFcfa: 1_000_000,
               performanceLevel: "high",
               potentialLevel: "high",
+              hireDate: "2020-07-15",
               confirmedUnderperformer: true,
             },
           ],
@@ -452,6 +460,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
               salaryFcfa: 1000,
               performanceLevel: "high",
               potentialLevel: "high",
+              hireDate: "2020-07-15",
               confirmedUnderperformer: false,
             },
             {
@@ -461,6 +470,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
               salaryFcfa: 2000,
               performanceLevel: "high",
               potentialLevel: "high",
+              hireDate: "2020-07-15",
               confirmedUnderperformer: false,
             },
           ],
@@ -487,6 +497,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
               salaryFcfa: 1000,
               performanceLevel: "high",
               potentialLevel: "high",
+              hireDate: "2020-07-15",
               confirmedUnderperformer: false,
             },
           ],
@@ -510,6 +521,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
               familyCode: "F1",
               gradeCode: "G1",
               salaryFcfa: 1000,
+              hireDate: "2020-07-15",
               confirmedUnderperformer: false,
             },
           ],
@@ -528,6 +540,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 650_000, // ~65% → S7-
           performanceLevel: "high",
           potentialLevel: "high",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
         {
@@ -537,6 +550,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_500_000, // 100% → S0
           performanceLevel: "medium",
           potentialLevel: "low",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
         {
@@ -546,6 +560,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_620_000, // 135% → S7+
           performanceLevel: "low",
           potentialLevel: "low",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: true,
         },
       ],
@@ -606,6 +621,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             salaryFcfa: 800_000,
             performanceLevel: "high",
             potentialLevel: "medium",
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
           {
@@ -615,6 +631,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             salaryFcfa: 1_200_000,
             performanceLevel: "medium",
             potentialLevel: "high",
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
         ],
@@ -642,6 +659,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 500_000,
           performanceLevel: "low",
           potentialLevel: "low",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
         {
@@ -651,6 +669,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_500_000,
           performanceLevel: "high",
           potentialLevel: "high",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
       ],
@@ -662,6 +681,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_200_000,
           performanceLevel: "medium",
           potentialLevel: "medium",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
         {
@@ -671,6 +691,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_200_000,
           performanceLevel: "medium",
           potentialLevel: "medium",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: true,
         },
       ],
@@ -753,6 +774,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             salaryFcfa: bigSalary,
             performanceLevel: "medium",
             potentialLevel: "medium",
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
         ],

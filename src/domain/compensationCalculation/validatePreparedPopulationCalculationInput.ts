@@ -234,18 +234,46 @@ export function validatePreparedPopulationCalculationInput(
       );
     }
 
-    if (typeof employee.confirmedUnderperformer !== "boolean") {
-      issues.push(
-        issue({
-          employeeId: employee.employeeId,
-          code: "EMPLOYEE_CALCULATION_FAILED",
-          field: "confirmedUnderperformer",
-          message: "confirmedUnderperformer doit être un booléen explicite.",
-          step: "validate_input",
-        }),
-      );
-    }
+  if (
+    typeof employee.confirmedUnderperformer !== "boolean"
+  ) {
+    issues.push(
+      issue({
+        employeeId: employee.employeeId,
+        code: "EMPLOYEE_CALCULATION_FAILED",
+        field: "confirmedUnderperformer",
+        message: "confirmedUnderperformer doit être un booléen explicite.",
+        step: "validate_input",
+      }),
+    );
   }
+
+  if (
+    typeof employee.hireDate !== "string" ||
+    employee.hireDate.trim() === ""
+  ) {
+    issues.push(
+      issue({
+        employeeId: employee.employeeId,
+        code: "MISSING_HIRE_DATE",
+        field: "hireDate",
+        message:
+          "La date d’embauche est obligatoire pour l’incidence d’ancienneté.",
+        step: "validate_input",
+      }),
+    );
+  } else if (!/^\d{4}-\d{2}-\d{2}$/.test(employee.hireDate.trim())) {
+    issues.push(
+      issue({
+        employeeId: employee.employeeId,
+        code: "INVALID_HIRE_DATE",
+        field: "hireDate",
+        message: "La date d’embauche doit être au format ISO YYYY-MM-DD.",
+        step: "validate_input",
+      }),
+    );
+  }
+}
 
   return { isValid: issues.length === 0, issues };
 }

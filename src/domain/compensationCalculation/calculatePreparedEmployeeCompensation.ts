@@ -210,6 +210,7 @@ export function calculatePreparedEmployeeCompensation(
     familyCode: employee.familyCode,
     gradeCode: employee.gradeCode,
     salaryFcfa,
+    hireDate: employee.hireDate,
     s0Resolution,
     salaryPositionResult,
     evaluationFactorResult,

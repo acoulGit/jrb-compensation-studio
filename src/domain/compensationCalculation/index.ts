@@ -40,6 +40,21 @@ export {
   type ApplicationCalendarInput,
   type BaseSalaryReminderBreakdown,
 } from "./baseSalaryReminder";
+export {
+  SENIORITY_IMPACT_CONTRACT_VERSION,
+  anniversaryEffectYearMonth,
+  ceilFcfaPercentOfAmount,
+  computeSeniorityImpactBreakdown,
+  effectiveAnniversaryCountAt,
+  parseHireDateIso,
+  seniorityRatePercentAt,
+  seniorityRatePercentFromEffectiveAnniversaryCount,
+  validateHireDateForCampaign,
+  type MonthlySeniorityImpactEntry,
+  type ParsedHireDate,
+  type SeniorityImpactBreakdown,
+  type SeniorityPaymentTiming,
+} from "./seniorityImpact";
 export { calculatePopulationBudgetAllocation } from "./calculatePopulationBudgetAllocation";
 export {
   CompensationCalculationError,

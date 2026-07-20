@@ -11,6 +11,7 @@
  * | performanceLevel   | nineBoxCode → facteurs 9-Box   | si mode l’exige ; sinon omis            |
  * | potentialLevel     | nineBoxCode → facteurs 9-Box   | si mode l’exige ; sinon omis            |
  * | confirmedUnderperformer | confirmedUnderperformer   | booléen explicite (Lot 1C post-import)  |
+ * | hireDate           | hireDate                   | ISO YYYY-MM-DD (Lot 2A-H2B)             |
  *
  * Aucune valeur par défaut silencieuse dans ce mapper.
  */
@@ -160,6 +161,29 @@ export function mapImportedEmployeeToPreparedInput(
     });
   }
 
+  const hireDateRaw = employee.hireDate?.trim() ?? "";
+  if (!hireDateRaw) {
+    issues.push({
+      scope: "employee",
+      employeeId: employeeId || undefined,
+      code: "MISSING_HIRE_DATE",
+      field: "hireDate",
+      severity: "blocking",
+      message:
+        "La date d’embauche est obligatoire pour l’incidence d’ancienneté.",
+    });
+  } else if (!/^\d{4}-\d{2}-\d{2}$/.test(hireDateRaw)) {
+    issues.push({
+      scope: "employee",
+      employeeId: employeeId || undefined,
+      code: "INVALID_HIRE_DATE",
+      field: "hireDate",
+      severity: "blocking",
+      message: "La date d’embauche doit être au format ISO YYYY-MM-DD.",
+      details: { hireDate: hireDateRaw },
+    });
+  }
+
   let performanceLevel: PreparedEmployeeCalculationInput["performanceLevel"];
   let potentialLevel: PreparedEmployeeCalculationInput["potentialLevel"];
 
@@ -246,6 +270,7 @@ export function mapImportedEmployeeToPreparedInput(
     familyCode: family!.code,
     gradeCode: grade!.code,
     salaryFcfa: salary,
+    hireDate: hireDateRaw,
     confirmedUnderperformer: employee.confirmedUnderperformer,
     ...(performanceLevel !== undefined ? { performanceLevel } : {}),
     ...(potentialLevel !== undefined ? { potentialLevel } : {}),

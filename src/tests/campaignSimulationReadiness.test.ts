@@ -247,6 +247,7 @@ describe("Lot 2B-1 — mapping salarié", () => {
         familyCode: "F1",
         gradeCode: "G1",
         salaryFcfa: 1_000_000,
+        hireDate: "2020-01-01",
         performanceLevel: "medium",
         potentialLevel: "medium",
         confirmedUnderperformer: false,
@@ -316,6 +317,7 @@ describe("Lot 2B-1 — mapping salarié", () => {
         familyCode: "F1",
         gradeCode: "G1",
         salaryFcfa: 1,
+        hireDate: "2020-07-15",
         confirmedUnderperformer: false,
       },
       {
@@ -323,6 +325,7 @@ describe("Lot 2B-1 — mapping salarié", () => {
         familyCode: "F1",
         gradeCode: "G1",
         salaryFcfa: 1,
+        hireDate: "2020-07-15",
         confirmedUnderperformer: false,
       },
     ] satisfies PreparedEmployeeCalculationInput[]);

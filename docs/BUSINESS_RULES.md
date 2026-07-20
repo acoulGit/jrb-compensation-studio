@@ -253,6 +253,20 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
 - Hors périmètre H2A : ancienneté, TPA, CNSS, charges patronales, autres
   incidences, rappel d’ancienneté (Lot 2A-H2B).
 
+## Incidence supplémentaire d’ancienneté (2A-H2B)
+
+- Vocabulaire : « incidence supplémentaire d’ancienneté » (pas la prime totale).
+- Assiette exclusive : `monthlyFinalIncreaseFcfa` (augmentation mensuelle finale).
+- Barème sans plafond : moins de 3 anniversaires effectifs → 0 % ; sinon
+  `ratePercent = effectiveAnniversaryCount + 2`.
+- Prise d’effet : 1er jour du mois précédant le mois d’anniversaire
+  (embauche en janvier → décembre de l’année précédente). Pas de prorata journalier.
+- Arrondi : plafond FCFA (`(num + 99) / 100` pour taux entier).
+- Approximation conventionnelle : pas de chargement de la prime historique.
+- Hors budget : ne modifie ni budget cible, ni allocation, ni coût annuel de base.
+- Ventilation rappel / direct selon `technicalApplicationMonth` (H2A).
+- Hors périmètre H2B : TPA, CNSS, charges, taxes, prime historique.
+
 ## Persistance de simulation (Lot 2B-4A)
 
 - Enregistrement **explicite** d’un snapshot immuable (append-only).
