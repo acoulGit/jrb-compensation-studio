@@ -9,6 +9,7 @@ import { pageDefinitions } from "./pageDefinitions";
 import { ImportPage } from "./ImportPage";
 import { ReferencesPage } from "./ReferencesPage";
 import { SettingsPage } from "./SettingsPage";
+import { SimulationPage } from "./SimulationPage";
 
 export { pageDefinitions };
 
@@ -23,6 +24,7 @@ function FeaturePage({
     | "campaigns"
     | "references"
     | "imports"
+    | "simulations"
   >;
 }) {
   const definition = pageDefinitions[page];
@@ -46,6 +48,7 @@ export function PageContent({ page }: { page: PageId }) {
   if (page === "campaigns") return <CampaignsPage />;
   if (page === "references") return <ReferencesPage />;
   if (page === "imports") return <ImportPage />;
+  if (page === "simulations") return <SimulationPage />;
   if (page === "settings") return <SettingsPage />;
   if (page === "about") return <AboutPage />;
   return <FeaturePage page={page} />;

@@ -304,6 +304,15 @@ alertes budgétaires restent à produire dans des lots ultérieurs.
 | `preparedReferences` | `PopulationCalculationReferences` ou null |
 | `nineBoxOrientation` | Métadonnée informative (hors calcul) |
 
+### Lot 2B-2 (non persisté — session UI)
+
+| Concept | Nature |
+| --- | --- |
+| `CampaignSimulationConfigurationDraft` | Brouillon saisi par campagne |
+| `ValidatedCampaignSimulationConfiguration` | Snapshot mémoire après validation |
+| `validatedAtSessionSequence` | Compteur de session (non temporel) |
+| `configurationFingerprint` | Empreinte stable des paramètres |
+
 Voir `docs/CAMPAIGN_SIMULATION.md`.
 
 ## Décisions RH

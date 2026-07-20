@@ -7,6 +7,7 @@ import { MAX_POPULATION_PAGE_SIZE } from "../../infrastructure/imports/importLim
 import type { EmployeeSnapshot } from "../../domain/hrImport/models";
 import {
   buildPopulationCalculationReferences,
+  logSimulationReferenceReadinessFailure,
 } from "./buildPopulationCalculationReferences";
 import type {
   CampaignSimulationReadinessInput,
@@ -221,7 +222,30 @@ export async function buildCampaignSimulationReadiness(
 
   const referenceSet = await ports.getReferenceSet(input.campaignId);
   const completeness = await ports.getCompleteness(input.campaignId);
-  if (!completeness.ready) {
+  const referencesBuild = buildPopulationCalculationReferences(referenceSet);
+  issues.push(...referencesBuild.issues);
+
+  if (!referencesBuild.references) {
+    logSimulationReferenceReadinessFailure({
+      campaignId: input.campaignId,
+      evaluationMode: referenceSet.config.nineBoxMode,
+      set: referenceSet,
+      build: referencesBuild,
+    });
+  }
+
+  // Évite le doublon générique si buildPopulationCalculationReferences
+  // a déjà traduit la complétude éditoriale.
+  if (
+    !completeness.ready &&
+    !referencesBuild.issues.some(
+      (issue) =>
+        issue.code === "INCOMPLETE_COMPENSATION_REFERENCES" ||
+        issue.code === "S0_REFERENCE_NOT_FOUND" ||
+        issue.code === "FACTOR_NOT_FOUND" ||
+        issue.code === "EMPTY_POSITION_REFERENCE",
+    )
+  ) {
     issues.push({
       scope: "references",
       code: "INCOMPLETE_COMPENSATION_REFERENCES",
@@ -234,17 +258,14 @@ export async function buildCampaignSimulationReadiness(
     });
   }
 
-  const referencesBuild = buildPopulationCalculationReferences(referenceSet);
-  issues.push(...referencesBuild.issues);
-
   const configBuild = buildConfigurationReadiness(input);
   issues.push(...configBuild.issues);
 
   const familiesById = new Map(
-    referenceSet.jobFamilies.map((family) => [family.id, family]),
+    referenceSet.jobFamilies.map((family) => [Number(family.id), family]),
   );
   const gradesById = new Map(
-    referenceSet.grades.map((grade) => [grade.id, grade]),
+    referenceSet.grades.map((grade) => [Number(grade.id), grade]),
   );
   const nineBoxFactorsByCode = new Map<number, (typeof referenceSet.nineBoxFactors)[0]>();
   for (const factor of referenceSet.nineBoxFactors) {
@@ -319,8 +340,8 @@ export async function buildCampaignSimulationReadiness(
     }
 
     // S0 lookup readiness (sans lancer le moteur)
-    const family = familiesById.get(employee.jobFamilyId);
-    const grade = gradesById.get(employee.gradeId);
+    const family = familiesById.get(Number(employee.jobFamilyId));
+    const grade = gradesById.get(Number(employee.gradeId));
     if (family && grade && referencesBuild.references) {
       const cell = referencesBuild.references.salaryGrid.find(
         (item) =>

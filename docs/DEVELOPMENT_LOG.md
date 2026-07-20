@@ -477,3 +477,40 @@ silencieux dans le mapper). Statut : pas de
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
 - `git diff --check`
 - migrations 0001–0004 : diff silencieux
+
+## 2026-07-19 — Lot 2B-2 : configuration UI de simulation
+
+### Objectif
+
+Page Simulation : sélection de campagne, readiness, saisie budget / arrondi,
+validation en mémoire — sans exécuter le moteur ni persister.
+
+### Livrables
+
+- `SimulationPage`, `SimulationConfigurationProvider`
+- Parsing exact FCFA / taux bps / pas d’arrondi
+- Tests parsing + page + navigation
+- Docs mises à jour
+- Aucune migration / Rust / Tauri / calcul d’allocation
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux
+
+## 2026-07-20 — Correctif alignement readiness référentiels (2B-2)
+
+### Cause
+
+Rapport Simulation obsolète après édition Référentiels ; validation Simulation
+pas assez alignée sur `computeReferenceCompleteness` ; messages génériques.
+
+### Correction
+
+- `buildPopulationCalculationReferences` = complétude éditoriale + contrôles moteur
+- coercion numérique IDs/montants SQLite dans les mappers
+- refresh readiness à l’entrée Simulation + révision référentiels
+- sous-issues détaillées + log DEV `[SIMULATION_REFERENCE_READINESS_FAILED]`
+- tests `referenceReadinessAlignment.test.ts`

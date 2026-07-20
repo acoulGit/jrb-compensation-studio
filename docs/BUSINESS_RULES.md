@@ -201,6 +201,18 @@ Règles de readiness (sans calcul d’allocation) :
 
 Détails : `docs/CAMPAIGN_SIMULATION.md`.
 
+## Configuration de simulation (Lot 2B-2)
+
+- Deux modes de budget explicites (aucun défaut silencieux) : montant saisi ;
+  pourcentage de masse éligible saisie.
+- Montant manuel : entier FCFA ≥ 0, non arrondi au pas individuel.
+- Taux : conversion exacte en basis points (max 2 décimales, sans flottant).
+- Budget cible exact éventuellement fractionnaire ; jamais arrondi au pas.
+- Pas d’arrondi individuel paramétrable (mode `nearest_half_up`), non figé à 5.
+- Configuration validée uniquement en mémoire de session ; invalidée à toute
+  modification ; isolée par campagne.
+- Campagne archivée : lecture seule (pas de nouvelle validation).
+
 ## Autres règles
 
 - Un sous-performant confirmé reçoit 0 % matriciel.

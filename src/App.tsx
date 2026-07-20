@@ -1,6 +1,7 @@
 import { AppDataProvider } from "./app/AppDataProvider";
 import { CompensationReferenceProvider } from "./app/CompensationReferenceProvider";
 import { HrImportProvider } from "./app/HrImportProvider";
+import { SimulationConfigurationProvider } from "./app/SimulationConfigurationProvider";
 import { AppShell } from "./app/AppShell";
 import type { AppServices } from "./services/createAppServices";
 import "./styles/global.css";
@@ -18,7 +19,9 @@ function App({ services, initializeErrorFactory }: AppProps) {
     >
       <CompensationReferenceProvider>
         <HrImportProvider>
-          <AppShell />
+          <SimulationConfigurationProvider>
+            <AppShell />
+          </SimulationConfigurationProvider>
         </HrImportProvider>
       </CompensationReferenceProvider>
     </AppDataProvider>

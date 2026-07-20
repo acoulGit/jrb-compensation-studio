@@ -285,6 +285,17 @@ Le Lot 2B-1 **ne doit pas** appeler
 `calculatePreparedPopulationCompensation`. Voir
 `docs/CAMPAIGN_SIMULATION.md`.
 
+## Lot 2B-2 — configuration UI (sans calcul)
+
+La page Simulation permet de saisir et valider en mémoire :
+
+- `BudgetTargetInput` (manuel ou % d’assiette saisie) ;
+- `RoundingPolicy` (`nearest_half_up` + pas > 0) .
+
+Aperçu autorisé : `resolveBudgetTarget` + affichage exact fractionnaire.
+Interdit : allocation population, arrondi individuel des augmentations,
+persistance.
+
 ## Sorties attendues
 
 Le futur résultat devra distinguer proposition matricielle, complément de

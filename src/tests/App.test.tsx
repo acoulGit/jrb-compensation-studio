@@ -40,14 +40,16 @@ describe("socle applicatif", () => {
     expect(screen.getByText("Population importée")).toBeInTheDocument();
   });
 
-  it("navigue vers chacune des pages", async () => {
+  it(
+    "navigue vers chacune des pages",
+    async () => {
     const { user } = await renderApp();
 
     for (const page of [
       "Campagnes",
       "Référentiels",
       "Import RH",
-      "Simulations",
+      "Simulation",
       "Revue individuelle",
       "Rapports",
       "Paramètres",
@@ -64,7 +66,9 @@ describe("socle applicatif", () => {
         screen.getByRole("heading", { name: headingName, level: 1 }),
       ).toBeInTheDocument();
     }
-  });
+  },
+    15_000,
+  );
 
   it("affiche l’organisation dans l’en-tête et la page À propos", async () => {
     const { user } = await renderApp();

@@ -114,6 +114,19 @@ Aucune migration, UI ou commande Tauri dans ce sous-lot.
 
 Voir `docs/CAMPAIGN_SIMULATION.md`.
 
+## Couche configuration UI de simulation (Lot 2B-2)
+
+- **Page** `SimulationPage` (navigation « Simulation »).
+- **Provider** `SimulationConfigurationProvider` : brouillons et snapshots
+  validés **en mémoire de session**, isolés par `campaignId`, sans persistance.
+- Parsing exact (`parseNonNegativeFcfaAmount`, `parseBudgetRatePercentToBps`,
+  `parseRoundingStepFcfa`) et aperçu budget via `resolveBudgetTarget` +
+  `formatExactAmountAsFcfa`.
+- Réutilise `buildCampaignSimulationReadiness` ; n’appelle pas le moteur
+  d’allocation.
+
+Voir `docs/CAMPAIGN_SIMULATION.md`.
+
 ## Couche import RH (Lot 1C)
 
 Le Lot 1C ajoute l’import local de population par campagne, sans moteur de

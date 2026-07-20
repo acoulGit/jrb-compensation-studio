@@ -60,15 +60,16 @@ export const pageDefinitions: Record<PageId, FeatureDefinition> = {
     ],
   },
   simulations: {
-    title: "Simulations",
-    description: "Construisez et comparez plusieurs hypothèses de répartition.",
-    emptyTitle: "Aucun scénario",
+    title: "Simulation",
+    description:
+      "Préparez la configuration budgétaire et l’arrondi d’une campagne avant calcul.",
+    emptyTitle: "Aucune campagne",
     emptyDescription:
-      "Les simulations seront disponibles après la mise en place du moteur de calcul.",
+      "Sélectionnez une campagne pour consulter la préparation et valider une configuration en mémoire.",
     plannedFeatures: [
-      "Création de scénarios paramétrés",
-      "Comparaison des consommations budgétaires",
-      "Analyse des écarts entre scénarios",
+      "Exécution du calcul de simulation (Lot 2B-3)",
+      "Persistance et historique (Lot 2B-4)",
+      "Comparaison de scénarios",
     ],
   },
   "individual-review": {

@@ -84,7 +84,7 @@ export function mapImportedEmployeeToPreparedInput(
     });
   }
 
-  const family = context.familiesById.get(employee.jobFamilyId);
+  const family = context.familiesById.get(Number(employee.jobFamilyId));
   if (!family) {
     issues.push({
       scope: "employee",
@@ -93,7 +93,7 @@ export function mapImportedEmployeeToPreparedInput(
       field: "familyCode",
       severity: "blocking",
       message: `Famille introuvable pour jobFamilyId=${employee.jobFamilyId}.`,
-      details: { jobFamilyId: employee.jobFamilyId },
+      details: { jobFamilyId: Number(employee.jobFamilyId) },
     });
   } else if (!family.code.trim()) {
     issues.push({
@@ -106,7 +106,7 @@ export function mapImportedEmployeeToPreparedInput(
     });
   }
 
-  const grade = context.gradesById.get(employee.gradeId);
+  const grade = context.gradesById.get(Number(employee.gradeId));
   if (!grade) {
     issues.push({
       scope: "employee",
@@ -115,7 +115,7 @@ export function mapImportedEmployeeToPreparedInput(
       field: "gradeCode",
       severity: "blocking",
       message: `Grade introuvable pour gradeId=${employee.gradeId}.`,
-      details: { gradeId: employee.gradeId },
+      details: { gradeId: Number(employee.gradeId) },
     });
   } else if (!grade.code.trim()) {
     issues.push({

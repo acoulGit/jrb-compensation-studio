@@ -9,7 +9,10 @@ export {
   buildCampaignSimulationReadiness,
   createCampaignSimulationReadinessPortsFromServices,
 } from "./buildCampaignSimulationReadiness";
-export { buildPopulationCalculationReferences } from "./buildPopulationCalculationReferences";
+export {
+  buildPopulationCalculationReferences,
+  logSimulationReferenceReadinessFailure,
+} from "./buildPopulationCalculationReferences";
 export type {
   CampaignSimulationReadinessInput,
   CampaignSimulationReadinessIssue,
@@ -30,3 +33,26 @@ export {
   normalizePerformanceLevel,
   normalizePotentialLevel,
 } from "./normalizeFactorLevel";
+export type { SimulationConfigurationCode } from "./simulationConfigurationCodes";
+export {
+  parseBudgetRatePercentToBps,
+  parseNonNegativeFcfaAmount,
+  parseRoundingStepFcfa,
+  parseSimulationConfigurationDraft,
+  type ParseFailure,
+  type ParseResult,
+  type ParsedSimulationConfiguration,
+  type SimulationConfigurationDraftFields,
+} from "./parseSimulationConfiguration";
+export {
+  buildConfigurationFingerprint,
+  formatBasisPointsAsPercent,
+  formatExactAmountAsFcfa,
+} from "./formatExactBudgetDisplay";
+export {
+  ROUNDING_STEP_SUGGESTIONS,
+  createEmptyConfigurationDraft,
+  type CampaignSimulationConfigurationDraft,
+  type ValidatedCampaignSimulationConfiguration,
+  type BudgetTargetModeChoice,
+} from "./simulationConfigurationModels";

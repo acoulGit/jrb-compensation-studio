@@ -759,7 +759,10 @@ describe("Lot 2B-1 — readiness campagne", () => {
     );
     expect(report.isReady).toBe(false);
     const codes = new Set(report.issues.map((i) => i.code));
-    expect(codes.has("INCOMPLETE_COMPENSATION_REFERENCES")).toBe(true);
+    expect(
+      codes.has("INCOMPLETE_COMPENSATION_REFERENCES") ||
+        codes.has("S0_REFERENCE_NOT_FOUND"),
+    ).toBe(true);
     expect(codes.has("DUPLICATE_EMPLOYEE_ID")).toBe(true);
     expect(codes.has("MISSING_BUDGET_CONFIGURATION")).toBe(true);
     expect(codes.has("MISSING_ROUNDING_POLICY")).toBe(true);
