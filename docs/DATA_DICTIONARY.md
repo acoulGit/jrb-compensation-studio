@@ -312,6 +312,18 @@ alertes budgétaires restent à produire dans des lots ultérieurs.
 | `ValidatedCampaignSimulationConfiguration` | Snapshot mémoire après validation |
 | `validatedAtSessionSequence` | Compteur de session (non temporel) |
 | `configurationFingerprint` | Empreinte stable des paramètres |
+| `sourceFingerprint` | Empreinte sources + config à la validation |
+
+### Lot 2B-3 (non persisté — exécution session)
+
+| Concept | Nature |
+| --- | --- |
+| `CampaignSimulationExecutionResult` | Vue consultable post-calcul |
+| `EmployeeSimulationResultView` | Ligne salarié + `finalSalaryFcfa` affichage |
+| `SimulationBudgetSummaryView` | Budget cible / théorique / réel / écart |
+| `SimulationPopulationSummaryView` | Compteurs et totaux population |
+| `runSequence` | Compteur local de session par campagne |
+| `CampaignSimulationExecutionState` | idle/running/success/error/stale |
 
 Voir `docs/CAMPAIGN_SIMULATION.md`.
 

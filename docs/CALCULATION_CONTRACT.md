@@ -296,6 +296,26 @@ Aperçu autorisé : `resolveBudgetTarget` + affichage exact fractionnaire.
 Interdit : allocation population, arrondi individuel des augmentations,
 persistance.
 
+## Lot 2B-3 — exécution en mémoire
+
+Entrée applicative : `ExecuteCampaignSimulationInput`
+(`campaignId`, `validatedConfiguration`, `expectedSourceFingerprint`, ports).
+
+Ordre :
+
+1. contrôles campagne / configuration ;
+2. readiness reconstruit ;
+3. comparaison d’empreinte sources + config ;
+4. `PreparedPopulationCalculationInput` ;
+5. **un seul** appel `calculatePreparedPopulationCompensation` ;
+6. vue `CampaignSimulationExecutionResult` (synthèse + salariés + étapes).
+
+Interdit dans la couche applicative : recalcul de position, facteurs, poids,
+budget exact, allocation théorique ou arrondi final.
+
+Échec structuré si le moteur lève `CompensationCalculationError` ou si le
+résultat est incomplet — aucun total partiel « valide ».
+
 ## Sorties attendues
 
 Le futur résultat devra distinguer proposition matricielle, complément de

@@ -8,6 +8,7 @@ import { useAppData } from "../app/AppDataProvider";
 import { useCompensationReference } from "../app/CompensationReferenceProvider";
 import { useHrImport } from "../app/HrImportProvider";
 import { useSimulationConfiguration } from "../app/SimulationConfigurationProvider";
+import { useSimulationExecution } from "../app/SimulationExecutionProvider";
 import { ROUNDING_STEP_SUGGESTIONS } from "../application/campaignSimulation/simulationConfigurationModels";
 import type { CampaignSimulationReadinessIssue } from "../application/campaignSimulation/campaignSimulationModels";
 import type { ReadinessScope } from "../application/campaignSimulation/campaignSimulationCodes";
@@ -17,6 +18,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { pageDefinitions } from "./pageDefinitions";
+import { SimulationResultsPanel } from "./simulation/SimulationResultsPanel";
 
 const SCOPE_ORDER: ReadinessScope[] = [
   "campaign",
@@ -105,8 +107,10 @@ export function SimulationPage() {
     validateConfiguration,
     refreshReadiness,
   } = useSimulationConfiguration();
+  const { execution, canLaunch, launchSimulation } = useSimulationExecution();
 
   const [busy, setBusy] = useState(false);
+  const [launchBusy, setLaunchBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -158,6 +162,18 @@ export function SimulationPage() {
       setFormError("Impossible de valider la configuration pour le moment.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleLaunch = async () => {
+    setLaunchBusy(true);
+    setFormError(null);
+    try {
+      await launchSimulation();
+    } catch {
+      setFormError("Impossible de lancer la simulation pour le moment.");
+    } finally {
+      setLaunchBusy(false);
     }
   };
 
@@ -678,8 +694,14 @@ export function SimulationPage() {
             aria-live="polite"
             data-testid="simulation-validation-success"
           >
-            Configuration validée pour le calcul. Aucun calcul n’a encore été
-            lancé. (séquence session #
+            Configuration validée pour le calcul.
+            {execution.status === "idle" ||
+            (execution.status !== "success" &&
+              execution.status !== "running" &&
+              !execution.result)
+              ? " Aucun calcul n’a encore été lancé."
+              : ""}{" "}
+            (séquence validation #
             {validatedConfiguration.validatedAtSessionSequence})
           </p>
         ) : null}
@@ -701,12 +723,41 @@ export function SimulationPage() {
           >
             Valider la configuration
           </button>
+          {validationStatus === "validated" && !isReadOnly ? (
+            <button
+              type="button"
+              className="button button--primary"
+              data-testid="simulation-launch"
+              disabled={!canLaunch || launchBusy || execution.status === "running"}
+              onClick={() => {
+                void handleLaunch();
+              }}
+            >
+              Lancer la simulation
+            </button>
+          ) : null}
         </div>
 
-        <p className="muted" data-testid="simulation-next-lot-hint">
-          Calcul disponible après validation dans le prochain sous-lot.
+        <p
+          className="muted"
+          role="status"
+          aria-live="polite"
+          data-testid="simulation-execution-status"
+        >
+          {execution.status === "running" || launchBusy
+            ? "Calcul en cours…"
+            : execution.status === "success" && execution.result
+              ? `Simulation réussie (séquence #${execution.result.runSequence}).`
+              : validationStatus === "validated"
+                ? "Prêt à lancer la simulation."
+                : "Validez la configuration pour activer le lancement."}
         </p>
       </SectionCard>
+
+      <SimulationResultsPanel
+        execution={execution}
+        isArchived={isReadOnly}
+      />
     </>
   );
 }

@@ -125,6 +125,18 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
 - Réutilise `buildCampaignSimulationReadiness` ; n’appelle pas le moteur
   d’allocation.
 
+## Couche exécution de simulation (Lot 2B-3)
+
+- **Service** `executeCampaignSimulation` : recharge sources, vérifie empreintes,
+  appelle **une fois** `calculatePreparedPopulationCompensation`, construit une
+  vue consultable — **aucune persistance**.
+- **Fingerprint** `buildSimulationSourceFingerprint` (sources + config).
+- **Provider** `SimulationExecutionProvider` : état / résultat / issues par
+  `campaignId`, `runSequence` de session, invalidation stale.
+- **UI** : synthèse, tableau (recherche / pagination), drawer de détail.
+- Formatage exact : `formatFcfaInteger`, `formatExactAmountAsFcfa`,
+  `formatExactRateAsPercent`, `formatFactorMilli`, `formatExactWeight`.
+
 Voir `docs/CAMPAIGN_SIMULATION.md`.
 
 ## Couche import RH (Lot 1C)

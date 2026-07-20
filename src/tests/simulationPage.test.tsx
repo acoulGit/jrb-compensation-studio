@@ -267,11 +267,128 @@ describe("Lot 2B-2 — page Simulation", () => {
       "nearest_half_up",
     );
     expect(spy).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("simulation-launch")).not.toBeInTheDocument();
     expect(
       screen.queryByText(/finalRoundedIncreaseAmountFcfa/),
     ).not.toBeInTheDocument();
-    expect(screen.getByTestId("simulation-next-lot-hint")).toBeInTheDocument();
     spy.mockRestore();
+  });
+
+  it("affiche le bouton de lancement après validation et appelle le moteur au clic", async () => {
+    const spy = vi.spyOn(
+      calculation,
+      "calculatePreparedPopulationCompensation",
+    );
+    const services = createMemoryAppServices();
+    await prepareReadyCampaign(services);
+    const { user } = await openSimulation(services);
+
+    expect(screen.queryByTestId("simulation-launch")).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("simulation-budget-mode-manual"));
+    await user.type(screen.getByTestId("simulation-manual-budget"), "25000003");
+    await user.click(screen.getByTestId("simulation-rounding-suggest-100"));
+    await waitFor(() => {
+      expect(screen.getByTestId("simulation-validate")).not.toBeDisabled();
+    });
+    expect(spy).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId("simulation-validate"));
+    await screen.findByTestId("simulation-validation-success");
+    const launch = await screen.findByTestId("simulation-launch");
+    expect(launch).not.toBeDisabled();
+    expect(spy).not.toHaveBeenCalled();
+
+    await user.click(launch);
+    await screen.findByTestId("simulation-summary");
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("simulation-summary-budget-target").textContent).toMatch(
+      /25[\s\u202F]?000[\s\u202F]?003/,
+    );
+    expect(screen.getByTestId("simulation-results-table")).toBeInTheDocument();
+    expect(screen.getByText("A-1")).toBeInTheDocument();
+    expect(screen.getByText("B-2")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("simulation-employee-open-A-1"));
+    await screen.findByTestId("simulation-employee-drawer");
+    expect(screen.getByTestId("simulation-detail-s0")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("simulation-employee-drawer"),
+      ).not.toBeInTheDocument();
+    });
+
+    await user.clear(screen.getByTestId("simulation-manual-budget"));
+    await user.type(screen.getByTestId("simulation-manual-budget"), "30000000");
+    await screen.findByTestId("simulation-result-stale");
+    expect(screen.queryByTestId("simulation-summary")).not.toBeInTheDocument();
+
+    spy.mockRestore();
+  });
+
+  it("recherche et pagine les résultats", async () => {
+    const services = createMemoryAppServices();
+    const campaign = await services.campaign.createCampaign({
+      name: "Pagination",
+      referenceYear: 2027,
+      notes: "",
+    });
+    await fillAllS0(services, campaign.id);
+    await services.compensationReference.updateNineBoxMode(campaign.id, "none");
+    const rows: (string | number)[][] = [FR_HEADERS];
+    for (let index = 1; index <= 30; index += 1) {
+      rows.push(
+        validRow({
+          matricule: `M-${String(index).padStart(2, "0")}`,
+          nom: `Nom ${index}`,
+          salaire: 400_000 + index,
+        }),
+      );
+    }
+    const file = sheetToBuffer(rows, "big.xlsx");
+    const parsed = await services.hrImport.parseFile(file);
+    const mapping = services.hrImport.buildAutoMapping(FR_HEADERS);
+    await services.hrImport.confirmImport({
+      campaignId: campaign.id,
+      fileName: parsed.fileName,
+      format: parsed.format,
+      sheetName: parsed.sheets[0].name,
+      fileSizeBytes: file.fileSizeBytes,
+      rows: parsed.sheets[0].rows,
+      headerRowIndex: 0,
+      mapping,
+    });
+    await services.campaign.activateCampaign(campaign.id);
+
+    const { user } = await openSimulation(services);
+    await user.selectOptions(
+      await screen.findByTestId("simulation-campaign-select"),
+      String(campaign.id),
+    );
+    await user.click(screen.getByTestId("simulation-budget-mode-manual"));
+    await user.type(screen.getByTestId("simulation-manual-budget"), "1000000");
+    await user.click(screen.getByTestId("simulation-rounding-suggest-100"));
+    await waitFor(() => {
+      expect(screen.getByTestId("simulation-validate")).not.toBeDisabled();
+    });
+    await user.click(screen.getByTestId("simulation-validate"));
+    await user.click(await screen.findByTestId("simulation-launch"));
+    await screen.findByTestId("simulation-results-table");
+
+    expect(screen.getByTestId("simulation-results-pagination")).toHaveTextContent(
+      "Page 1",
+    );
+    await user.type(screen.getByTestId("simulation-results-search"), "M-30");
+    await waitFor(() => {
+      expect(screen.getByText("M-30")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("M-01")).not.toBeInTheDocument();
+    await user.clear(screen.getByTestId("simulation-results-search"));
+    await user.type(screen.getByTestId("simulation-results-search"), "Nom 12");
+    await waitFor(() => {
+      expect(screen.getByText("M-12")).toBeInTheDocument();
+    });
   });
 
   it("désactive la validation si configuration incomplète", async () => {

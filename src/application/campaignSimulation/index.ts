@@ -48,7 +48,25 @@ export {
   buildConfigurationFingerprint,
   formatBasisPointsAsPercent,
   formatExactAmountAsFcfa,
+  formatExactRateAsPercent,
+  formatExactWeight,
+  formatFactorMilli,
+  formatFcfaInteger,
 } from "./formatExactBudgetDisplay";
+export { buildSimulationSourceFingerprint } from "./buildSimulationSourceFingerprint";
+export { executeCampaignSimulation } from "./executeCampaignSimulation";
+export { buildSimulationResultView } from "./buildSimulationResultView";
+export type { CampaignSimulationExecutionCode } from "./campaignSimulationExecutionCodes";
+export type {
+  CampaignSimulationExecutionIssue,
+  CampaignSimulationExecutionResult,
+  EmployeeSimulationResultView,
+  ExecuteCampaignSimulationInput,
+  ExecuteCampaignSimulationOutcome,
+  SimulationBudgetSummaryView,
+  SimulationExecutionStatus,
+  SimulationPopulationSummaryView,
+} from "./campaignSimulationExecutionModels";
 export {
   ROUNDING_STEP_SUGGESTIONS,
   createEmptyConfigurationDraft,

@@ -954,6 +954,55 @@ button:focus-visible {
   margin-top: 12px;
 }
 
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--brand-700, #1a4d7c);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.simulation-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.simulation-drawer {
+  width: min(440px, 100%);
+  height: 100%;
+  background: #fff;
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.simulation-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.simulation-drawer__header h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.simulation-drawer__body {
+  padding: 16px 18px 24px;
+  overflow: auto;
+}
+
 .references-completeness ul {
   margin: 14px 0 0;
   padding-left: 18px;

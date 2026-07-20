@@ -17,6 +17,7 @@ import {
   buildCampaignSimulationReadiness,
   createCampaignSimulationReadinessPortsFromServices,
 } from "../application/campaignSimulation/buildCampaignSimulationReadiness";
+import { buildSimulationSourceFingerprint } from "../application/campaignSimulation/buildSimulationSourceFingerprint";
 import {
   buildConfigurationFingerprint,
   formatBasisPointsAsPercent,
@@ -76,6 +77,8 @@ interface SimulationConfigurationContextValue {
   applyRoundingStepSuggestion: (value: string) => void;
   validateConfiguration: () => Promise<boolean>;
   refreshReadiness: () => Promise<void>;
+  /** Marque le snapshot validé de la campagne courante comme stale. */
+  markValidationStale: () => void;
 }
 
 const SimulationConfigurationContext =
@@ -364,6 +367,38 @@ export function SimulationConfigurationProvider({
     };
   }, [draftFingerprint, referenceRevision, refreshReadiness, selectedCampaignId]);
 
+  // Invalide le snapshot si les sources rechargées ne correspondent plus à l’empreinte.
+  useEffect(() => {
+    if (selectedCampaignId === null) return;
+    if (validationStatus !== "validated") return;
+    if (!validatedConfiguration || !readinessReport) return;
+    if (readinessStatus !== "ready") return;
+
+    const currentFingerprint = buildSimulationSourceFingerprint({
+      campaignId: selectedCampaignId,
+      campaignStatus: readinessReport.campaignStatus,
+      evaluationMode: readinessReport.evaluationMode,
+      currentImportBatchId: readinessReport.currentImportBatchId,
+      preparedEmployees: readinessReport.preparedEmployees,
+      preparedReferences: readinessReport.preparedReferences,
+      budgetTarget: validatedConfiguration.budgetTarget,
+      roundingPolicy: validatedConfiguration.roundingPolicy,
+    });
+
+    if (currentFingerprint !== validatedConfiguration.sourceFingerprint) {
+      setValidationStatusByCampaignId((prev) => ({
+        ...prev,
+        [selectedCampaignId]: "stale",
+      }));
+    }
+  }, [
+    readinessReport,
+    readinessStatus,
+    selectedCampaignId,
+    validatedConfiguration,
+    validationStatus,
+  ]);
+
   const resolvedBudgetDetails = useMemo(() => {
     if (!parsed?.budgetTarget) return null;
     try {
@@ -452,6 +487,16 @@ export function SimulationConfigurationProvider({
       roundingMode: currentParsed.roundingPolicy.mode,
       roundingStep: BigInt(currentParsed.roundingPolicy.stepFcfa),
     });
+    const sourceFingerprint = buildSimulationSourceFingerprint({
+      campaignId: selectedCampaignId,
+      campaignStatus: report.campaignStatus,
+      evaluationMode: report.evaluationMode,
+      currentImportBatchId: report.currentImportBatchId,
+      preparedEmployees: report.preparedEmployees,
+      preparedReferences: report.preparedReferences,
+      budgetTarget: currentParsed.budgetTarget,
+      roundingPolicy: currentParsed.roundingPolicy,
+    });
 
     const snapshot: ValidatedCampaignSimulationConfiguration = {
       campaignId: selectedCampaignId,
@@ -460,6 +505,7 @@ export function SimulationConfigurationProvider({
       readinessReport: report,
       validatedAtSessionSequence: nextSequence,
       configurationFingerprint: fingerprint,
+      sourceFingerprint,
     };
 
     setValidatedByCampaignId((prev) => ({
@@ -482,6 +528,14 @@ export function SimulationConfigurationProvider({
     services,
     sessionSequence,
   ]);
+
+  const markValidationStale = useCallback(() => {
+    if (selectedCampaignId === null) return;
+    setValidationStatusByCampaignId((prev) => {
+      if ((prev[selectedCampaignId] ?? "none") === "none") return prev;
+      return { ...prev, [selectedCampaignId]: "stale" };
+    });
+  }, [selectedCampaignId]);
 
   const value = useMemo<SimulationConfigurationContextValue>(
     () => ({
@@ -507,12 +561,14 @@ export function SimulationConfigurationProvider({
       applyRoundingStepSuggestion,
       validateConfiguration,
       refreshReadiness,
+      markValidationStale,
     }),
     [
       applyRoundingStepSuggestion,
       canValidate,
       draft,
       isReadOnly,
+      markValidationStale,
       parsed,
       readinessErrorMessage,
       readinessReport,

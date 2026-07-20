@@ -28,6 +28,8 @@ export interface ValidatedCampaignSimulationConfiguration {
   /** Compteur de session (non temporel) incrémenté à chaque validation. */
   validatedAtSessionSequence: number;
   configurationFingerprint: string;
+  /** Empreinte des sources + config au moment de la validation (Lot 2B-3). */
+  sourceFingerprint: string;
 }
 
 export function createEmptyConfigurationDraft(

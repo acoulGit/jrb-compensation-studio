@@ -213,6 +213,19 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
   modification ; isolée par campagne.
 - Campagne archivée : lecture seule (pas de nouvelle validation).
 
+## Exécution de simulation (Lot 2B-3)
+
+- Lancement **explicite** uniquement (« Lancer la simulation »).
+- Pas d’appel moteur à l’ouverture, saisie, readiness ou validation seule.
+- Empreinte des sources : toute divergence après validation bloque l’exécution
+  (`SIMULATION_INPUTS_CHANGED_AFTER_VALIDATION`).
+- Atomicité : pas de résultat partiel présenté comme valide.
+- Résultat courant invalidé (stale) si données ou configuration changent.
+- Isolation mémoire par campagne ; rien après redémarrage.
+- `finalSalaryFcfa` = affichage dérivé BigInt (`salaire + augmentation finale`),
+  hors mutation du résultat moteur.
+- Persistance / historique / export reportés au Lot 2B-4.
+
 ## Autres règles
 
 - Un sous-performant confirmé reçoit 0 % matriciel.

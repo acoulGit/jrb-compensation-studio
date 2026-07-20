@@ -9,8 +9,8 @@ d’augmentation.
 | Sous-lot | Contenu |
 | --- | --- |
 | **2B-1** | Préparation / readiness — rapport structuré, sans calcul |
-| **2B-2** (ce document étendu) | Page Simulation + configuration budgétaire / arrondi en mémoire |
-| **2B-3** (prévu) | Exécution du moteur (`calculatePreparedPopulationCompensation`) |
+| **2B-2** | Page Simulation + configuration budgétaire / arrondi en mémoire |
+| **2B-3** (ce document étendu) | Exécution en mémoire + consultation des résultats |
 | **2B-4** (prévu) | Persistance / historique des configurations et résultats |
 
 ## Séparation import / préparation / configuration / calcul
@@ -22,85 +22,110 @@ Préparation (Lot 2B-1)
   → CampaignSimulationReadinessReport
 Configuration UI (Lot 2B-2)
   → brouillon + snapshot ValidatedCampaignSimulationConfiguration (mémoire)
-Calcul (Lot 2A-4, à partir de 2B-3)
-  → calculatePreparedPopulationCompensation
+Exécution (Lot 2B-3)
+  → executeCampaignSimulation → calculatePreparedPopulationCompensation (1×)
+  → CampaignSimulationExecutionResult (vue consultable, mémoire)
 ```
 
 Les Lots **2B-1 et 2B-2 n’appellent pas** le moteur d’allocation.
+Le Lot **2B-3** l’appelle **uniquement** après un clic explicite
+« Lancer la simulation », jamais à l’ouverture, à la saisie ni à la validation.
 
-## Page Simulation (Lot 2B-2)
+## Page Simulation
 
 - Navigation : libellé **Simulation** (`PageId` `simulations`).
 - Zones : Campagne, État de préparation, Budget cible, Arrondi individuel,
-  Validation de la configuration.
-- Aucun tableau de résultats salariés.
-- Indice futur : « Calcul disponible après validation dans le prochain sous-lot »
-  (pas de bouton « Lancer la simulation »).
+  Validation, **Lancer la simulation**, Synthèse, Résultats individuels,
+  Détail salarié (drawer).
+- Bouton de lancement visible seulement après validation réussie, campagne
+  draft/active, readiness prêt, configuration non stale, aucune exécution
+  en cours.
 
-## État de configuration (mémoire de session)
+## État de configuration (mémoire de session) — Lot 2B-2
 
 `SimulationConfigurationProvider` conserve :
 
 - un **brouillon par `campaignId`** pendant la session ;
-- un **snapshot validé** immuable par campagne (invalidé dès modification) ;
+- un **snapshot validé** immuable par campagne (invalidé dès modification
+  de brouillon ou d’empreinte des sources) ;
+- `configurationFingerprint` + `sourceFingerprint` au moment de la validation ;
 - aucun `localStorage`, `sessionStorage`, SQLite, AppData ni fichier.
 
-Après fermeture complète de l’application, la configuration est perdue.
+### Empreinte des sources (Lot 2B-3)
 
-### Isolation
+`buildSimulationSourceFingerprint` couvre au minimum : campaignId, statut,
+mode d’évaluation, lot RH courant, population préparée (salaire, famille,
+grade, Performance/Potentiel, sous-performant), référentiels (S0, positions,
+facteurs), budget et arrondi. Hash FNV-1a déterministe sans dépendance externe.
+Les salaires ne sont pas journalisés en clair hors de la chaîne canonique
+interne.
 
-Changer de campagne restaure le brouillon de cette campagne uniquement.
-Une nouvelle campagne démarre avec une configuration vide (aucun mode budget
-sélectionné, pas vide).
+Si les sources changent après validation :
 
-### Modes de budget
+- code `SIMULATION_INPUTS_CHANGED_AFTER_VALIDATION` ;
+- message : *Les données ont changé depuis la validation. Veuillez valider
+  de nouveau la configuration.* ;
+- le moteur n’est **pas** appelé.
 
-Aucun mode par défaut :
+## Exécution en mémoire — Lot 2B-3
 
-1. **Montant saisi** (`manual_amount`) — entier FCFA ≥ 0, sans arrondi au pas.
-2. **Pourcentage de la masse éligible** (`percentage_of_eligible_payroll`) —
-   assiette entière saisie + taux % (max 2 décimales) → basis points exacts
-   (ex. 4,25 % → 425 bps). Aucun `Number` / `parseFloat` pour les montants.
+### Service
 
-Le budget cible exact peut être **fractionnaire** (`resolveBudgetTarget`) et
-est affiché via `formatExactAmountAsFcfa` sans conversion flottante ni arrondi
-au pas.
+`executeCampaignSimulation(input)` :
 
-### Arrondi individuel
+1. vérifie la configuration validée et l’appartenance à la campagne ;
+2. recharge campagne / lot / population / référentiels via ports ;
+3. reconstruit le readiness ;
+4. vérifie calculabilité + empreintes ;
+5. construit `PreparedPopulationCalculationInput` ;
+6. appelle **une seule fois** `calculatePreparedPopulationCompensation` ;
+7. construit `CampaignSimulationExecutionResult` (vue) ;
+8. **ne persiste rien**.
 
-Mode visible : **Au multiple le plus proche — half-up** (`nearest_half_up`).
-Pas d’arrondi **obligatoire**, entier > 0, **non figé à 5** ; suggestions
-1 / 5 / 10 / 50 / 100 / 500 / 1 000 (sélection explicite).
+### Atomicité
 
-### Validation
+Une simulation réussie exige toute la population calculée. En cas d’erreur
+bloquante : échec structuré, pas de totaux partiels présentés comme valides.
 
-Le bouton **Valider la configuration** crée un snapshot mémoire si readiness
-complet. Message : *Aucun calcul n’a encore été lancé.* Toute modification
-affiche *Configuration modifiée — nouvelle validation requise.*
+### Provider d’exécution
 
-Campagne **archived** : readiness consultable, validation interdite.
+`SimulationExecutionProvider` — état par `campaignId` :
 
-## Couche applicative 2B-1 / 2B-2
+- status : `idle` | `ready` | `running` | `success` | `error` | `stale` ;
+- `runSequence` local à la session (pas de date système) ;
+- isolation : revenir à une campagne restaure son dernier résultat de session ;
+- redémarrage app : tout est perdu.
 
-`src/application/campaignSimulation/`
+### Invalidation du résultat
 
-- `buildCampaignSimulationReadiness`, mapping, référentiels ;
-- `parseSimulationConfiguration`, `formatExactBudgetDisplay` ;
-- codes UI (`MISSING_BUDGET_TARGET_MODE`, …) sans dupliquer inutilement le moteur.
+Un résultat courant devient stale (retiré de l’affichage courant) si budget,
+arrondi, lot, population, salaires, famille/grade, Performance/Potentiel,
+sous-performant, S0, positions, facteurs, mode d’évaluation ou statut
+campagne changent. Message :
 
-Indépendante de React / DOM / date / locale / réseau.
+*Résultat obsolète — les données ou la configuration ont changé.*
 
-## Hors périmètre 2B-2
+Un `staleResult` peut rester en mémoire pour diagnostic uniquement.
 
-- exécution du moteur population ;
-- montants d’augmentation individuels ;
-- persistance / migration / Rust / Tauri.
+### Affichage
 
-## Correction alignement référentiels (recette 2B-2)
+- Synthèse : budget cible, montant théorique, coût réel, écart d’arrondi
+  (signe conservé), compteurs population.
+- Tableau : matricule, nom (`employeeLabel` si présent), famille/grade,
+  salaires, position, évaluation, taux/montants, nouveau salaire
+  (`salary + finalRoundedIncrease` en BigInt d’affichage).
+- Recherche matricule/nom, tri `employeeId`, pagination 25/50/100.
+- Détail drawer : facteurs, poids, arrondi, étapes d’explication ;
+  codes techniques dans `<details>` ; pas de stack trace.
 
-`buildPopulationCalculationReferences` réutilise `computeReferenceCompleteness`
-(même règle que la page Référentiels) puis ajoute les contrôles moteur.
-Mode `performance_only` : Performance exigée ; Potentiel / 9-Box non exigés.
-Le readiness Simulation se recharge à l’entrée page et après mutation des
-référentiels (évite un rapport obsolète). Journal DEV :
-`[SIMULATION_REFERENCE_READINESS_FAILED]` (sans salaires salariés).
+### Campagne archivée
+
+Consultation lecture seule d’un résultat déjà en mémoire possible ; pas de
+nouvelle validation ni nouveau lancement.
+
+## Reporté au Lot 2B-4
+
+- Persistance SQLite / historique des runs ;
+- export ;
+- workflow de validation métier ;
+- édition manuelle salarié par salarié.

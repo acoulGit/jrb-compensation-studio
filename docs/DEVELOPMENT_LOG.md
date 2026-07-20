@@ -514,3 +514,28 @@ pas assez alignée sur `computeReferenceCompleteness` ; messages génériques.
 - refresh readiness à l’entrée Simulation + révision référentiels
 - sous-issues détaillées + log DEV `[SIMULATION_REFERENCE_READINESS_FAILED]`
 - tests `referenceReadinessAlignment.test.ts`
+
+## 2026-07-20 — Lot 2B-3 : exécution en mémoire et consultation
+
+### Objectif
+
+Lancer explicitement une simulation via le moteur Lot 2A, consulter synthèse /
+résultats individuels / détail, avec garde d’empreinte et isolation session —
+sans persistance.
+
+### Livrables
+
+- `executeCampaignSimulation`, `buildSimulationSourceFingerprint`,
+  `buildSimulationResultView`, formatage exact étendu
+- `SimulationExecutionProvider` + panneau résultats / drawer
+- Tests service, provider, UI
+- Docs mises à jour
+- Aucune migration / Rust / Tauri / SQLite simulation
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux
+- aucun fichier `src-tauri/` modifié
