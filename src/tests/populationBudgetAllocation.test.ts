@@ -106,7 +106,7 @@ describe("Lot 2A-3 — resolveBudgetTarget", () => {
       budgetRateBasisPoints: 400,
     });
     expect(exact.exactAmount).toEqual({
-      numerator: 40_000_000n,
+      numerator: 480_000_000n,
       denominator: 1n,
     });
 
@@ -115,12 +115,11 @@ describe("Lot 2A-3 — resolveBudgetTarget", () => {
       eligiblePayrollFcfa: 250_623,
       budgetRateBasisPoints: 400,
     });
-    // 250623 * 400 / 10000 = 1002492 / 100 = 250623 / 25
-    expect(fractionsEqual(fractional.exactAmount, reduceFraction(1_002_492n, 100n))).toBe(
-      true,
+    // monthly 250623 × 12 × 400 / 10000 (budget annuel)
+    expect(fractional.exactAmount).toEqual(
+      reduceFraction(250_623n * 12n * 400n, 10_000n),
     );
-    expect(fractional.exactAmount).toEqual(reduceFraction(250_623n * 400n, 10_000n));
-    // Pas arrondi à 10025
+    // Pas arrondi à un entier
     expect(fractional.exactAmount.denominator).not.toBe(1n);
   });
 
@@ -207,7 +206,7 @@ describe("Lot 2A-3 — resolveBudgetTarget", () => {
       eligiblePayrollFcfa: huge,
       budgetRateBasisPoints: 400n,
     });
-    expect(pct.exactAmount).toEqual(reduceFraction(huge * 400n, 10_000n));
+    expect(pct.exactAmount).toEqual(reduceFraction(huge * 12n * 400n, 10_000n));
 
     expectErrorCode(
       () =>
@@ -231,7 +230,7 @@ describe("Lot 2A-3 — resolveBudgetTarget", () => {
     expect(first).toEqual(second);
     expect(input).toEqual(snapshot);
     const codes = first.explanationSteps.map((step) => step.code);
-    expect(codes).toContain("BUDGET_TARGET_PERCENTAGE");
+    expect(codes).toContain("BUDGET_TARGET_PERCENTAGE_ANNUAL");
     expect(codes).toContain("BUDGET_TARGET_EXACT");
   });
 });
@@ -399,7 +398,7 @@ describe("Lot 2A-3 — allocateTheoreticalPopulationBudget", () => {
   });
 
   it("reste exact avec gros BigInt, budget fractionnaire et ordre indépendant", () => {
-    const fractionalBudget = reduceFraction(250_623n * 400n, 10_000n);
+    const fractionalBudget = reduceFraction(250_623n * 12n * 400n, 10_000n);
     const employees: PopulationAllocationEmployeeInput[] = [
       {
         employeeId: "A",
@@ -559,7 +558,7 @@ describe("Lot 2A-3 — roundPopulationAllocations", () => {
   });
 
   it("couvre totaux inférieur / égal / supérieur et écart fractionnaire", () => {
-    const fractionalBudget = reduceFraction(250_623n * 400n, 10_000n); // 10024.92
+    const fractionalBudget = reduceFraction(250_623n * 12n * 400n, 10_000n); // annualized
     const one = allocateTheoreticalPopulationBudget({
       budgetTarget: fractionalBudget,
       employees: [
@@ -570,10 +569,10 @@ describe("Lot 2A-3 — roundPopulationAllocations", () => {
       theoretical: one,
       roundingPolicy: { mode: "nearest_half_up", stepFcfa: 1 },
     });
-    // 10024.92 → 10025 ; delta = 10025 - 10024.92 = 0.08 = 8/100 = 2/25
-    expect(rounded1.actualOperationAmountFcfa).toBe(10_025n);
+    // 120299,04 → 120299 ; delta = 120299 - 120299,04 = -0,04 = -4/100 = -1/25
+    expect(rounded1.actualOperationAmountFcfa).toBe(120_299n);
     expect(
-      fractionsEqual(rounded1.totalRoundingDelta, reduceFraction(8n, 100n)),
+      fractionsEqual(rounded1.totalRoundingDelta, reduceFraction(-4n, 100n)),
     ).toBe(true);
 
     const equal = roundPopulationAllocations({
@@ -608,7 +607,7 @@ describe("Lot 2A-3 — roundPopulationAllocations", () => {
     const budgets = [
       exactAmountFromInteger(0n),
       exactAmountFromInteger(10_000n),
-      reduceFraction(250_623n * 400n, 10_000n),
+      reduceFraction(250_623n * 12n * 400n, 10_000n),
     ];
     const policies: RoundingPolicy[] = [
       { mode: "nearest_half_up", stepFcfa: 1 },
@@ -692,7 +691,7 @@ describe("Lot 2A-3 — roundPopulationAllocations", () => {
       "NO_FORCED_BUDGET_RECONCILIATION",
     );
     expect(result.explanationSteps.map((s) => s.code)).toContain(
-      "BUDGET_TARGET_MANUAL",
+      "BUDGET_TARGET_MANUAL_ANNUAL",
     );
   });
 });

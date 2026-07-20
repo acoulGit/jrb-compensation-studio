@@ -1,5 +1,6 @@
-/** Résolution exacte du budget cible (Lot 2A-3) — aucun arrondi. */
+/** Résolution exacte du budget cible ANNUEL (Lot 2A-3 / correctif 2A-H1). */
 
+import { ANNUAL_BUDGET_PERIOD_MONTHS } from "./calculationContract";
 import { CompensationCalculationError } from "./errors";
 import {
   exactAmountFromInteger,
@@ -48,8 +49,12 @@ function isKnownMode(mode: string): mode is BudgetTargetMode {
 }
 
 /**
- * Résout le budget cible exact (fraction rationnelle).
+ * Résout le budget cible ANNUEL exact (fraction rationnelle).
  * Aucun arrondi. Mode toujours explicite.
+ *
+ * - `manual_amount` : montant saisi = budget annuel cible.
+ * - `percentage_of_eligible_payroll` : `eligiblePayrollFcfa` = masse MENSUELLE
+ *   éligible ; annualisée × 12 avant application du taux.
  */
 export function resolveBudgetTarget(
   input: BudgetTargetInput,
@@ -81,21 +86,23 @@ export function resolveBudgetTarget(
     const exactAmount = exactAmountFromInteger(manualBudgetFcfa);
     const explanationSteps: CalculationExplanationStep[] = [
       {
-        code: "BUDGET_TARGET_MANUAL",
-        label: "Budget cible — montant manuel",
+        code: "BUDGET_TARGET_MANUAL_ANNUAL",
+        label: "Budget cible annuel — montant manuel",
         inputValues: {
           mode: "manual_amount",
           manualBudgetFcfa: manualBudgetFcfa.toString(),
+          annualBudgetPeriodMonths: ANNUAL_BUDGET_PERIOD_MONTHS.toString(),
+          employerChargesIncluded: false,
           ignoredForeignFields: ignoredForeignFields.join(",") || null,
         },
         outputValue: formatExactAmount(exactAmount),
-        formula: "exactAmount = manualBudgetFcfa / 1",
+        formula: "annualBudgetTarget = manualBudgetFcfa / 1",
         reason:
-          "Le montant saisi constitue directement le budget ; aucun calcul ni arrondi.",
+          "Le montant saisi est le coût annuel des augmentations (12 mois), hors charges patronales.",
       },
       {
         code: "BUDGET_TARGET_EXACT",
-        label: "Budget cible exact",
+        label: "Budget annuel cible exact",
         inputValues: {
           numerator: exactAmount.numerator.toString(),
           denominator: exactAmount.denominator.toString(),
@@ -134,8 +141,8 @@ export function resolveBudgetTarget(
     };
   }
 
-  // percentage_of_eligible_payroll
-  const eligiblePayrollFcfa = parseNonNegativeInteger(
+  // percentage_of_eligible_payroll — assiette mensuelle annualisée × 12
+  const eligibleMonthlyPayrollFcfa = parseNonNegativeInteger(
     input.eligiblePayrollFcfa,
     "MISSING_ELIGIBLE_PAYROLL",
     "INVALID_ELIGIBLE_PAYROLL",
@@ -150,28 +157,44 @@ export function resolveBudgetTarget(
     "Le taux de budget doit être un entier ≥ 0 (basis points).",
   );
 
+  const eligibleAnnualPayrollFcfa =
+    eligibleMonthlyPayrollFcfa * ANNUAL_BUDGET_PERIOD_MONTHS;
+
   const exactAmount: ExactAmount = reduceFraction(
-    eligiblePayrollFcfa * budgetRateBasisPoints,
+    eligibleAnnualPayrollFcfa * budgetRateBasisPoints,
     10_000n,
   );
 
   const explanationSteps: CalculationExplanationStep[] = [
     {
-      code: "BUDGET_TARGET_PERCENTAGE",
-      label: "Budget cible — pourcentage de l’assiette",
+      code: "BUDGET_TARGET_PERCENTAGE_ANNUALIZE_PAYROLL",
+      label: "Annualisation de la masse salariale éligible",
+      inputValues: {
+        eligibleMonthlyPayrollFcfa: eligibleMonthlyPayrollFcfa.toString(),
+        annualBudgetPeriodMonths: ANNUAL_BUDGET_PERIOD_MONTHS.toString(),
+      },
+      outputValue: eligibleAnnualPayrollFcfa.toString(),
+      formula: "eligibleAnnualPayroll = eligibleMonthlyPayroll × 12",
+      reason:
+        "L’assiette saisie est mensuelle ; le budget cible est un coût annuel.",
+    },
+    {
+      code: "BUDGET_TARGET_PERCENTAGE_ANNUAL",
+      label: "Budget cible annuel — pourcentage de l’assiette annuelle",
       inputValues: {
         mode: "percentage_of_eligible_payroll",
-        eligiblePayrollFcfa: eligiblePayrollFcfa.toString(),
+        eligibleAnnualPayrollFcfa: eligibleAnnualPayrollFcfa.toString(),
         budgetRateBasisPoints: budgetRateBasisPoints.toString(),
+        employerChargesIncluded: false,
       },
       outputValue: formatExactAmount(exactAmount),
       formula:
-        "exactAmount = reduce(eligiblePayrollFcfa × budgetRateBasisPoints, 10000)",
+        "annualBudgetTarget = reduce(eligibleAnnualPayroll × budgetRateBasisPoints, 10000)",
       reason: "400 bps = 4,00 % ; calcul exact sans arrondi.",
     },
     {
       code: "BUDGET_TARGET_EXACT",
-      label: "Budget cible exact",
+      label: "Budget annuel cible exact",
       inputValues: {
         numerator: exactAmount.numerator.toString(),
         denominator: exactAmount.denominator.toString(),
@@ -179,19 +202,21 @@ export function resolveBudgetTarget(
       outputValue: formatExactAmount(exactAmount),
       formula: "fraction rationnelle réduite",
       reason:
-        "Le budget peut rester fractionnaire (ex. 1002492/100) ; aucun arrondi.",
+        "Le budget peut rester fractionnaire ; aucun arrondi avant allocation.",
     },
   ];
 
   return {
     mode: "percentage_of_eligible_payroll",
     exactAmount,
-    eligiblePayrollFcfa,
+    /** Masse mensuelle saisie (source). */
+    eligiblePayrollFcfa: eligibleMonthlyPayrollFcfa,
     budgetRateBasisPoints,
     ignoredForeignFields: [],
     sourceValues: {
       mode: "percentage_of_eligible_payroll",
-      eligiblePayrollFcfa: eligiblePayrollFcfa.toString(),
+      eligibleMonthlyPayrollFcfa: eligibleMonthlyPayrollFcfa.toString(),
+      eligibleAnnualPayrollFcfa: eligibleAnnualPayrollFcfa.toString(),
       budgetRateBasisPoints: budgetRateBasisPoints.toString(),
     },
     explanationSteps,

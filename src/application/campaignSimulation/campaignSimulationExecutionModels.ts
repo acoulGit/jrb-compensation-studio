@@ -1,4 +1,4 @@
-/** Modèles d’exécution / résultat de simulation (Lot 2B-3). */
+/** Modèles d’exécution / résultat de simulation (Lot 2B-3 / correctif 2A-H1). */
 
 import type {
   BudgetTargetInput,
@@ -22,17 +22,25 @@ export type SimulationExecutionStatus =
 
 export interface SimulationBudgetSummaryView {
   budgetTargetMode: BudgetTargetInput["mode"];
+  /** Budget annuel cible exact. */
   exactBudgetTarget: ExactAmount;
   exactBudgetTargetLabel: string;
   manualBudgetFcfa?: bigint;
+  /** Masse mensuelle éligible saisie (mode pourcentage). */
   eligiblePayrollFcfa?: bigint;
   budgetRateBasisPoints?: bigint;
-  actualOperationAmountFcfa: bigint;
-  actualOperationAmountLabel: string;
-  totalRoundingDelta: ExactAmount;
-  totalRoundingDeltaLabel: string;
-  theoreticalAllocatedTotal: ExactAmount;
-  theoreticalAllocatedTotalLabel: string;
+  /** Coût annuel réel après arrondi. */
+  annualActualOperationCostFcfa: bigint;
+  annualActualOperationCostLabel: string;
+  /** Écart annuel d’arrondi. */
+  annualTotalRoundingDelta: ExactAmount;
+  annualTotalRoundingDeltaLabel: string;
+  /** Allocation théorique annuelle totale. */
+  annualTheoreticalAllocatedTotal: ExactAmount;
+  annualTheoreticalAllocatedTotalLabel: string;
+  /** Augmentation mensuelle théorique totale (= annuel / 12). */
+  monthlyTheoreticalIncreaseTotal: ExactAmount;
+  monthlyTheoreticalIncreaseTotalLabel: string;
   roundingMode: RoundingPolicy["mode"];
   roundingStepFcfa: bigint;
 }
@@ -42,9 +50,9 @@ export interface SimulationPopulationSummaryView {
   positiveWeightEmployeeCount: number;
   zeroWeightEmployeeCount: number;
   confirmedUnderperformerCount: number;
-  theoreticalAllocatedTotal: ExactAmount;
-  actualOperationAmountFcfa: bigint;
-  totalRoundingDelta: ExactAmount;
+  annualTheoreticalAllocatedTotal: ExactAmount;
+  annualActualOperationCostFcfa: bigint;
+  annualTotalRoundingDelta: ExactAmount;
   isTheoreticalBudgetExactlyAllocated: boolean;
 }
 
@@ -55,7 +63,9 @@ export interface EmployeeSimulationResultView {
   familyLabel: string | null;
   gradeCode: string;
   gradeLabel: string | null;
+  /** Salaire mensuel. */
   salaryFcfa: bigint;
+  /** S0 mensuel. */
   s0Fcfa: bigint;
   salaryRatioBasisPoints: number;
   salaryPositionCode: string;
@@ -64,7 +74,6 @@ export interface EmployeeSimulationResultView {
   evaluationMode: NineBoxMode;
   performanceLevel: string | null;
   potentialLevel: string | null;
-  /** Fractions exactes (persistance Lot 2B-4A) — hors recalcul moteur. */
   evaluationFactor: ExactAmount;
   theoreticalMatrixWeight: ExactAmount;
   effectiveMatrixWeight: ExactAmount;
@@ -74,14 +83,27 @@ export interface EmployeeSimulationResultView {
   effectiveMatrixWeightLabel: string;
   allocationWeightLabel: string;
   blockingReason: string | null;
-  theoreticalIncreaseRate: ExactAmount;
-  theoreticalIncreaseAmount: ExactAmount;
-  theoreticalIncreaseRateLabel: string;
-  theoreticalIncreaseAmountLabel: string;
-  finalRoundedIncreaseAmountFcfa: bigint;
-  individualRoundingDelta: ExactAmount;
-  individualRoundingDeltaLabel: string;
-  finalSalaryFcfa: bigint;
+  /** Allocation théorique annuelle. */
+  annualTheoreticalAllocation: ExactAmount;
+  annualTheoreticalAllocationLabel: string;
+  /** Augmentation mensuelle théorique. */
+  monthlyTheoreticalIncrease: ExactAmount;
+  monthlyTheoreticalIncreaseLabel: string;
+  /** Taux d’augmentation mensuel. */
+  monthlyTheoreticalIncreaseRate: ExactAmount;
+  monthlyTheoreticalIncreaseRateLabel: string;
+  /** Augmentation mensuelle finale arrondie. */
+  monthlyFinalRoundedIncreaseFcfa: bigint;
+  /** Écart mensuel d’arrondi. */
+  monthlyRoundingDelta: ExactAmount;
+  monthlyRoundingDeltaLabel: string;
+  /** Coût annuel réel. */
+  annualActualCostFcfa: bigint;
+  /** Écart annuel d’arrondi. */
+  annualRoundingDelta: ExactAmount;
+  annualRoundingDeltaLabel: string;
+  /** Nouveau salaire mensuel. */
+  monthlyFinalSalaryFcfa: bigint;
   explanationSteps: readonly {
     step: string;
     formula?: string;
@@ -99,6 +121,8 @@ export interface CampaignSimulationExecutionResult {
   runSequence: number;
   sourceFingerprint: string;
   configurationFingerprint: string;
+  /** Version du contrat de calcul ayant produit ce résultat. */
+  calculationContractVersion: number;
   budgetSummary: SimulationBudgetSummaryView;
   populationSummary: SimulationPopulationSummaryView;
   employees: EmployeeSimulationResultView[];

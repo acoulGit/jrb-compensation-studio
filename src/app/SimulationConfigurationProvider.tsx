@@ -407,7 +407,7 @@ export function SimulationConfigurationProvider({
       if (resolved.mode === "manual_amount") {
         return {
           mode: "manual_amount" as const,
-          lines: [`Budget cible exact : ${label}`],
+          lines: [`Budget annuel cible exact : ${label}`],
         };
       }
       const payroll = resolved.eligiblePayrollFcfa ?? 0n;
@@ -415,9 +415,9 @@ export function SimulationConfigurationProvider({
       return {
         mode: "percentage_of_eligible_payroll" as const,
         lines: [
-          `Assiette : ${formatExactAmountAsFcfa({ numerator: payroll, denominator: 1n })}`,
+          `Assiette mensuelle : ${formatExactAmountAsFcfa({ numerator: payroll, denominator: 1n })}`,
           `Taux : ${formatBasisPointsAsPercent(rate)}`,
-          `Budget cible exact : ${label}`,
+          `Budget annuel cible exact : ${label}`,
         ],
       };
     } catch {

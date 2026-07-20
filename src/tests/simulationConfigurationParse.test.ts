@@ -173,7 +173,7 @@ describe("Lot 2B-2 — budget exact sans arrondi", () => {
       budgetRateBasisPoints: 400n,
     });
     expect(formatExactAmountAsFcfa(resolved.exactAmount)).toBe(
-      "10\u202F024,92 FCFA",
+      "120\u202F299,04 FCFA",
     );
   });
 });

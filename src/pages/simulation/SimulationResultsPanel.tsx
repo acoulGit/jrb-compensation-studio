@@ -233,15 +233,17 @@ export function SimulationResultsPanel({
                 <th scope="col">Matricule</th>
                 <th scope="col">Salarié</th>
                 <th scope="col">Famille / Grade</th>
-                <th scope="col">Salaire</th>
-                <th scope="col">S0</th>
+                <th scope="col">Salaire mensuel</th>
+                <th scope="col">S0 mensuel</th>
                 <th scope="col">Position</th>
                 <th scope="col">Performance</th>
                 <th scope="col">Potentiel</th>
-                <th scope="col">Taux théorique</th>
-                <th scope="col">Montant théorique</th>
-                <th scope="col">Montant final</th>
-                <th scope="col">Nouveau salaire</th>
+                <th scope="col">Taux d’augmentation</th>
+                <th scope="col">Allocation théorique annuelle</th>
+                <th scope="col">Augmentation mensuelle théorique</th>
+                <th scope="col">Augmentation mensuelle finale</th>
+                <th scope="col">Nouveau salaire mensuel</th>
+                <th scope="col">Coût annuel réel</th>
                 <th scope="col">Statut</th>
               </tr>
             </thead>
@@ -280,13 +282,17 @@ export function SimulationResultsPanel({
                         employee.evaluationMode === "full_nine_box",
                     )}
                   </td>
-                  <td>{employee.theoreticalIncreaseRateLabel}</td>
-                  <td>{employee.theoreticalIncreaseAmountLabel}</td>
+                  <td>{employee.monthlyTheoreticalIncreaseRateLabel}</td>
+                  <td>{employee.annualTheoreticalAllocationLabel}</td>
+                  <td>{employee.monthlyTheoreticalIncreaseLabel}</td>
                   <td>
-                    {formatFcfaInteger(employee.finalRoundedIncreaseAmountFcfa)}
+                    {formatFcfaInteger(employee.monthlyFinalRoundedIncreaseFcfa)}
                   </td>
                   <td data-testid={`simulation-final-salary-${employee.employeeId}`}>
-                    {formatFcfaInteger(employee.finalSalaryFcfa)}
+                    {formatFcfaInteger(employee.monthlyFinalSalaryFcfa)}
+                  </td>
+                  <td data-testid={`simulation-annual-cost-${employee.employeeId}`}>
+                    {formatFcfaInteger(employee.annualActualCostFcfa)}
                   </td>
                   <td>
                     {employee.blockingReason === "CONFIRMED_UNDERPERFORMER" ? (
@@ -378,31 +384,37 @@ function SimulationSummary({
         </dd>
       </div>
       <div>
-        <dt>Budget cible exact</dt>
+        <dt>Budget annuel cible</dt>
         <dd data-testid="simulation-summary-budget-target">
           {budget.exactBudgetTargetLabel}
         </dd>
       </div>
       <div>
-        <dt>Montant théorique total</dt>
+        <dt>Allocation théorique annuelle totale</dt>
         <dd data-testid="simulation-summary-theoretical">
-          {budget.theoreticalAllocatedTotalLabel}
+          {budget.annualTheoreticalAllocatedTotalLabel}
         </dd>
       </div>
       <div>
-        <dt>Coût réel après arrondi</dt>
+        <dt>Augmentation mensuelle théorique totale</dt>
+        <dd data-testid="simulation-summary-monthly-theoretical">
+          {budget.monthlyTheoreticalIncreaseTotalLabel}
+        </dd>
+      </div>
+      <div>
+        <dt>Coût annuel réel après arrondi</dt>
         <dd data-testid="simulation-summary-actual">
-          {budget.actualOperationAmountLabel}
+          {budget.annualActualOperationCostLabel}
         </dd>
       </div>
       <div>
-        <dt>Écart total d’arrondi</dt>
+        <dt>Écart annuel d’arrondi</dt>
         <dd data-testid="simulation-summary-rounding-delta">
-          {budget.totalRoundingDeltaLabel}
+          {budget.annualTotalRoundingDeltaLabel}
         </dd>
       </div>
       <div>
-        <dt>Pas d’arrondi</dt>
+        <dt>Pas d’arrondi mensuel</dt>
         <dd data-testid="simulation-summary-rounding-step">
           {formatFcfaInteger(budget.roundingStepFcfa)}
         </dd>
@@ -544,11 +556,11 @@ function EmployeeDetailDrawer({
               </dd>
             </div>
             <div>
-              <dt>Salaire</dt>
+              <dt>Salaire mensuel actuel</dt>
               <dd>{formatFcfaInteger(employee.salaryFcfa)}</dd>
             </div>
             <div>
-              <dt>S0</dt>
+              <dt>S0 mensuel</dt>
               <dd data-testid="simulation-detail-s0">
                 {formatFcfaInteger(employee.s0Fcfa)}
               </dd>
@@ -614,45 +626,63 @@ function EmployeeDetailDrawer({
               </dd>
             </div>
             <div>
-              <dt>Taux théorique</dt>
-              <dd data-testid="simulation-detail-theo-rate">
-                {employee.theoreticalIncreaseRateLabel}
+              <dt>Allocation théorique annuelle</dt>
+              <dd data-testid="simulation-detail-annual-allocation">
+                {employee.annualTheoreticalAllocationLabel}
               </dd>
             </div>
             <div>
-              <dt>Montant théorique</dt>
+              <dt>Augmentation mensuelle théorique</dt>
               <dd data-testid="simulation-detail-theo-amount">
-                {employee.theoreticalIncreaseAmountLabel}
+                {employee.monthlyTheoreticalIncreaseLabel}
               </dd>
             </div>
             <div>
-              <dt>Politique d’arrondi</dt>
+              <dt>Taux d’augmentation mensuel</dt>
+              <dd data-testid="simulation-detail-theo-rate">
+                {employee.monthlyTheoreticalIncreaseRateLabel}
+              </dd>
+            </div>
+            <div>
+              <dt>Politique d’arrondi mensuel</dt>
               <dd data-testid="simulation-detail-rounding">
                 {result.budgetSummary.roundingMode} / pas{" "}
                 {formatFcfaInteger(result.budgetSummary.roundingStepFcfa)}
               </dd>
             </div>
             <div>
-              <dt>Montant final</dt>
+              <dt>Augmentation mensuelle finale</dt>
               <dd data-testid="simulation-detail-final-increase">
-                {formatFcfaInteger(employee.finalRoundedIncreaseAmountFcfa)}
+                {formatFcfaInteger(employee.monthlyFinalRoundedIncreaseFcfa)}
               </dd>
             </div>
             <div>
-              <dt>Écart individuel</dt>
-              <dd>{employee.individualRoundingDeltaLabel}</dd>
+              <dt>Écart mensuel d’arrondi</dt>
+              <dd>{employee.monthlyRoundingDeltaLabel}</dd>
             </div>
             <div>
-              <dt>Nouveau salaire</dt>
+              <dt>Nouveau salaire mensuel</dt>
               <dd data-testid="simulation-detail-final-salary">
-                {formatFcfaInteger(employee.finalSalaryFcfa)}
+                {formatFcfaInteger(employee.monthlyFinalSalaryFcfa)}
+              </dd>
+            </div>
+            <div>
+              <dt>Coût annuel réel</dt>
+              <dd data-testid="simulation-detail-annual-cost">
+                {formatFcfaInteger(employee.annualActualCostFcfa)}
+              </dd>
+            </div>
+            <div>
+              <dt>Écart annuel d’arrondi</dt>
+              <dd data-testid="simulation-detail-annual-delta">
+                {employee.annualRoundingDeltaLabel}
               </dd>
             </div>
             <div>
               <dt>Raison de blocage</dt>
               <dd>
                 {employee.blockingReason === "CONFIRMED_UNDERPERFORMER"
-                  ? "Sous-performant confirmé (montant final = 0)"
+                  ? "Sous-performant confirmé (augmentation mensuelle = 0)"
                   : (employee.blockingReason ?? "Aucune")}
               </dd>
             </div>

@@ -107,21 +107,22 @@ Fonctions pures dans le même module :
 
 | Mode | Formule exacte | Données |
 | --- | --- | --- |
-| `manual_amount` | `manualBudgetFcfa / 1` | montant ≥ 0 (assiette/taux ignorés) |
-| `percentage_of_eligible_payroll` | `payroll × rateBps / 10000` | assiette ≥ 0, taux bps ≥ 0 |
+| `manual_amount` | `manualBudgetFcfa / 1` | **budget annuel** ≥ 0 (assiette/taux ignorés) |
+| `percentage_of_eligible_payroll` | `(payrollMensuel × 12) × rateBps / 10000` | assiette **mensuelle** ≥ 0, taux bps ≥ 0 |
 
 Aucun arrondi du budget. Pas d’obligation de divisibilité par le pas d’arrondi.
-Assiette éligible **non calculée** ici (fournie en entrée).
+Assiette éligible **non calculée** ici (fournie en entrée, mensuelle, annualisée × 12).
 
 ### Allocation théorique
 
-`part_i = budget × weight_i / Σ weight` (fractions réduites, échelles
-hétérogènes admises). Invariant : Σ parts = budget. Aucun plus fort reste.
+`partAnnuelle_i = budgetAnnuel × weight_i / Σ weight` (fractions réduites).
+Invariant : Σ parts annuelles = budget annuel. Aucun plus fort reste.
 
-### Arrondi final
+### Arrondi final (niveau 2A-3 isolé)
 
-Politique explicite : `nearest_half_up` + `stepFcfa > 0`. Montant réel =
-Σ finaux ; `totalRoundingDelta = réel − budget` (non forcé à zéro).
+Politique explicite : `nearest_half_up` + `stepFcfa > 0` sur le montant fourni.
+Au niveau population préparée (2A-4 / H1), l’arrondi s’applique à
+l’**augmentation mensuelle** uniquement.
 
 ### Hors périmètre Lot 2A-3
 
@@ -135,9 +136,34 @@ Fonction pure `calculatePreparedPopulationCompensation` :
 1. valider la population préparée (erreurs structurées, atomicité) ;
 2. résoudre le S0 (`resolveEmployeeS0`) ;
 3. chaîner 2A-2 (position, évaluation, poids matriciel) ;
-4. construire `allocationWeight = salary × effectiveMatrixWeight` ;
-5. résoudre le budget (2A-3) ;
-6. allouer théoriquement puis arrondir individuellement (2A-3).
+4. construire `allocationWeight = monthlySalary × effectiveMatrixWeight` ;
+5. résoudre le budget **annuel** (2A-3) ;
+6. allouer les parts **annuelles** exactes ;
+7. convertir en augmentation **mensuelle** (`÷ 12`) ;
+8. arrondir uniquement l’augmentation mensuelle ;
+9. coût annuel réel = Σ (mensuel arrondi × 12).
+
+## Correctif 2A-H1 — budget annuel / augmentation mensuelle
+
+**Contrat** (`calculationContractVersion = 2`, `annualBudgetPeriodMonths = 12`,
+`employerChargesIncluded = false`) :
+
+| Concept | Période |
+| --- | --- |
+| Budget cible | Annuel (coût des augmentations de salaire de base, 12 mois, hors charges) |
+| Salaires importés / S0 | Mensuels |
+| Allocation théorique | Annuelle |
+| Augmentation théorique / finale | Mensuelle |
+| Taux d’augmentation | Mensuel (`mensuel ÷ salaire mensuel`) |
+| Nouveau salaire | Mensuel |
+| Coût réel d’opération | Annuel (`Σ mensuel arrondi × 12`) |
+| Écart d’arrondi synthétique | Annuel (`coût annuel − budget annuel`) |
+
+Équivalence : `annualRoundingDelta = monthlyRoundingDelta × 12`.
+
+**Persistance** : `result_schema_version = 2` (colonnes 0005 réinterprétées ;
+pas de migration 0006). Version 1 = sémantique obsolète — ne pas recalculer ni
+présenter comme conforme H1.
 
 La population est déjà préparée : **aucune** dépendance au module d’import RH.
 Résultats salariés triés par `employeeId` (ordre lexicographique UTF-16, sans

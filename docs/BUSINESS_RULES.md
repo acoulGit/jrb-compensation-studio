@@ -222,9 +222,16 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
 - Atomicité : pas de résultat partiel présenté comme valide.
 - Résultat courant invalidé (stale) si données ou configuration changent.
 - Isolation mémoire par campagne ; rien après redémarrage.
-- `finalSalaryFcfa` = affichage dérivé BigInt (`salaire + augmentation finale`),
-  hors mutation du résultat moteur.
+- `monthlyFinalSalaryFcfa` = salaire mensuel + augmentation mensuelle finale
+  (produit du moteur H1, pas un recalcul UI).
 - Persistance / historique UI / export reportés au Lot 2B-4B.
+
+## Budget annuel et salaires mensuels (2A-H1)
+
+- Le budget cible est un **coût annuel** d’augmentations (12 mois, hors charges).
+- Les salaires et S0 restent **mensuels** ; le ratio salarial est inchangé.
+- L’allocation est annuelle ; l’arrondi s’applique au **mensuel** uniquement.
+- Mode pourcentage : masse mensuelle saisie × 12 avant application du taux.
 
 ## Persistance de simulation (Lot 2B-4A)
 
@@ -233,6 +240,10 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
 - Vérification fingerprints / lot courant / statut avant sauvegarde.
 - Grands entiers et fractions en TEXT canonique (pas de REAL / Number).
 - Aucune mise à jour ni suppression métier des runs enregistrés.
+- **Schema v2 (H1)** : budget/theoretical_total/actual = annuels ;
+  rate/amount/final_increase/delta/salary salariés = mensuels ;
+  valeurs annuelles individuelles dérivables × 12.
+- Snapshots `result_schema_version = 1` : sémantique obsolète, non convertis.
 
 ## Autres règles
 

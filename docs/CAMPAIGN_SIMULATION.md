@@ -113,14 +113,15 @@ Un `staleResult` peut rester en mémoire pour diagnostic uniquement.
 
 ### Affichage
 
-- Synthèse : budget cible, montant théorique, coût réel, écart d’arrondi
-  (signe conservé), compteurs population.
-- Tableau : matricule, nom (`employeeLabel` si présent), famille/grade,
-  salaires, position, évaluation, taux/montants, nouveau salaire
-  (`salary + finalRoundedIncrease` en BigInt d’affichage).
+- Synthèse : budget **annuel** cible, allocation théorique annuelle,
+  augmentation mensuelle théorique totale, coût **annuel** réel, écart **annuel**
+  d’arrondi (signe conservé), compteurs population.
+- Tableau : matricule, nom, famille/grade, salaire/S0 **mensuels**, position,
+  évaluation, taux mensuel, allocation annuelle, augmentations mensuelles,
+  nouveau salaire mensuel, coût annuel réel.
 - Recherche matricule/nom, tri `employeeId`, pagination 25/50/100.
-- Détail drawer : facteurs, poids, arrondi, étapes d’explication ;
-  codes techniques dans `<details>` ; pas de stack trace.
+- Détail drawer : facteurs, poids, allocation annuelle, mensuel théorique /
+  final, écarts mensuel et annuel, étapes d’explication.
 
 ### Campagne archivée
 

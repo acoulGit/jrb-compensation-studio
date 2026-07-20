@@ -83,7 +83,7 @@ export class MemorySimulationHistoryRepository
       id,
       campaignId: dto.campaignId,
       runNumber,
-      resultSchemaVersion: 1,
+      resultSchemaVersion: 2,
       campaignName: dto.campaignName,
       campaignYear: dto.campaignYear,
       campaignStatusAtRun: dto.campaignStatusAtRun,

@@ -10,6 +10,16 @@ calcul.
 Le Lot **2B-4B** (ultérieur) branchera l’interface Historique sur les
 repositories créés ici.
 
+## Sémantique result_schema_version (correctif 2A-H1)
+
+| Version | Statut | Lecture |
+| --- | --- | --- |
+| 1 | Obsolète (budget traité comme mensuel) | Afficher un avertissement ; **ne pas** recalculer ni convertir |
+| 2 | Courante | Budget/totaux annuels ; montants salariés mensuels |
+
+Nouvelles écritures : `RESULT_SCHEMA_VERSION = 2` (Rust + memory). Schéma SQL
+0005 inchangé ; pas de migration 0006 (dérivation exacte × 12).
+
 ## Snapshot immuable
 
 Une simulation enregistrée est un snapshot append-only :

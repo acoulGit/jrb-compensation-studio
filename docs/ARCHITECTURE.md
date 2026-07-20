@@ -85,8 +85,10 @@ SQLite, Tauri, navigateur, filesystem, date courante, locale ou réseau.
 - `resolveEmployeeS0` — lookup S0 par famille/grade ;
 - `validatePreparedPopulationCalculationInput` ;
 - `calculatePreparedEmployeeCompensation` ;
-- `calculatePreparedPopulationCompensation` — assemble 2A-2 + 2A-3 ;
-- convention `allocationWeight = salary × effectiveMatrixWeight`.
+- `calculatePreparedPopulationCompensation` — assemble 2A-2 + 2A-3 + H1 ;
+- convention `allocationWeight = monthlySalary × effectiveMatrixWeight` ;
+- correctif **2A-H1** : budget annuel, allocation annuelle, ÷12, arrondi
+  mensuel, coût annuel = mensuel × 12 (`CALCULATION_CONTRACT_VERSION = 2`).
 
 Erreurs typées `CompensationCalculationError` (codes stables). Pas de
 duplication Rust, ni UI, ni persistance, ni commande Tauri.

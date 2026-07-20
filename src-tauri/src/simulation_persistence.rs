@@ -542,7 +542,7 @@ async fn save_simulation_run_in_tx(
             total_rounding_delta_numerator_text, total_rounding_delta_denominator_text,
             created_at
         ) VALUES (
-            ?1, ?2, 1,
+            ?1, ?2, 2,
             ?3, ?4, ?5, ?6,
             ?7, ?8,
             ?9, ?10,

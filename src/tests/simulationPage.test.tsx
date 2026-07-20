@@ -257,11 +257,11 @@ describe("Lot 2B-2 — page Simulation", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("simulation-budget-preview")).toHaveTextContent(
-        "10",
+        "120",
       );
     });
     expect(screen.getByTestId("simulation-budget-preview").textContent).toMatch(
-      /10[\s\u202F]?024,92/,
+      /120[\s\u202F]?299,04/,
     );
     expect(screen.getByTestId("simulation-rounding-mode")).toHaveTextContent(
       "nearest_half_up",

@@ -121,5 +121,5 @@ export function buildSimulationSourceFingerprint(
     configFingerprint,
   ].join("\n");
 
-  return `v1:${fnv1aHex(canonical)}:${fnv1aHex(canonical.slice().split("").reverse().join(""))}:${canonical.length}`;
+  return `v2:${fnv1aHex(canonical)}:${fnv1aHex(canonical.slice().split("").reverse().join(""))}:${canonical.length}`;
 }

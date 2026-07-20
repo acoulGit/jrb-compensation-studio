@@ -15,17 +15,23 @@ function sampleResult(
     runSequence: 1,
     sourceFingerprint: "fp-source",
     configurationFingerprint: "fp-config",
+    calculationContractVersion: 2,
     budgetSummary: {
       budgetTargetMode: "manual_amount",
       exactBudgetTarget: { numerator: 25000003n, denominator: 1n },
       exactBudgetTargetLabel: "x",
       manualBudgetFcfa: 25000003n,
-      actualOperationAmountFcfa: 25000000n,
-      actualOperationAmountLabel: "x",
-      totalRoundingDelta: { numerator: -3n, denominator: 1n },
-      totalRoundingDeltaLabel: "x",
-      theoreticalAllocatedTotal: { numerator: 25000003n, denominator: 1n },
-      theoreticalAllocatedTotalLabel: "x",
+      annualActualOperationCostFcfa: 25000000n,
+      annualActualOperationCostLabel: "x",
+      annualTotalRoundingDelta: { numerator: -3n, denominator: 1n },
+      annualTotalRoundingDeltaLabel: "x",
+      annualTheoreticalAllocatedTotal: { numerator: 25000003n, denominator: 1n },
+      annualTheoreticalAllocatedTotalLabel: "x",
+      monthlyTheoreticalIncreaseTotal: {
+        numerator: 25000003n,
+        denominator: 12n,
+      },
+      monthlyTheoreticalIncreaseTotalLabel: "x",
       roundingMode: "nearest_half_up",
       roundingStepFcfa: 100n,
     },
@@ -34,9 +40,9 @@ function sampleResult(
       positiveWeightEmployeeCount: 1,
       zeroWeightEmployeeCount: 0,
       confirmedUnderperformerCount: 0,
-      theoreticalAllocatedTotal: { numerator: 25000003n, denominator: 1n },
-      actualOperationAmountFcfa: 25000000n,
-      totalRoundingDelta: { numerator: -3n, denominator: 1n },
+      annualTheoreticalAllocatedTotal: { numerator: 25000003n, denominator: 1n },
+      annualActualOperationCostFcfa: 25000000n,
+      annualTotalRoundingDelta: { numerator: -3n, denominator: 1n },
       isTheoreticalBudgetExactlyAllocated: true,
     },
     employees: [
@@ -65,14 +71,22 @@ function sampleResult(
         effectiveMatrixWeightLabel: "1",
         allocationWeightLabel: "1000000",
         blockingReason: null,
-        theoreticalIncreaseRate: { numerator: 1n, denominator: 40n },
-        theoreticalIncreaseAmount: { numerator: 25000003n, denominator: 1n },
-        theoreticalIncreaseRateLabel: "x",
-        theoreticalIncreaseAmountLabel: "x",
-        finalRoundedIncreaseAmountFcfa: 25000000n,
-        individualRoundingDelta: { numerator: -3n, denominator: 1n },
-        individualRoundingDeltaLabel: "x",
-        finalSalaryFcfa: 1025000000n,
+        annualTheoreticalAllocation: { numerator: 25000003n, denominator: 1n },
+        annualTheoreticalAllocationLabel: "x",
+        monthlyTheoreticalIncrease: {
+          numerator: 25000003n,
+          denominator: 12n,
+        },
+        monthlyTheoreticalIncreaseLabel: "x",
+        monthlyTheoreticalIncreaseRate: { numerator: 1n, denominator: 40n },
+        monthlyTheoreticalIncreaseRateLabel: "x",
+        monthlyFinalRoundedIncreaseFcfa: 2083300n,
+        monthlyRoundingDelta: { numerator: -3n, denominator: 1n },
+        monthlyRoundingDeltaLabel: "x",
+        annualActualCostFcfa: 24999600n,
+        annualRoundingDelta: { numerator: -403n, denominator: 1n },
+        annualRoundingDeltaLabel: "x",
+        monthlyFinalSalaryFcfa: 30283300n,
         explanationSteps: [
           { step: "alloc", formula: "a/b", outputValue: "1" },
         ],
@@ -105,9 +119,12 @@ describe("mapExecutionResultToSaveDto", () => {
     expect(employee.salaryFcfaText).toBe("1000000");
     expect(employee.theoreticalIncreaseRateNumeratorText).toBe("1");
     expect(employee.theoreticalIncreaseRateDenominatorText).toBe("40");
+    // Schema v2 : theoretical_increase_amount = augmentation mensuelle théorique
     expect(employee.theoreticalIncreaseAmountNumeratorText).toBe("25000003");
+    expect(employee.theoreticalIncreaseAmountDenominatorText).toBe("12");
     expect(employee.allocationWeightNumeratorText).toBe("1000000");
-    expect(employee.finalSalaryFcfaText).toBe("1025000000");
+    expect(employee.finalRoundedIncreaseFcfaText).toBe("2083300");
+    expect(employee.finalSalaryFcfaText).toBe("30283300");
   });
 
   it("serializes explanation steps as JSON", () => {
@@ -150,12 +167,12 @@ describe("mapExecutionResultToSaveDto", () => {
     const result = sampleResult({
       budgetSummary: {
         ...sampleResult().budgetSummary,
-        actualOperationAmountFcfa: 9000000000000n,
+        annualActualOperationCostFcfa: 9000000000000n,
       },
       employees: [
         {
           ...sampleResult().employees[0],
-          finalSalaryFcfa: 9000000000000n,
+          monthlyFinalSalaryFcfa: 9000000000000n,
         },
       ],
     });

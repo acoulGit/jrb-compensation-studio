@@ -562,3 +562,47 @@ Enregistrer durablement un snapshot immuable d’une simulation réussie
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
 - `git diff --check`
 - migrations 0001–0004 inchangées ; seule 0005 ajoutée
+
+## 2026-07-20 — Correctif 2A-H1 : budget annuel / augmentation mensuelle
+
+### Objectif
+
+Corriger le contrat de calcul qui traitait le budget annuel comme une
+augmentation mensuelle (taux ×12, nouveau salaire gonflé).
+
+### Livrables
+
+- Constantes `CALCULATION_CONTRACT_VERSION=2`, `ANNUAL_BUDGET_PERIOD_MONTHS=12`
+- `resolveBudgetTarget` : annualisation masse × 12 en mode %
+- Orchestrateur 2A-4 : allocation annuelle → ÷12 → arrondi mensuel → ×12
+- Modèles / vues / UI avec libellés annuel/mensuel explicites
+- `result_schema_version = 2` (Rust + memory) ; pas de migration 0006
+- Fingerprints contrat v2 ; snapshots v1 signalés incompatibles
+- Tests moteur + régression EMP-2002 / budget 5 000 023
+- Docs mises à jour
+- Stash 2B-4B **non appliqué**
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- migrations 0001–0005 inchangées
+- stash intact ; aucun commit
+
+## 2026-07-20 — Correctif 2A-H1 final : formatage d’affichage 2 décimales
+
+### Objectif
+
+Limiter l’affichage UI des taux et montants théoriques à 2 décimales
+(arrondi d’affichage half-up), sans modifier les fractions métier.
+
+### Livrables
+
+- `formatExactAmountAsFcfa` / `formatExactRateAsPercent` — max 2 décimales
+- Tests dédiés `formatExactBudgetDisplay.test.ts`
+- Aucune modification moteur / migrations / Rust / stash
+
+### Vérifications
+
+- `pnpm test` / `pnpm build` / cargo / migrations inchangées
+- stash intact ; aucun commit

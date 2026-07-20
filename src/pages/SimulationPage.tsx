@@ -501,7 +501,7 @@ export function SimulationPage() {
         ) : null}
       </SectionCard>
 
-      <SectionCard title="Budget cible">
+      <SectionCard title="Budget annuel cible">
         <fieldset disabled={isReadOnly} className="form-grid">
           <legend className="visually-hidden">Mode de budget</legend>
           <label className="field">
@@ -540,7 +540,7 @@ export function SimulationPage() {
 
         {draft.budgetTargetMode === "manual_amount" ? (
           <label className="field field--full" htmlFor="simulation-manual-budget">
-            Budget cible — FCFA
+            Budget annuel cible — FCFA
             <input
               id="simulation-manual-budget"
               data-testid="simulation-manual-budget"
@@ -576,7 +576,7 @@ export function SimulationPage() {
               className="field field--full"
               htmlFor="simulation-eligible-payroll"
             >
-              Masse salariale éligible — FCFA
+              Masse salariale mensuelle éligible — FCFA
               <input
                 id="simulation-eligible-payroll"
                 data-testid="simulation-eligible-payroll"

@@ -282,12 +282,17 @@ Résultats de domaine purs (non stockés) :
 | Concept | Nature |
 | --- | --- |
 | `PreparedEmployeeCalculationInput` | Salarié préparé (hors import RH) |
-| `allocationWeight` | `salary × effectiveMatrixWeight` (ExactAmount) |
-| `calibrationCoefficient` | `budget / Σ allocationWeight` |
-| `theoreticalIncreaseRate` | `calibration × effectiveMatrixWeight` |
-| `theoreticalIncreaseAmount` | Part théorique exacte |
-| `finalRoundedIncreaseAmountFcfa` | Montant matriciel final |
-| `PopulationCalculationSummary` | Synthèse population |
+| `allocationWeight` | `monthlySalary × effectiveMatrixWeight` (ExactAmount) |
+| `calibrationCoefficient` | `annualBudget / Σ allocationWeight` |
+| `annualTheoreticalAllocation` | Part annuelle exacte |
+| `monthlyTheoreticalIncrease` | `annualTheoreticalAllocation / 12` |
+| `monthlyTheoreticalIncreaseRate` | `monthlyIncrease / monthlySalary` |
+| `monthlyFinalRoundedIncreaseFcfa` | Augmentation mensuelle arrondie |
+| `annualActualCostFcfa` | `monthlyFinalRounded × 12` |
+| `monthlyFinalSalaryFcfa` | Nouveau salaire mensuel |
+| `PopulationCalculationSummary` | Synthèse annuelle/mensuelle |
+| `CALCULATION_CONTRACT_VERSION` | `2` (H1) |
+| `RESULT_SCHEMA_VERSION` | `2` (snapshots) |
 | `POPULATION_CALCULATION_FAILED` | Échec atomique + `issues[]` |
 
 Éligibilité, masse auto, promotion, ancienneté, persistance des résultats et

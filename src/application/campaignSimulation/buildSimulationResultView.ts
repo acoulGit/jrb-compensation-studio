@@ -1,9 +1,11 @@
 /**
- * Construction de la vue consultable à partir du résultat moteur (Lot 2B-3).
- * Ne recalcule aucun montant métier hors finalSalaryFcfa d’affichage (BigInt).
+ * Construction de la vue consultable à partir du résultat moteur
+ * (Lot 2B-3 / correctif 2A-H1).
+ * Ne recalcule aucun montant métier : lit les champs explicites du moteur.
  */
 
 import {
+  CALCULATION_CONTRACT_VERSION,
   formatExactAmount,
   type CalculationExplanationStep,
   type EmployeeCompensationCalculationResult,
@@ -45,8 +47,6 @@ function mapEmployee(
   familyLabels: ReadonlyMap<string, string>,
   gradeLabels: ReadonlyMap<string, string>,
 ): EmployeeSimulationResultView {
-  const salary = BigInt(employee.salaryFcfa);
-  const increase = BigInt(employee.finalRoundedIncreaseAmountFcfa);
   const displayName = labels.get(employee.employeeId) ?? null;
   const evaluationFactor = {
     numerator: BigInt(employee.evaluationFactorNumerator),
@@ -59,7 +59,7 @@ function mapEmployee(
     familyLabel: familyLabels.get(employee.familyCode) ?? null,
     gradeCode: employee.gradeCode,
     gradeLabel: gradeLabels.get(employee.gradeCode) ?? null,
-    salaryFcfa: salary,
+    salaryFcfa: BigInt(employee.salaryFcfa),
     s0Fcfa: BigInt(employee.s0Fcfa),
     salaryRatioBasisPoints: employee.salaryRatioBasisPoints,
     salaryPositionCode: employee.salaryPositionCode,
@@ -79,20 +79,29 @@ function mapEmployee(
     effectiveMatrixWeightLabel: formatExactWeight(employee.effectiveMatrixWeight),
     allocationWeightLabel: formatExactWeight(employee.allocationWeight),
     blockingReason: employee.blockingReason ?? null,
-    theoreticalIncreaseRate: employee.theoreticalIncreaseRate,
-    theoreticalIncreaseAmount: employee.theoreticalIncreaseAmount,
-    theoreticalIncreaseRateLabel: formatExactRateAsPercent(
-      employee.theoreticalIncreaseRate,
+    annualTheoreticalAllocation: employee.annualTheoreticalAllocation,
+    annualTheoreticalAllocationLabel: formatExactAmountAsFcfa(
+      employee.annualTheoreticalAllocation,
     ),
-    theoreticalIncreaseAmountLabel: formatExactAmountAsFcfa(
-      employee.theoreticalIncreaseAmount,
+    monthlyTheoreticalIncrease: employee.monthlyTheoreticalIncrease,
+    monthlyTheoreticalIncreaseLabel: formatExactAmountAsFcfa(
+      employee.monthlyTheoreticalIncrease,
     ),
-    finalRoundedIncreaseAmountFcfa: increase,
-    individualRoundingDelta: employee.individualRoundingDelta,
-    individualRoundingDeltaLabel: formatExactAmountAsFcfa(
-      employee.individualRoundingDelta,
+    monthlyTheoreticalIncreaseRate: employee.monthlyTheoreticalIncreaseRate,
+    monthlyTheoreticalIncreaseRateLabel: formatExactRateAsPercent(
+      employee.monthlyTheoreticalIncreaseRate,
     ),
-    finalSalaryFcfa: salary + increase,
+    monthlyFinalRoundedIncreaseFcfa: employee.monthlyFinalRoundedIncreaseFcfa,
+    monthlyRoundingDelta: employee.monthlyRoundingDelta,
+    monthlyRoundingDeltaLabel: formatExactAmountAsFcfa(
+      employee.monthlyRoundingDelta,
+    ),
+    annualActualCostFcfa: employee.annualActualCostFcfa,
+    annualRoundingDelta: employee.annualRoundingDelta,
+    annualRoundingDeltaLabel: formatExactAmountAsFcfa(
+      employee.annualRoundingDelta,
+    ),
+    monthlyFinalSalaryFcfa: employee.monthlyFinalSalaryFcfa,
     explanationSteps: mapExplanationSteps(employee.explanationSteps),
   };
 }
@@ -132,17 +141,21 @@ export function buildSimulationResultView(input: {
       budgetTarget.mode === "percentage_of_eligible_payroll"
         ? BigInt(budgetTarget.budgetRateBasisPoints ?? 0)
         : undefined,
-    actualOperationAmountFcfa: engineResult.actualOperationAmountFcfa,
-    actualOperationAmountLabel: formatFcfaInteger(
-      engineResult.actualOperationAmountFcfa,
+    annualActualOperationCostFcfa: engineResult.annualActualOperationCostFcfa,
+    annualActualOperationCostLabel: formatFcfaInteger(
+      engineResult.annualActualOperationCostFcfa,
     ),
-    totalRoundingDelta: engineResult.totalRoundingDelta,
-    totalRoundingDeltaLabel: formatExactAmountAsFcfa(
-      engineResult.totalRoundingDelta,
+    annualTotalRoundingDelta: engineResult.annualTotalRoundingDelta,
+    annualTotalRoundingDeltaLabel: formatExactAmountAsFcfa(
+      engineResult.annualTotalRoundingDelta,
     ),
-    theoreticalAllocatedTotal: summary.theoreticalAllocatedTotal,
-    theoreticalAllocatedTotalLabel: formatExactAmountAsFcfa(
-      summary.theoreticalAllocatedTotal,
+    annualTheoreticalAllocatedTotal: summary.annualTheoreticalAllocatedTotal,
+    annualTheoreticalAllocatedTotalLabel: formatExactAmountAsFcfa(
+      summary.annualTheoreticalAllocatedTotal,
+    ),
+    monthlyTheoreticalIncreaseTotal: summary.monthlyTheoreticalIncreaseTotal,
+    monthlyTheoreticalIncreaseTotalLabel: formatExactAmountAsFcfa(
+      summary.monthlyTheoreticalIncreaseTotal,
     ),
     roundingMode: engineResult.roundingPolicy.mode,
     roundingStepFcfa: BigInt(engineResult.roundingPolicy.stepFcfa),
@@ -153,9 +166,9 @@ export function buildSimulationResultView(input: {
     positiveWeightEmployeeCount: summary.positiveWeightEmployeeCount,
     zeroWeightEmployeeCount: summary.zeroWeightEmployeeCount,
     confirmedUnderperformerCount: summary.confirmedUnderperformerCount,
-    theoreticalAllocatedTotal: summary.theoreticalAllocatedTotal,
-    actualOperationAmountFcfa: summary.actualOperationAmountFcfa,
-    totalRoundingDelta: summary.totalRoundingDelta,
+    annualTheoreticalAllocatedTotal: summary.annualTheoreticalAllocatedTotal,
+    annualActualOperationCostFcfa: summary.annualActualOperationCostFcfa,
+    annualTotalRoundingDelta: summary.annualTotalRoundingDelta,
     isTheoreticalBudgetExactlyAllocated:
       summary.isTheoreticalBudgetExactlyAllocated,
   };
@@ -182,6 +195,7 @@ export function buildSimulationResultView(input: {
     runSequence: input.runSequence,
     sourceFingerprint: input.sourceFingerprint,
     configurationFingerprint: input.configurationFingerprint,
+    calculationContractVersion: CALCULATION_CONTRACT_VERSION,
     budgetSummary,
     populationSummary,
     employees,

@@ -543,7 +543,7 @@ describe("Lot 2B-3 — executeCampaignSimulation", () => {
     spy.mockRestore();
   });
 
-  it("produit un résultat complet avec finalSalaryFcfa exact et sous-performant à 0", async () => {
+  it("produit un résultat complet avec monthlyFinalSalaryFcfa exact et sous-performant à 0", async () => {
     const { ports, validated, restoreReadiness } = await buildValidated({
       budgetTarget: { mode: "manual_amount", manualBudgetFcfa: 25_000_003n },
       roundingPolicy: { mode: "nearest_half_up", stepFcfa: 100n },
@@ -560,13 +560,13 @@ describe("Lot 2B-3 — executeCampaignSimulation", () => {
     expect(outcome.result.employees).toHaveLength(3);
     expect(outcome.result.runSequence).toBe(3);
     for (const employee of outcome.result.employees) {
-      expect(employee.finalSalaryFcfa).toBe(
-        employee.salaryFcfa + employee.finalRoundedIncreaseAmountFcfa,
+      expect(employee.monthlyFinalSalaryFcfa).toBe(
+        employee.salaryFcfa + employee.monthlyFinalRoundedIncreaseFcfa,
       );
     }
     const under = outcome.result.employees.find((e) => e.employeeId === "E3");
     expect(under?.blockingReason).toBe("CONFIRMED_UNDERPERFORMER");
-    expect(under?.finalRoundedIncreaseAmountFcfa).toBe(0n);
+    expect(under?.monthlyFinalRoundedIncreaseFcfa).toBe(0n);
     expect(outcome.result.populationSummary.confirmedUnderperformerCount).toBe(1);
     restoreReadiness();
   });
@@ -625,13 +625,13 @@ describe("Lot 2B-3 — executeCampaignSimulation", () => {
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
     if (first.ok && second.ok) {
-      expect(first.result.budgetSummary.actualOperationAmountFcfa).toBe(
-        second.result.budgetSummary.actualOperationAmountFcfa,
+      expect(first.result.budgetSummary.annualActualOperationCostFcfa).toBe(
+        second.result.budgetSummary.annualActualOperationCostFcfa,
       );
       expect(
-        first.result.employees.map((e) => e.finalRoundedIncreaseAmountFcfa.toString()),
+        first.result.employees.map((e) => e.monthlyFinalRoundedIncreaseFcfa.toString()),
       ).toEqual(
-        second.result.employees.map((e) => e.finalRoundedIncreaseAmountFcfa.toString()),
+        second.result.employees.map((e) => e.monthlyFinalRoundedIncreaseFcfa.toString()),
       );
     }
     expect(validated.readinessReport.preparedEmployees).toEqual(snapshotEmployees);
@@ -663,7 +663,7 @@ describe("Lot 2B-3 — executeCampaignSimulation", () => {
         Object.fromEntries(
           result.employees.map((e) => [
             e.employeeId,
-            e.finalRoundedIncreaseAmountFcfa.toString(),
+            e.monthlyFinalRoundedIncreaseFcfa.toString(),
           ]),
         );
       expect(map(first.result)).toEqual(map(second.result));
@@ -761,8 +761,8 @@ describe("Lot 2B-3 — executeCampaignSimulation", () => {
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {
       const employee = outcome.result.employees[0];
-      expect(employee.finalSalaryFcfa).toBe(
-        employee.salaryFcfa + employee.finalRoundedIncreaseAmountFcfa,
+      expect(employee.monthlyFinalSalaryFcfa).toBe(
+        employee.salaryFcfa + employee.monthlyFinalRoundedIncreaseFcfa,
       );
     }
     restoreReadiness();

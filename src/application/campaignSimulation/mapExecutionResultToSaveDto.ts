@@ -1,8 +1,20 @@
 /**
- * Mapping CampaignSimulationExecutionResult → SaveSimulationRunDto (Lot 2B-4A).
- * Ne mute pas le résultat source.
+ * Mapping CampaignSimulationExecutionResult → SaveSimulationRunDto
+ * (Lot 2B-4A / sémantique schema v2 — correctif 2A-H1).
+ *
+ * Mapping colonnes persistées (result_schema_version = 2) :
+ * - budget_target = annuel
+ * - theoretical_total = allocation annuelle totale
+ * - actual_operation_amount = coût annuel réel
+ * - total_rounding_delta = écart annuel
+ * - theoretical_increase_rate = taux mensuel
+ * - theoretical_increase_amount = augmentation mensuelle théorique
+ * - final_rounded_increase = augmentation mensuelle finale
+ * - individual_rounding_delta = écart mensuel
+ * - final_salary = salaire mensuel final
  */
 
+import { RESULT_SCHEMA_VERSION } from "../../domain/compensationCalculation";
 import type { CampaignSimulationExecutionResult } from "./campaignSimulationExecutionModels";
 import {
   bigintToCanonicalText,
@@ -24,12 +36,14 @@ function mapEmployee(
     employee.effectiveMatrixWeight,
   );
   const allocationWeight = exactAmountToCanonicalTexts(employee.allocationWeight);
-  const theoRate = exactAmountToCanonicalTexts(employee.theoreticalIncreaseRate);
+  const theoRate = exactAmountToCanonicalTexts(
+    employee.monthlyTheoreticalIncreaseRate,
+  );
   const theoAmount = exactAmountToCanonicalTexts(
-    employee.theoreticalIncreaseAmount,
+    employee.monthlyTheoreticalIncrease,
   );
   const roundingDelta = exactAmountToCanonicalTexts(
-    employee.individualRoundingDelta,
+    employee.monthlyRoundingDelta,
   );
 
   return {
@@ -62,11 +76,11 @@ function mapEmployee(
     theoreticalIncreaseAmountNumeratorText: theoAmount.numeratorText,
     theoreticalIncreaseAmountDenominatorText: theoAmount.denominatorText,
     finalRoundedIncreaseFcfaText: bigintToCanonicalText(
-      employee.finalRoundedIncreaseAmountFcfa,
+      employee.monthlyFinalRoundedIncreaseFcfa,
     ),
     individualRoundingDeltaNumeratorText: roundingDelta.numeratorText,
     individualRoundingDeltaDenominatorText: roundingDelta.denominatorText,
-    finalSalaryFcfaText: bigintToCanonicalText(employee.finalSalaryFcfa),
+    finalSalaryFcfaText: bigintToCanonicalText(employee.monthlyFinalSalaryFcfa),
     explanationStepsJson: JSON.stringify(employee.explanationSteps),
   };
 }
@@ -81,9 +95,11 @@ export function mapExecutionResultToSaveDto(input: {
   const population = result.populationSummary;
   const budgetTarget = exactAmountToCanonicalTexts(budget.exactBudgetTarget);
   const theoretical = exactAmountToCanonicalTexts(
-    budget.theoreticalAllocatedTotal,
+    budget.annualTheoreticalAllocatedTotal,
   );
-  const roundingDelta = exactAmountToCanonicalTexts(budget.totalRoundingDelta);
+  const roundingDelta = exactAmountToCanonicalTexts(
+    budget.annualTotalRoundingDelta,
+  );
 
   if (result.campaignStatus === "unknown" || result.campaignStatus === "archived") {
     throw new Error(
@@ -127,10 +143,12 @@ export function mapExecutionResultToSaveDto(input: {
     theoreticalTotalNumeratorText: theoretical.numeratorText,
     theoreticalTotalDenominatorText: theoretical.denominatorText,
     actualOperationAmountFcfaText: bigintToCanonicalText(
-      budget.actualOperationAmountFcfa,
+      budget.annualActualOperationCostFcfa,
     ),
     totalRoundingDeltaNumeratorText: roundingDelta.numeratorText,
     totalRoundingDeltaDenominatorText: roundingDelta.denominatorText,
     employees: result.employees.map(mapEmployee),
   };
 }
+
+export { RESULT_SCHEMA_VERSION };

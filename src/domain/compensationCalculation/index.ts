@@ -18,6 +18,13 @@ export {
   buildAllocationWeight,
   calculatePreparedEmployeeCompensation,
 } from "./calculatePreparedEmployeeCompensation";
+export {
+  ANNUAL_BUDGET_PERIOD_MONTHS,
+  CALCULATION_CONTRACT_VERSION,
+  EMPLOYER_CHARGES_INCLUDED,
+  RESULT_SCHEMA_VERSION,
+  RESULT_SCHEMA_VERSION_LEGACY,
+} from "./calculationContract";
 export { calculatePreparedPopulationCompensation } from "./calculatePreparedPopulationCompensation";
 export { calculatePopulationBudgetAllocation } from "./calculatePopulationBudgetAllocation";
 export {
