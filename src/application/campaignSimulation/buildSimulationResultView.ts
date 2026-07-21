@@ -126,6 +126,36 @@ function mapTrajectoryEntry(
     includedInCampaignEnvelope: entry.includedInCampaignEnvelope,
     promotionActive: entry.promotionActive,
     promotionStatus: entry.promotionStatus,
+    isMinimumIncreasePopulationEmployee:
+      entry.isMinimumIncreasePopulationEmployee,
+    guaranteedTotalIncreaseExact: entry.guaranteedTotalIncreaseExact,
+    guaranteedTotalIncreaseLabel: formatExactAmountAsFcfa(
+      entry.guaranteedTotalIncreaseExact,
+    ),
+    applicablePromotionIncrementFcfa: entry.applicablePromotionIncrementFcfa,
+    applicablePromotionIncrementLabel: formatFcfaInteger(
+      entry.applicablePromotionIncrementFcfa,
+    ),
+    requiredMinimumComplementExact: entry.requiredMinimumComplementExact,
+    requiredMinimumComplementLabel: formatExactAmountAsFcfa(
+      entry.requiredMinimumComplementExact,
+    ),
+    minimumComplementFloorFcfa: entry.minimumComplementFloorFcfa,
+    minimumComplementFloorLabel: formatFcfaInteger(
+      entry.minimumComplementFloorFcfa,
+    ),
+    weightedComplementExact: entry.weightedComplementExact,
+    weightedComplementLabel: formatExactAmountAsFcfa(
+      entry.weightedComplementExact,
+    ),
+    theoreticalComplementExact: entry.theoreticalComplementExact,
+    theoreticalComplementLabel: formatExactAmountAsFcfa(
+      entry.theoreticalComplementExact,
+    ),
+    actualComplementAboveMinimumFcfa: entry.actualComplementAboveMinimumFcfa,
+    actualComplementAboveMinimumLabel: formatFcfaInteger(
+      entry.actualComplementAboveMinimumFcfa,
+    ),
   };
 }
 
@@ -350,6 +380,48 @@ function mapEmployee(
     technicalMonthFinalSalaryLabel: formatFcfaInteger(
       technicalMonthEntry?.finalSalaryFcfa ?? employee.monthlyFinalSalaryFcfa,
     ),
+    isMinimumIncreasePopulationEmployee:
+      employee.isMinimumIncreasePopulationEmployee,
+    minimumIncreaseExclusionReason: employee.minimumIncreaseExclusionReason,
+    campaignPeriodMinimumComplementFloorCostFcfa:
+      employee.campaignPeriodMinimumComplementFloorCostFcfa,
+    campaignPeriodMinimumComplementFloorCostLabel: formatFcfaInteger(
+      employee.campaignPeriodMinimumComplementFloorCostFcfa,
+    ),
+    campaignPeriodCompensationAboveMinimumCostFcfa:
+      employee.campaignPeriodCompensationAboveMinimumCostFcfa,
+    campaignPeriodCompensationAboveMinimumCostLabel: formatFcfaInteger(
+      employee.campaignPeriodCompensationAboveMinimumCostFcfa,
+    ),
+    minimumCompensatoryReminderFcfa: employee.minimumCompensatoryReminderFcfa,
+    minimumCompensatoryReminderLabel: formatFcfaInteger(
+      employee.minimumCompensatoryReminderFcfa,
+    ),
+    aboveMinimumCompensatoryReminderFcfa:
+      employee.aboveMinimumCompensatoryReminderFcfa,
+    aboveMinimumCompensatoryReminderLabel: formatFcfaInteger(
+      employee.aboveMinimumCompensatoryReminderFcfa,
+    ),
+    minimumRemainingYearDirectCostFcfa:
+      employee.minimumRemainingYearDirectCostFcfa,
+    minimumRemainingYearDirectCostLabel: formatFcfaInteger(
+      employee.minimumRemainingYearDirectCostFcfa,
+    ),
+    aboveMinimumRemainingYearDirectCostFcfa:
+      employee.aboveMinimumRemainingYearDirectCostFcfa,
+    aboveMinimumRemainingYearDirectCostLabel: formatFcfaInteger(
+      employee.aboveMinimumRemainingYearDirectCostFcfa,
+    ),
+    fullYearRunRateMinimumComplementCostFcfa:
+      employee.fullYearRunRateMinimumComplementCostFcfa,
+    fullYearRunRateMinimumComplementCostLabel: formatFcfaInteger(
+      employee.fullYearRunRateMinimumComplementCostFcfa,
+    ),
+    fullYearRunRateCompensationAboveMinimumCostFcfa:
+      employee.fullYearRunRateCompensationAboveMinimumCostFcfa,
+    fullYearRunRateCompensationAboveMinimumCostLabel: formatFcfaInteger(
+      employee.fullYearRunRateCompensationAboveMinimumCostFcfa,
+    ),
     monthlyCompensationTrajectory: trajectory,
     explanationSteps: mapExplanationSteps(employee.explanationSteps),
   };
@@ -372,6 +444,26 @@ function buildEnvelopeSummary(
       engineResult.availableAnnualCompensatoryBudget,
     availableAnnualCompensatoryBudgetLabel: formatExactAmountAsFcfa(
       engineResult.availableAnnualCompensatoryBudget,
+    ),
+    totalMinimumComplementFloorCostFcfa:
+      engineResult.totalMinimumComplementFloorCostFcfa,
+    totalMinimumComplementFloorCostLabel: formatFcfaInteger(
+      engineResult.totalMinimumComplementFloorCostFcfa,
+    ),
+    availableBudgetAfterPromotionsAndMinimumFcfa:
+      engineResult.availableBudgetAfterPromotionsAndMinimumFcfa,
+    availableBudgetAfterPromotionsAndMinimumLabel: formatExactAmountAsFcfa(
+      engineResult.availableBudgetAfterPromotionsAndMinimumFcfa,
+    ),
+    actualMinimumComplementPaidCostFcfa:
+      engineResult.actualMinimumComplementPaidCostFcfa,
+    actualMinimumComplementPaidCostLabel: formatFcfaInteger(
+      engineResult.actualMinimumComplementPaidCostFcfa,
+    ),
+    actualCompensationAboveMinimumCostFcfa:
+      engineResult.actualCompensationAboveMinimumCostFcfa,
+    actualCompensationAboveMinimumCostLabel: formatFcfaInteger(
+      engineResult.actualCompensationAboveMinimumCostFcfa,
     ),
     totalAnnualTheoreticalCompensatoryCostFcfa:
       engineResult.annualTheoreticalAllocatedTotal,
@@ -634,6 +726,15 @@ export function buildSimulationResultView(input: {
     totalCombinedAnnualSeniorityImpactFcfa:
       summary.totalCombinedAnnualSeniorityImpactFcfa,
     compensatoryCalibrationRate: summary.compensatoryCalibrationRate,
+    minimumIncreaseMode: summary.minimumIncreaseMode,
+    minimumIncreasePopulationEmployeeCount:
+      summary.minimumIncreasePopulationEmployeeCount,
+    totalMinimumComplementFloorCostFcfa:
+      summary.totalMinimumComplementFloorCostFcfa,
+    actualMinimumComplementPaidCostFcfa:
+      summary.actualMinimumComplementPaidCostFcfa,
+    actualCompensationAboveMinimumCostFcfa:
+      summary.actualCompensationAboveMinimumCostFcfa,
   };
 
   return {

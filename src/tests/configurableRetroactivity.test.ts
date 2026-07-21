@@ -230,6 +230,11 @@ function samplePersistableResult(
       totalAnnualPromotionSeniorityImpactFcfa: 0n,
       totalCombinedAnnualSeniorityImpactFcfa: 0n,
       compensatoryCalibrationRate: { numerator: 0n, denominator: 1n },
+      minimumIncreaseMode: "none",
+      minimumIncreasePopulationEmployeeCount: 0,
+      totalMinimumComplementFloorCostFcfa: 0n,
+      actualMinimumComplementPaidCostFcfa: 0n,
+      actualCompensationAboveMinimumCostFcfa: 0n,
     },
     employees: [
       withPromotionAwareEmployeeDefaults({
@@ -297,7 +302,7 @@ describe("Lot 2A-H2D-1 — rétroactivité configurable", () => {
     expect(result.retroactivityStartMonth).toBe(1);
     expect(result.campaignCoveredMonthCount).toBe(12);
     expect(result.employees[0]!.retroactivityStartMonth).toBe(1);
-    expect(CALCULATION_CONTRACT_VERSION).toBe(3);
+    expect(CALCULATION_CONTRACT_VERSION).toBe(4);
   });
 
   it("2a. recette Population Test 1 mesurée (5 000 023 / pas 5 → 5 000 040 / +17)", () => {
@@ -464,7 +469,7 @@ describe("Lot 2A-H2D-1 — rétroactivité configurable", () => {
     expect(january).not.toBe(march);
     expect(january).toContain("retroStart:1");
     expect(march).toContain("retroStart:3");
-    expect(january).toContain("contract:v3");
+    expect(january).toContain("contract:v4");
   });
 
   it("8. mars / juillet → 10 mois couverts, 4 rappel, 6 direct", () => {
@@ -800,11 +805,11 @@ describe("Lot 2A-H2D-1 — rétroactivité configurable", () => {
   });
 
   it("19. mapExecutionResultToSaveDto / assert refuse contrat 3 / schema 2", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(3);
+    expect(CALCULATION_CONTRACT_VERSION).toBe(4);
     expect(RESULT_SCHEMA_VERSION).toBe(2);
     expect(() =>
       assertSimulationResultPersistable({
-        calculationContractVersion: 3,
+        calculationContractVersion: 4,
         resultSchemaVersion: 2,
       }),
     ).toThrow(/consolidat/i);

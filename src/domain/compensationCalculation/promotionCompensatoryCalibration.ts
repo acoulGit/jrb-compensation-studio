@@ -1,26 +1,20 @@
 /**
- * Calibrage compensatoire conscient des promotions (Lot 2A-H2C-2).
+ * Calibrage compensatoire conscient des promotions et du minimum garanti
+ * (Lot 2A-H2C-2 / Lot 2A-H2D-2).
  *
- * Résout, en arithmétique rationnelle exacte (BigInt), le taux mensuel
- * unique tel que :
- *   Σ salaire_i × max(0, taux×facteur_i − décalagePromotion_i) = budgetDisponible
+ * Équation (mode none — parité H2D-1) :
+ *   Σ salaire × max(0, taux×facteur − décalage) = budgetDisponible
  *
- * `décalagePromotion_i` neutralise, mois par mois, la part de taux déjà
- * consommée par une promotion structurée incluse — un salarié promu ne
- * cumule pas intégralement l'augmentation matricielle standard et sa
- * promotion : seul le complément (éventuellement nul) est versé.
+ * Équation (avec planchers) :
+ *   Σ max(plancher_i, salaire × max(0, taux×facteur − décalage))
+ *     = budgetDisponible
+ * équivalent à :
+ *   Σ max(0, weighted_i(taux) − plancher_i)
+ *     = budgetDisponible − Σ plancher_i
  *
- * Algorithme (piecewise linéaire croissant, convexe) :
- * 1. budget nul → taux nul (aucune résolution nécessaire) ;
- * 2. exclusion des expositions à facteur nul (aucune capacité) ;
- * 3. aucune exposition restante + budget positif → erreur ;
- * 4. seuils = décalage / facteur (fraction exacte) ; liste triée distincte ;
- * 5. segments (t_i, t_{i+1}] avec t_0 = 0 (virtuel) ;
- * 6. sur un segment, l'exposition est active ssi seuil ≤ t_i (le taux du
- *    segment est strictement supérieur au seuil ; égalité ⇒ complément nul) ;
- * 7. A = Σ salaire×facteur (actifs) ; B = Σ salaire×décalage (actifs) ;
- * 8. taux candidat = (budgetDisponible + B) / A ; retenu si dans le segment ;
- * 9. résultat renvoyé sous forme de fraction canonique réduite.
+ * Algorithme piecewise exact (BigInt) sur les seuils :
+ * - activation pondérée : décalage / facteur ;
+ * - franchissement du plancher : (décalage + plancher/salaire) / facteur.
  */
 
 import { CompensationCalculationError } from "./errors";
@@ -32,6 +26,7 @@ import {
   fractionsEqual,
   isZeroFraction,
   multiplyFractions,
+  subtractFractions,
   type ExactAmount,
 } from "./exactFraction";
 import type { PromotionCampaignCostPreview } from "./promotionTrajectory";
@@ -39,16 +34,23 @@ import type { PromotionCampaignCostPreview } from "./promotionTrajectory";
 export const PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION = 1 as const;
 
 export interface PromotionCompensatoryExposure {
-  /** Identifiant de traçabilité — n'affecte pas le calcul. */
   employeeId?: string;
   month?: number;
   salary: bigint;
   factor: ExactAmount;
   promotionRateOffset: ExactAmount;
+  /**
+   * Plancher de complément payable (multiple du pas). Défaut 0 = H2D-1.
+   */
+  minimumComplementFloorFcfa?: bigint;
 }
 
 function salaryAsExact(salary: bigint): ExactAmount {
   return exactAmountFromInteger(salary);
+}
+
+function floorOf(exposure: PromotionCompensatoryExposure): bigint {
+  return exposure.minimumComplementFloorFcfa ?? 0n;
 }
 
 /**
@@ -60,27 +62,82 @@ export function solvePromotionAwareCompensatoryCalibrationRate(input: {
   exposures: readonly PromotionCompensatoryExposure[];
 }): ExactAmount {
   if (isZeroFraction(input.availableBudget)) {
+    const anyPositiveFloor = input.exposures.some((e) => floorOf(e) > 0n);
+    if (anyPositiveFloor) {
+      throw new CompensationCalculationError(
+        "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
+        "L’enveloppe ne permet pas de financer les promotions et le minimum garanti.",
+      );
+    }
     return exactAmountFromInteger(0n);
   }
 
+  let totalFloor = 0n;
+  for (const exposure of input.exposures) {
+    totalFloor += floorOf(exposure);
+  }
+  const totalFloorExact = exactAmountFromInteger(totalFloor);
+
+  if (compareFractions(totalFloorExact, input.availableBudget) > 0) {
+    throw new CompensationCalculationError(
+      "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
+      "L’enveloppe ne permet pas de financer les promotions et le minimum garanti.",
+    );
+  }
+
+  const residualBudget = subtractFractions(input.availableBudget, totalFloorExact);
+
+  // Budget exact = planchers uniquement → taux nul, simulation valide.
+  if (isZeroFraction(residualBudget)) {
+    return exactAmountFromInteger(0n);
+  }
+
+  // Capacité au-dessus du plancher : facteur > 0 uniquement.
   const active = input.exposures.filter((exposure) => !isZeroFraction(exposure.factor));
 
   if (active.length === 0) {
     throw new CompensationCalculationError(
       "NO_COMPENSATORY_ALLOCATION_CAPACITY",
-      "Aucune capacité d'allocation compensatoire disponible : tous les facteurs matriciels effectifs sont nuls alors qu'un budget compensatoire positif reste à répartir. Réduisez l'enveloppe disponible ou revoyez la population et les règles d'éligibilité au complément compensatoire.",
+      "Un budget reste disponible après promotions et minimum garanti, mais aucune exposition ne présente de capacité d’allocation positive au-dessus du plancher. Réduisez l’enveloppe disponible ou revoyez la population et les règles d’éligibilité.",
     );
   }
 
-  const withThreshold = active.map((exposure) => ({
-    ...exposure,
-    threshold: divideFractions(exposure.promotionRateOffset, exposure.factor),
-  }));
+  type ExposureWithThresholds = PromotionCompensatoryExposure & {
+    weightedActivationThreshold: ExactAmount;
+    floorCrossingThreshold: ExactAmount;
+  };
+
+  const withThresholds: ExposureWithThresholds[] = active.map((exposure) => {
+    const floor = floorOf(exposure);
+    const weightedActivationThreshold = divideFractions(
+      exposure.promotionRateOffset,
+      exposure.factor,
+    );
+    // rate = (offset + floor/salary) / factor
+    const floorOverSalary =
+      floor === 0n || exposure.salary === 0n
+        ? exactAmountFromInteger(0n)
+        : reduceSafe(floor, exposure.salary);
+    const floorCrossingThreshold = divideFractions(
+      addFractions(exposure.promotionRateOffset, floorOverSalary),
+      exposure.factor,
+    );
+    return {
+      ...exposure,
+      weightedActivationThreshold,
+      floorCrossingThreshold,
+    };
+  });
 
   const boundaries: ExactAmount[] = [exactAmountFromInteger(0n)];
-  for (const exposure of withThreshold) {
-    if (!boundaries.some((existing) => fractionsEqual(existing, exposure.threshold))) {
-      boundaries.push(exposure.threshold);
+  for (const exposure of withThresholds) {
+    for (const threshold of [
+      exposure.weightedActivationThreshold,
+      exposure.floorCrossingThreshold,
+    ]) {
+      if (!boundaries.some((existing) => fractionsEqual(existing, threshold))) {
+        boundaries.push(threshold);
+      }
     }
   }
   boundaries.sort((left, right) => compareFractions(left, right));
@@ -89,10 +146,14 @@ export function solvePromotionAwareCompensatoryCalibrationRate(input: {
     const lowerBound = boundaries[index]!;
     const upperBound = index + 1 < boundaries.length ? boundaries[index + 1]! : null;
 
+    // Sur (lower, upper], expositions au-dessus du plancher :
+    // floorCrossingThreshold ≤ lowerBound (taux du segment > seuil plancher).
     let sumSalaryFactor: ExactAmount = exactAmountFromInteger(0n);
     let sumSalaryOffset: ExactAmount = exactAmountFromInteger(0n);
-    for (const exposure of withThreshold) {
-      if (compareFractions(exposure.threshold, lowerBound) <= 0) {
+    let sumFloorsAbove: ExactAmount = exactAmountFromInteger(0n);
+
+    for (const exposure of withThresholds) {
+      if (compareFractions(exposure.floorCrossingThreshold, lowerBound) <= 0) {
         const salaryExact = salaryAsExact(exposure.salary);
         sumSalaryFactor = addFractions(
           sumSalaryFactor,
@@ -102,6 +163,10 @@ export function solvePromotionAwareCompensatoryCalibrationRate(input: {
           sumSalaryOffset,
           multiplyFractions(salaryExact, exposure.promotionRateOffset),
         );
+        sumFloorsAbove = addFractions(
+          sumFloorsAbove,
+          exactAmountFromInteger(floorOf(exposure)),
+        );
       }
     }
 
@@ -109,8 +174,10 @@ export function solvePromotionAwareCompensatoryCalibrationRate(input: {
       continue;
     }
 
+    // residual = Σ (salary×rate×f − salary×o − floor) sur actifs above floor
+    // residual + Σ(salary×o) + Σ floor = rate × Σ(salary×f)
     const candidateRate = divideFractions(
-      addFractions(input.availableBudget, sumSalaryOffset),
+      addFractions(addFractions(residualBudget, sumSalaryOffset), sumFloorsAbove),
       sumSalaryFactor,
     );
 
@@ -125,15 +192,17 @@ export function solvePromotionAwareCompensatoryCalibrationRate(input: {
 
   throw new CompensationCalculationError(
     "NO_COMPENSATORY_ALLOCATION_CAPACITY",
-    "Aucun taux de calibrage compensatoire ne satisfait l'équation exacte de répartition du budget disponible sur les expositions fournies. Réduisez l'enveloppe disponible ou revoyez la population et les règles d'éligibilité au complément compensatoire.",
+    "Aucun taux de calibrage compensatoire ne satisfait l’équation exacte de répartition du reliquat au-dessus du minimum garanti. Réduisez l’enveloppe disponible ou revoyez la population et les règles d’éligibilité.",
   );
 }
 
-/**
- * Coût budgétaire annuel de promotion imputable pour un salarié, filtré par
- * appartenance à la population de consommation du budget promotion.
- * Renvoie 0 si le salarié est hors population ou si la promotion est exclue.
- */
+function reduceSafe(numerator: bigint, denominator: bigint): ExactAmount {
+  return divideFractions(
+    exactAmountFromInteger(numerator),
+    exactAmountFromInteger(denominator),
+  );
+}
+
 export function promotionAnnualBudgetCostFcfa(input: {
   costPreview: PromotionCampaignCostPreview;
   isPromotionBudgetPopulationEmployee: boolean;
@@ -146,7 +215,6 @@ export function promotionAnnualBudgetCostFcfa(input: {
     : 0n;
 }
 
-/** Somme des coûts annuels de promotion imputables sur une population. */
 export function sumPromotionAnnualBudgetCostFcfa(
   entries: readonly {
     costPreview: PromotionCampaignCostPreview;

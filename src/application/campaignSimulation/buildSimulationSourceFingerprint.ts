@@ -10,6 +10,8 @@ import { SENIORITY_IMPACT_CONTRACT_VERSION } from "../../domain/compensationCalc
 import { PROMOTION_TRAJECTORY_CONTRACT_VERSION } from "../../domain/compensationCalculation";
 import { PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION } from "../../domain/compensationCalculation";
 import { PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION } from "../../domain/compensationCalculation";
+import { MINIMUM_INCREASE_CONTRACT_VERSION } from "../../domain/compensationCalculation";
+import type { MinimumIncreasePolicy } from "../../domain/compensationCalculation";
 import type { CampaignStatus } from "../../domain/campaign/models";
 import type { NineBoxMode } from "../../domain/compensationReference/models";
 import { buildConfigurationFingerprint } from "./formatExactBudgetDisplay";
@@ -57,6 +59,7 @@ export interface SimulationSourceFingerprintInput {
   campaignYear: number;
   retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  minimumIncreasePolicy: MinimumIncreasePolicy;
 }
 
 /**
@@ -147,6 +150,14 @@ export function buildSimulationSourceFingerprint(
     promotionCompensatoryCalibrationContractVersion:
       PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION,
     promotionAwareCompensationContractVersion: PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION,
+    minimumIncreaseMode: input.minimumIncreasePolicy.mode,
+    minimumMonthlyAmountFcfa:
+      input.minimumIncreasePolicy.minimumMonthlyAmountFcfa,
+    minimumIncreaseRateNumerator:
+      input.minimumIncreasePolicy.minimumIncreaseRate?.numerator ?? null,
+    minimumIncreaseRateDenominator:
+      input.minimumIncreasePolicy.minimumIncreaseRate?.denominator ?? null,
+    minimumIncreaseContractVersion: MINIMUM_INCREASE_CONTRACT_VERSION,
   });
 
   const canonical = [

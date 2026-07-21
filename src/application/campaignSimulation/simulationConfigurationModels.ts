@@ -2,6 +2,7 @@
 
 import type {
   BudgetTargetInput,
+  MinimumIncreasePolicy,
   RoundingPolicy,
 } from "../../domain/compensationCalculation";
 import type { CampaignSimulationReadinessReport } from "./campaignSimulationModels";
@@ -30,6 +31,8 @@ export interface ValidatedCampaignSimulationConfiguration {
   retroactivityStartMonth: number;
   /** Mois d’application technique (1–12). */
   technicalApplicationMonth: number;
+  /** Politique de minimum garanti d’augmentation (Lot 2A-H2D-2). */
+  minimumIncreasePolicy: MinimumIncreasePolicy;
   readinessReport: CampaignSimulationReadinessReport;
   /** Compteur de session (non temporel) incrémenté à chaque validation. */
   validatedAtSessionSequence: number;
@@ -58,6 +61,9 @@ export function createEmptyConfigurationDraft(
     campaignYearInput: String(uiDefaultYear),
     retroactivityStartMonthInput: "1",
     technicalApplicationMonthInput: "1",
+    minimumIncreaseMode: "none",
+    minimumMonthlyAmountInput: "",
+    minimumIncreaseRatePercentInput: "",
   };
 }
 

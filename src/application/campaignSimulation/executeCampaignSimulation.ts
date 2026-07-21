@@ -165,6 +165,7 @@ export async function executeCampaignSimulation(
     campaignYear: validatedConfiguration.campaignYear,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
     retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
+    minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
   });
 
   const currentConfigFingerprint = buildConfigurationFingerprint({
@@ -187,6 +188,15 @@ export async function executeCampaignSimulation(
     campaignYear: validatedConfiguration.campaignYear,
     retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
+    minimumIncreaseMode: validatedConfiguration.minimumIncreasePolicy.mode,
+    minimumMonthlyAmountFcfa:
+      validatedConfiguration.minimumIncreasePolicy.minimumMonthlyAmountFcfa,
+    minimumIncreaseRateNumerator:
+      validatedConfiguration.minimumIncreasePolicy.minimumIncreaseRate
+        ?.numerator ?? null,
+    minimumIncreaseRateDenominator:
+      validatedConfiguration.minimumIncreasePolicy.minimumIncreaseRate
+        ?.denominator ?? null,
   });
 
   if (
@@ -229,6 +239,7 @@ export async function executeCampaignSimulation(
     campaignYear: validatedConfiguration.campaignYear,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
     retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
+    minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
   };
 
   let engineResult;

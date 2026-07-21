@@ -35,6 +35,10 @@ import {
   type BudgetTargetModeChoice,
 } from "../application/campaignSimulation/simulationConfigurationModels";
 import { resolveBudgetTarget } from "../domain/compensationCalculation";
+import {
+  MINIMUM_INCREASE_CONTRACT_VERSION,
+  type MinimumIncreaseMode,
+} from "../domain/compensationCalculation";
 import type { Campaign } from "../infrastructure/database/types";
 import { toUserMessage } from "../services/errors";
 import { useAppData } from "./AppDataProvider";
@@ -78,6 +82,9 @@ interface SimulationConfigurationContextValue {
   setCampaignYearInput: (value: string) => void;
   setRetroactivityStartMonthInput: (value: string) => void;
   setTechnicalApplicationMonthInput: (value: string) => void;
+  setMinimumIncreaseMode: (mode: MinimumIncreaseMode) => void;
+  setMinimumMonthlyAmountInput: (value: string) => void;
+  setMinimumIncreaseRatePercentInput: (value: string) => void;
   validateConfiguration: () => Promise<boolean>;
   refreshReadiness: () => Promise<void>;
   /** Marque le snapshot validé de la campagne courante comme stale. */
@@ -321,6 +328,44 @@ export function SimulationConfigurationProvider({
     [patchDraft],
   );
 
+  const setMinimumIncreaseMode = useCallback(
+    (mode: MinimumIncreaseMode) => {
+      patchDraft((current) => ({
+        ...current,
+        minimumIncreaseMode: mode,
+        ...(mode === "none"
+          ? {
+              minimumMonthlyAmountInput: "",
+              minimumIncreaseRatePercentInput: "",
+            }
+          : mode === "fixed_monthly_amount"
+            ? { minimumIncreaseRatePercentInput: "" }
+            : { minimumMonthlyAmountInput: "" }),
+      }));
+    },
+    [patchDraft],
+  );
+
+  const setMinimumMonthlyAmountInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({
+        ...current,
+        minimumMonthlyAmountInput: value,
+      }));
+    },
+    [patchDraft],
+  );
+
+  const setMinimumIncreaseRatePercentInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({
+        ...current,
+        minimumIncreaseRatePercentInput: value,
+      }));
+    },
+    [patchDraft],
+  );
+
   const draftFingerprint = draft
     ? [
         draft.campaignId,
@@ -333,6 +378,9 @@ export function SimulationConfigurationProvider({
         draft.campaignYearInput,
         draft.retroactivityStartMonthInput,
         draft.technicalApplicationMonthInput,
+        draft.minimumIncreaseMode,
+        draft.minimumMonthlyAmountInput,
+        draft.minimumIncreaseRatePercentInput,
       ].join("|")
     : "";
 
@@ -431,6 +479,7 @@ export function SimulationConfigurationProvider({
       campaignYear: validatedConfiguration.campaignYear,
       retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
       technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
+      minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
     });
 
     if (currentFingerprint !== validatedConfiguration.sourceFingerprint) {
@@ -513,7 +562,8 @@ export function SimulationConfigurationProvider({
       !currentParsed.roundingPolicy ||
       currentParsed.campaignYear === null ||
       currentParsed.retroactivityStartMonth === null ||
-      currentParsed.technicalApplicationMonth === null
+      currentParsed.technicalApplicationMonth === null ||
+      !currentParsed.minimumIncreasePolicy
     ) {
       return false;
     }
@@ -556,6 +606,16 @@ export function SimulationConfigurationProvider({
       campaignYear: currentParsed.campaignYear,
       retroactivityStartMonth: currentParsed.retroactivityStartMonth,
       technicalApplicationMonth: currentParsed.technicalApplicationMonth,
+      minimumIncreaseMode: currentParsed.minimumIncreasePolicy.mode,
+      minimumMonthlyAmountFcfa:
+        currentParsed.minimumIncreasePolicy.minimumMonthlyAmountFcfa,
+      minimumIncreaseRateNumerator:
+        currentParsed.minimumIncreasePolicy.minimumIncreaseRate?.numerator ??
+        null,
+      minimumIncreaseRateDenominator:
+        currentParsed.minimumIncreasePolicy.minimumIncreaseRate?.denominator ??
+        null,
+      minimumIncreaseContractVersion: MINIMUM_INCREASE_CONTRACT_VERSION,
     });
     const sourceFingerprint = buildSimulationSourceFingerprint({
       campaignId: selectedCampaignId,
@@ -569,6 +629,7 @@ export function SimulationConfigurationProvider({
       campaignYear: currentParsed.campaignYear,
       retroactivityStartMonth: currentParsed.retroactivityStartMonth,
       technicalApplicationMonth: currentParsed.technicalApplicationMonth,
+      minimumIncreasePolicy: currentParsed.minimumIncreasePolicy,
     });
 
     const snapshot: ValidatedCampaignSimulationConfiguration = {
@@ -578,6 +639,7 @@ export function SimulationConfigurationProvider({
       campaignYear: currentParsed.campaignYear,
       retroactivityStartMonth: currentParsed.retroactivityStartMonth,
       technicalApplicationMonth: currentParsed.technicalApplicationMonth,
+      minimumIncreasePolicy: currentParsed.minimumIncreasePolicy,
       readinessReport: report,
       validatedAtSessionSequence: nextSequence,
       configurationFingerprint: fingerprint,
@@ -638,6 +700,9 @@ export function SimulationConfigurationProvider({
       setCampaignYearInput,
       setRetroactivityStartMonthInput,
       setTechnicalApplicationMonthInput,
+      setMinimumIncreaseMode,
+      setMinimumMonthlyAmountInput,
+      setMinimumIncreaseRatePercentInput,
       validateConfiguration,
       refreshReadiness,
       markValidationStale,
@@ -663,6 +728,9 @@ export function SimulationConfigurationProvider({
       setCampaignYearInput,
       setEligiblePayrollInput,
       setManualBudgetInput,
+      setMinimumIncreaseMode,
+      setMinimumIncreaseRatePercentInput,
+      setMinimumMonthlyAmountInput,
       setRoundingStepInput,
       setRetroactivityStartMonthInput,
       setTechnicalApplicationMonthInput,

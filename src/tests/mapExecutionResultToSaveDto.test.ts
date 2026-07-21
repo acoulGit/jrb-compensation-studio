@@ -74,6 +74,11 @@ function sampleResult(
       totalAnnualPromotionSeniorityImpactFcfa: 0n,
       totalCombinedAnnualSeniorityImpactFcfa: 0n,
       compensatoryCalibrationRate: { numerator: 0n, denominator: 1n },
+      minimumIncreaseMode: "none",
+      minimumIncreasePopulationEmployeeCount: 0,
+      totalMinimumComplementFloorCostFcfa: 0n,
+      actualMinimumComplementPaidCostFcfa: 0n,
+      actualCompensationAboveMinimumCostFcfa: 0n,
     },
     employees: [
       withPromotionAwareEmployeeDefaults({

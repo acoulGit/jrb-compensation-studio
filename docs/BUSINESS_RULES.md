@@ -86,7 +86,11 @@ convention historique non documentée :
 
 ## Budget
 
-- Le budget est global et ne constitue pas un taux individuel garanti.
+- Le budget est global et ne constitue pas, **par défaut**, un taux
+  individuel garanti. Un **minimum garanti d’augmentation** optionnel
+  (Lot **2A-H2D-2**, contrat v4) peut toutefois imposer un plancher mensuel
+  sur l’augmentation totale de base (promotion applicable + complément),
+  réservé avant répartition du reliquat.
 - Les directeurs sont exclus de l’assiette (résolution d’assiette hors Lot 2A-3).
 - Une consommation exacte du budget n’est **pas** forcée après arrondi
   individuel : le montant réel de l’opération est la somme des montants
@@ -268,6 +272,16 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
   12 = décembre), rattaché à `campaignYear`.
 - `retroactivityStartMonth` (Lot **2A-H2D-1**, contrat v3) : début de la
   période d’effet (1–12, défaut janvier). Doit être ≤ mois d’application.
+- Minimum garanti d’augmentation (Lot **2A-H2D-2**, contrat v4) — modes
+  exclusifs `none` | `fixed_monthly_amount` | `percentage_of_base_salary` :
+  - porte sur l’augmentation mensuelle totale de base
+    (promotion applicable + complément compensatoire) ;
+  - population distincte : CDI/CDD + `active` / `group_detachment` /
+    `legal_leave` (pas d’exigence ≥ 12 mois ni d’exclusion sous-performant) ;
+  - plancher payable = `ceil` du complément minimum requis au pas d’arrondi ;
+  - réservation `Σ planchers` avant allocation du reliquat pondéré ;
+  - si promo + planchers > enveloppe → `MINIMUM_GUARANTEE_EXCEEDS_BUDGET` ;
+  - mode `none` : parité stricte avec H2D-1.
 - Effet financier rétroactif au **mois de rétroactivité** (plus seulement
   au 1er janvier).
 - Formules (BigInt FCFA) — avec `retro = retroactivityStartMonth` :

@@ -1,9 +1,11 @@
 /**
  * Trajectoire mensuelle de rémunération consciente des promotions
- * (Lot 2A-H2C-2 / Lot 2A-H2D-1). Combine, mois par mois (janvier → décembre) :
+ * (Lot 2A-H2C-2 / Lot 2A-H2D-1 / Lot 2A-H2D-2). Combine, mois par mois
+ * (janvier → décembre) :
  * - la trajectoire salariale de base (grade/famille/salaire) ;
  * - le calcul matriciel individuel ;
  * - le complément compensatoire (nul avant retroactivityStartMonth) ;
+ * - le minimum garanti d’augmentation (plancher payable) ;
  * - l'incidence d'ancienneté ventilée promotion / compensatoire.
  *
  * Les agrégats de campagne ne couvrent que [rétroactivité … décembre].
@@ -39,6 +41,18 @@ import {
 } from "./promotionBudgetPopulation";
 import { isCompensatoryMeasureEligible } from "./compensatoryMeasureEligibility";
 import {
+  computeGuaranteedTotalIncreaseExact,
+  computeMinimumComplementFloorFcfa,
+  computeRequiredMinimumComplementExact,
+  NO_MINIMUM_INCREASE_POLICY,
+  type MinimumIncreasePolicy,
+} from "./minimumIncrease";
+import {
+  isMinimumIncreasePopulationEmployee,
+  resolveMinimumIncreaseExclusionReason,
+  type MinimumIncreaseExclusionReason,
+} from "./minimumIncreasePopulation";
+import {
   buildPromotionAwareMonthlySalaryTrajectory,
   type PromotionCampaignCostPreview,
   type PromotionEvent,
@@ -71,6 +85,8 @@ export interface EmployeeMonthlyExposureContext {
   effectiveCompensationFactor: ExactAmount;
   promotionRateOffset: ExactAmount;
   promotionAmountForMonthFcfa: bigint;
+  /** Plancher de complément payable (0 hors population / hors période / mode none). */
+  minimumComplementFloorFcfa: bigint;
 }
 
 export interface EmployeePromotionAwareExposureResult {
@@ -81,6 +97,8 @@ export interface EmployeePromotionAwareExposureResult {
   promotionMonth: number | null;
   isPromotionBudgetPopulationEmployee: boolean;
   compensatoryMeasureEligible: boolean;
+  isMinimumIncreasePopulationEmployee: boolean;
+  minimumIncreaseExclusionReason: MinimumIncreaseExclusionReason;
 }
 
 export interface BuildEmployeePromotionAwareExposuresInput {
@@ -105,6 +123,10 @@ export interface BuildEmployeePromotionAwareExposuresInput {
   performanceFactors: readonly LevelFactorRef[];
   potentialFactors: readonly LevelFactorRef[];
   nineBoxFactors: readonly NineBoxFactorRef[];
+  /** Politique de minimum (défaut = none). */
+  minimumIncreasePolicy?: MinimumIncreasePolicy;
+  /** Pas d’arrondi requis pour calculer le plancher payable. */
+  roundingStepFcfa?: bigint;
 }
 
 /** Construit les 12 expositions mensuelles d'un salarié (avant résolution du taux). */
@@ -117,6 +139,9 @@ export function buildEmployeePromotionAwareExposures(
     technicalApplicationMonth: input.technicalApplicationMonth,
     retroactivityStartMonth,
   });
+
+  const policy = input.minimumIncreasePolicy ?? NO_MINIMUM_INCREASE_POLICY;
+  const roundingStepFcfa = input.roundingStepFcfa ?? 1n;
 
   const trajectoryResult = buildPromotionAwareMonthlySalaryTrajectory({
     campaignYear: input.campaignYear,
@@ -135,6 +160,17 @@ export function buildEmployeePromotionAwareExposures(
     employmentStatus: input.employmentStatus,
     override: input.compensatoryMeasureEligible,
   });
+
+  const minimumPopulationInput = {
+    contractType: input.contractType,
+    employmentStatus: input.employmentStatus,
+  };
+  const inMinimumPopulation = isMinimumIncreasePopulationEmployee(
+    minimumPopulationInput,
+  );
+  const minimumIncreaseExclusionReason = resolveMinimumIncreaseExclusionReason(
+    minimumPopulationInput,
+  );
 
   const months: EmployeeMonthlyExposureContext[] = trajectoryResult.trajectory.map(
     (entry) => {
@@ -179,6 +215,19 @@ export function buildEmployeePromotionAwareExposures(
         entry.promotionActive &&
         inCampaignPeriod;
 
+      const promotionAmountForMonthFcfa = countsForPromotionThisMonth
+        ? input.promotion!.promotionAmountFcfa
+        : 0n;
+
+      const minimumComplementFloorFcfa = computeMinimumComplementFloorFcfa({
+        policy,
+        applicableMonthlyBaseSalaryFcfa: entry.baseSalaryFcfa,
+        applicablePromotionIncrementFcfa: promotionAmountForMonthFcfa,
+        roundingStepFcfa,
+        isCampaignCoveredMonth: inCampaignPeriod,
+        isMinimumIncreasePopulationEmployee: inMinimumPopulation,
+      });
+
       return {
         month: entry.month,
         baseSalaryFcfa: entry.baseSalaryFcfa,
@@ -192,9 +241,8 @@ export function buildEmployeePromotionAwareExposures(
         promotionRateOffset: countsForPromotionThisMonth
           ? input.promotion!.promotionRate
           : exactAmountFromInteger(0n),
-        promotionAmountForMonthFcfa: countsForPromotionThisMonth
-          ? input.promotion!.promotionAmountFcfa
-          : 0n,
+        promotionAmountForMonthFcfa,
+        minimumComplementFloorFcfa,
       };
     },
   );
@@ -209,6 +257,8 @@ export function buildEmployeePromotionAwareExposures(
       employmentStatus: input.employmentStatus,
     }),
     compensatoryMeasureEligible,
+    isMinimumIncreasePopulationEmployee: inMinimumPopulation,
+    minimumIncreaseExclusionReason,
   };
 }
 
@@ -223,6 +273,8 @@ export interface FinalizeEmployeePromotionAwareCompensationInput {
   roundingPolicy: { mode: "nearest_half_up"; stepFcfa: bigint };
   costPreview: PromotionCampaignCostPreview;
   isPromotionBudgetPopulationEmployee: boolean;
+  minimumIncreasePolicy?: MinimumIncreasePolicy;
+  isMinimumIncreasePopulationEmployee?: boolean;
 }
 
 export interface FinalizeEmployeePromotionAwareCompensationResult {
@@ -247,12 +299,24 @@ export interface FinalizeEmployeePromotionAwareCompensationResult {
   fullYearRunRateCompensatoryCostFcfa: bigint;
   fullYearRunRateCombinedBaseMeasureCostFcfa: bigint;
   fullYearRunRateSeniorityImpactFcfa: bigint;
+  campaignPeriodMinimumComplementFloorCostFcfa: bigint;
+  campaignPeriodCompensationAboveMinimumCostFcfa: bigint;
+  minimumCompensatoryReminderFcfa: bigint;
+  aboveMinimumCompensatoryReminderFcfa: bigint;
+  minimumRemainingYearDirectCostFcfa: bigint;
+  aboveMinimumRemainingYearDirectCostFcfa: bigint;
+  fullYearRunRateMinimumComplementCostFcfa: bigint;
+  fullYearRunRateCompensationAboveMinimumCostFcfa: bigint;
 }
 
 function maxZero(amount: ExactAmount): ExactAmount {
   return compareFractions(amount, exactAmountFromInteger(0n)) < 0
     ? exactAmountFromInteger(0n)
     : amount;
+}
+
+function maxExact(left: ExactAmount, right: ExactAmount): ExactAmount {
+  return compareFractions(left, right) >= 0 ? left : right;
 }
 
 function nonNegative(value: bigint): bigint {
@@ -288,6 +352,8 @@ export function finalizeEmployeePromotionAwareCompensation(
   validateHireDateForCampaign(hire, input.campaignYear);
 
   const stepFcfa = input.roundingPolicy.stepFcfa;
+  const policy = input.minimumIncreasePolicy ?? NO_MINIMUM_INCREASE_POLICY;
+  const inMinimumPopulation = input.isMinimumIncreasePopulationEmployee ?? false;
 
   const imputesPromotionToBudget = promotionAnnualBudgetCostFcfa({
     costPreview: input.costPreview,
@@ -309,15 +375,51 @@ export function finalizeEmployeePromotionAwareCompensation(
             subtractFractions(targetCompensatoryRate, month.promotionRateOffset),
           )
         : exactAmountFromInteger(0n);
-      const theoreticalCompensatoryComplement = coveredByCampaignPeriod
+      const weightedComplementExact = coveredByCampaignPeriod
         ? multiplyFractions(
             exactAmountFromInteger(month.baseSalaryFcfa),
             compensatoryComplementRate,
           )
         : exactAmountFromInteger(0n);
-      const roundedCompensatoryComplementFcfa = coveredByCampaignPeriod
-        ? roundFractionToStepHalfUp(theoreticalCompensatoryComplement, stepFcfa)
+
+      const applicablePromotionIncrementFcfa = coveredByCampaignPeriod
+        ? month.promotionAmountForMonthFcfa
         : 0n;
+
+      const guaranteedTotalIncreaseExact =
+        coveredByCampaignPeriod && inMinimumPopulation
+          ? computeGuaranteedTotalIncreaseExact({
+              policy,
+              applicableMonthlyBaseSalaryFcfa: month.baseSalaryFcfa,
+            })
+          : exactAmountFromInteger(0n);
+      const requiredMinimumComplementExact = computeRequiredMinimumComplementExact({
+        guaranteedTotalIncreaseExact,
+        applicablePromotionIncrementFcfa,
+      });
+
+      // Préférer le plancher déjà calculé sur l’exposition (identique au solveur).
+      const minimumComplementFloorFcfa = coveredByCampaignPeriod
+        ? (month.minimumComplementFloorFcfa ?? 0n)
+        : 0n;
+
+      const floorExact = exactAmountFromInteger(minimumComplementFloorFcfa);
+      const theoreticalComplementExact = coveredByCampaignPeriod
+        ? maxExact(floorExact, weightedComplementExact)
+        : exactAmountFromInteger(0n);
+
+      const roundedFromTheoretical = coveredByCampaignPeriod
+        ? roundFractionToStepHalfUp(theoreticalComplementExact, stepFcfa)
+        : 0n;
+      const roundedCompensatoryComplementFcfa = coveredByCampaignPeriod
+        ? roundedFromTheoretical > minimumComplementFloorFcfa
+          ? roundedFromTheoretical
+          : minimumComplementFloorFcfa
+        : 0n;
+      const actualComplementAboveMinimumFcfa = nonNegative(
+        roundedCompensatoryComplementFcfa - minimumComplementFloorFcfa,
+      );
+
       const finalSalaryFcfa =
         month.baseSalaryFcfa + roundedCompensatoryComplementFcfa;
       const promotionBudgetCostFcfa =
@@ -377,7 +479,8 @@ export function finalizeEmployeePromotionAwareCompensation(
           ? targetCompensatoryRate
           : exactAmountFromInteger(0n),
         compensatoryComplementRate,
-        theoreticalCompensatoryComplement,
+        // Alias historique : théorique = max(plancher, weighted).
+        theoreticalCompensatoryComplement: theoreticalComplementExact,
         roundedCompensatoryComplementFcfa,
         finalSalaryFcfa,
         promotionBudgetCostFcfa,
@@ -389,6 +492,14 @@ export function finalizeEmployeePromotionAwareCompensation(
         totalSeniorityImpactFcfa,
         promotionSeniorityImpactFcfa,
         compensatorySeniorityImpactFcfa,
+        isMinimumIncreasePopulationEmployee: inMinimumPopulation,
+        guaranteedTotalIncreaseExact,
+        applicablePromotionIncrementFcfa,
+        requiredMinimumComplementExact,
+        minimumComplementFloorFcfa,
+        weightedComplementExact,
+        theoreticalComplementExact,
+        actualComplementAboveMinimumFcfa,
       };
     },
   );
@@ -405,6 +516,12 @@ export function finalizeEmployeePromotionAwareCompensation(
   let promotionCostFromTechnicalMonthToDecemberFcfa = 0n;
   let promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa = 0n;
   let promotionSeniorityFromTechnicalMonthToDecemberFcfa = 0n;
+  let campaignPeriodMinimumComplementFloorCostFcfa = 0n;
+  let campaignPeriodCompensationAboveMinimumCostFcfa = 0n;
+  let minimumCompensatoryReminderFcfa = 0n;
+  let aboveMinimumCompensatoryReminderFcfa = 0n;
+  let minimumRemainingYearDirectCostFcfa = 0n;
+  let aboveMinimumRemainingYearDirectCostFcfa = 0n;
 
   for (const entry of trajectory) {
     if (!entry.coveredByCampaignPeriod) {
@@ -417,6 +534,10 @@ export function finalizeEmployeePromotionAwareCompensation(
     );
     annualActualCompensatoryCostFcfa += entry.roundedCompensatoryComplementFcfa;
     annualPromotionSeniorityImpactFcfa += entry.promotionSeniorityImpactFcfa;
+    campaignPeriodMinimumComplementFloorCostFcfa +=
+      entry.minimumComplementFloorFcfa;
+    campaignPeriodCompensationAboveMinimumCostFcfa +=
+      entry.actualComplementAboveMinimumFcfa;
 
     if (entry.month < input.technicalApplicationMonth) {
       promotionCostAlreadyPaidBeforeTechnicalMonthFcfa +=
@@ -433,11 +554,17 @@ export function finalizeEmployeePromotionAwareCompensation(
     if (entry.paymentTiming === "reminder") {
       baseSalaryReminderFcfa += entry.roundedCompensatoryComplementFcfa;
       seniorityReminderFcfa += entry.compensatorySeniorityImpactFcfa;
+      minimumCompensatoryReminderFcfa += entry.minimumComplementFloorFcfa;
+      aboveMinimumCompensatoryReminderFcfa +=
+        entry.actualComplementAboveMinimumFcfa;
     } else if (entry.paymentTiming === "direct") {
       remainingYearDirectIncreaseCostFcfa +=
         entry.roundedCompensatoryComplementFcfa;
       remainingYearDirectSeniorityImpactFcfa +=
         entry.compensatorySeniorityImpactFcfa;
+      minimumRemainingYearDirectCostFcfa += entry.minimumComplementFloorFcfa;
+      aboveMinimumRemainingYearDirectCostFcfa +=
+        entry.actualComplementAboveMinimumFcfa;
     }
   }
 
@@ -472,6 +599,17 @@ export function finalizeEmployeePromotionAwareCompensation(
     );
   }
 
+  if (
+    campaignPeriodMinimumComplementFloorCostFcfa +
+      campaignPeriodCompensationAboveMinimumCostFcfa !==
+    annualActualCompensatoryCostFcfa
+  ) {
+    throw new CompensationCalculationError(
+      "PROMOTION_BUDGET_INVARIANT_FAILED",
+      `Incohérence minimum / au-dessus pour ${input.employeeId}.`,
+    );
+  }
+
   const decemberEntry = trajectory.find((entry) => entry.month === 12)!;
   // Plein effet : rythme de décembre, même si hors population budget (informatif).
   const decemberPromoForRunRate =
@@ -488,6 +626,11 @@ export function finalizeEmployeePromotionAwareCompensation(
     BigInt(FULL_YEAR_MONTH_COUNT);
   const fullYearRunRateSeniorityImpactFcfa =
     decemberEntry.totalSeniorityImpactFcfa * BigInt(FULL_YEAR_MONTH_COUNT);
+  const fullYearRunRateMinimumComplementCostFcfa =
+    decemberEntry.minimumComplementFloorFcfa * BigInt(FULL_YEAR_MONTH_COUNT);
+  const fullYearRunRateCompensationAboveMinimumCostFcfa =
+    decemberEntry.actualComplementAboveMinimumFcfa *
+    BigInt(FULL_YEAR_MONTH_COUNT);
 
   const technicalApplicationMonthSeniorityRatePercent = seniorityRatePercentAt(
     hire,
@@ -517,5 +660,13 @@ export function finalizeEmployeePromotionAwareCompensation(
     fullYearRunRateCompensatoryCostFcfa,
     fullYearRunRateCombinedBaseMeasureCostFcfa,
     fullYearRunRateSeniorityImpactFcfa,
+    campaignPeriodMinimumComplementFloorCostFcfa,
+    campaignPeriodCompensationAboveMinimumCostFcfa,
+    minimumCompensatoryReminderFcfa,
+    aboveMinimumCompensatoryReminderFcfa,
+    minimumRemainingYearDirectCostFcfa,
+    aboveMinimumRemainingYearDirectCostFcfa,
+    fullYearRunRateMinimumComplementCostFcfa,
+    fullYearRunRateCompensationAboveMinimumCostFcfa,
   };
 }

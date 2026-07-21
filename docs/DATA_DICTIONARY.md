@@ -357,7 +357,8 @@ Résultats de domaine purs (non stockés) :
 | Concept | Nature |
 | --- | --- |
 | `PopulationCalculationSummary` | Synthèse annuelle/mensuelle + calendrier |
-| `CALCULATION_CONTRACT_VERSION` | `3` (H2D-1 — période d’effet configurable) |
+| `CALCULATION_CONTRACT_VERSION` | `4` (H2D-2 — minimum garanti optionnel) |
+| `MINIMUM_INCREASE_CONTRACT_VERSION` | `1` |
 | `RESULT_SCHEMA_VERSION` | `2` (snapshots ; contrat 3 non enregistrable tant que schema v3 absent) |
 | `retroactivityStartMonth` | Début de rétroactivité 1–12 (défaut 1) |
 | `campaignCoveredMonthCount` | `13 − retroactivityStartMonth` |

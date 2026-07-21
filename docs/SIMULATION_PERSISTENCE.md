@@ -21,7 +21,8 @@ repositories créés ici.
 Nouvelles écritures : `RESULT_SCHEMA_VERSION = 2` (Rust + memory). Schéma SQL
 0005 inchangé ; pas de migration 0006 (dérivation exacte × 12).
 
-**Lot 2A-H2D-1** : un résultat avec `calculationContractVersion >= 3` est
+**Lot 2A-H2D-1 / H2D-2** : un résultat avec `calculationContractVersion >= 3`
+est
 **refusé** à l’enregistrement tant que le schema snapshot reste à 2
 (`assertSimulationResultPersistable` →
 `SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION`). Le calcul et

@@ -95,6 +95,28 @@ export {
   type CompensatoryMeasureEligibilityInput,
 } from "./compensatoryMeasureEligibility";
 export {
+  MINIMUM_INCREASE_CONTRACT_VERSION,
+  MINIMUM_INCREASE_ELIGIBLE_CONTRACT_TYPES,
+  MINIMUM_INCREASE_POPULATION_STATUSES,
+  isMinimumIncreasePopulationEmployee,
+  resolveMinimumIncreaseExclusionReason,
+  type MinimumIncreaseEligibleContractType,
+  type MinimumIncreaseExclusionReason,
+  type MinimumIncreasePopulationInput,
+} from "./minimumIncreasePopulation";
+export {
+  MINIMUM_INCREASE_MODES,
+  NO_MINIMUM_INCREASE_POLICY,
+  ceilFractionToConfiguredRoundingStep,
+  computeGuaranteedTotalIncreaseExact,
+  computeMinimumComplementFloorFcfa,
+  computeRequiredMinimumComplementExact,
+  minimumIncreaseRateFromPercentParts,
+  validateMinimumIncreasePolicy,
+  type MinimumIncreaseMode,
+  type MinimumIncreasePolicy,
+} from "./minimumIncrease";
+export {
   PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION,
   promotionAnnualBudgetCostFcfa,
   solvePromotionAwareCompensatoryCalibrationRate,

@@ -11,6 +11,7 @@ import type {
   PopulationCalculationReferences,
   PreparedSalaryGridCell,
 } from "../domain/compensationCalculation";
+import { NO_MINIMUM_INCREASE_POLICY } from "../domain/compensationCalculation";
 import { executeCampaignSimulation } from "../application/campaignSimulation/executeCampaignSimulation";
 import { buildSimulationSourceFingerprint } from "../application/campaignSimulation/buildSimulationSourceFingerprint";
 import { buildConfigurationFingerprint } from "../application/campaignSimulation/formatExactBudgetDisplay";
@@ -287,6 +288,7 @@ async function buildValidated(options?: {
     campaignYear: 2027,
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
+  minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
   });
 
   const configurationFingerprint = buildConfigurationFingerprint({
@@ -318,6 +320,7 @@ async function buildValidated(options?: {
     campaignYear: 2027,
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
+    minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     readinessReport: await readinessModule.buildCampaignSimulationReadiness(
       { campaignId: campaign?.id ?? 1 },
       ports,

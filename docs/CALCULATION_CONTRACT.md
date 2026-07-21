@@ -217,6 +217,29 @@ rétroactivité janvier. Résultat mesuré (H1 e985548 = H2C 21dbbb6 = H2D-1) :
 La valeur de brief **4 999 860 / −163** n’est **pas** produite par cette
 fixture (confusion avec le montant illustratif 31 110 des tests H2A/H2B).
 
+## Lot 2A-H2D-2 — minimum garanti d’augmentation (contrat v4)
+
+`CALCULATION_CONTRACT_VERSION = 4`. `MINIMUM_INCREASE_CONTRACT_VERSION = 1`.
+
+Modes exclusifs : `none` | `fixed_monthly_amount` | `percentage_of_base_salary`.
+
+| Concept | Formule / règle |
+| --- | --- |
+| Assiette forfait | `guaranteed = minimumMonthlyAmountFcfa` |
+| Assiette taux | `guaranteed = salaireMensuelApplicable × minimumIncreaseRate` |
+| Complément requis | `max(0, guaranteed − promotionApplicable)` |
+| Plancher payable | `ceilToRoundingStep(required)` |
+| Complément théorique | `max(plancher, salaire × max(0, r×f − o))` |
+| Complément arrondi | `max(plancher, halfUp(théorique))` |
+| Enveloppe | `budget = promo + planchers + reliquat au-dessus` |
+| Erreur budget | `MINIMUM_GUARANTEE_EXCEEDS_BUDGET` si promo + planchers > budget |
+
+Population minimum ≠ éligibilité compensatoire classique (pas de seuil
+12 mois, sous-performants inclus). Mode `none` : bit-identique à H2D-1.
+
+`RESULT_SCHEMA_VERSION` reste **2** : contrat ≥ 3 (donc v4) non persistable
+jusqu’au schema snapshot v3 / migration 0007.
+
 ## Lot 2A-H2B — incidence supplémentaire d’ancienneté
 
 Contrat `SENIORITY_IMPACT_CONTRACT_VERSION = 1` (empreintes).

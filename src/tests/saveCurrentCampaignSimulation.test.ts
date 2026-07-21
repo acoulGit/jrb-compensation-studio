@@ -11,6 +11,7 @@ import type {
   PreparedEmployeeCalculationInput,
   PopulationCalculationReferences,
 } from "../domain/compensationCalculation";
+import { NO_MINIMUM_INCREASE_POLICY } from "../domain/compensationCalculation";
 import {
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_PERFORMANCE_FACTORS,
@@ -90,6 +91,11 @@ function sampleResult(
       totalAnnualPromotionSeniorityImpactFcfa: 0n,
       totalCombinedAnnualSeniorityImpactFcfa: 0n,
       compensatoryCalibrationRate: { numerator: 0n, denominator: 1n },
+      minimumIncreaseMode: "none",
+      minimumIncreasePopulationEmployeeCount: 0,
+      totalMinimumComplementFloorCostFcfa: 0n,
+      actualMinimumComplementPaidCostFcfa: 0n,
+      actualCompensationAboveMinimumCostFcfa: 0n,
     },
     employees: [
       withPromotionAwareEmployeeDefaults({
@@ -318,6 +324,7 @@ async function setupSuccessContext(options?: {
     campaignYear: 2027,
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
+  minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
   });
   const configurationFingerprint = buildConfigurationFingerprint({
     campaignId: campaign.id,
@@ -396,6 +403,7 @@ async function setupSuccessContext(options?: {
     campaignYear: 2027,
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
+    minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     readinessReport: {
       campaignId: campaign.id,
       campaignName: campaign.name,

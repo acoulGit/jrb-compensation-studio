@@ -108,6 +108,9 @@ export function SimulationPage() {
     setCampaignYearInput,
     setRetroactivityStartMonthInput,
     setTechnicalApplicationMonthInput,
+    setMinimumIncreaseMode,
+    setMinimumMonthlyAmountInput,
+    setMinimumIncreaseRatePercentInput,
     validateConfiguration,
     refreshReadiness,
   } = useSimulationConfiguration();
@@ -623,6 +626,123 @@ export function SimulationPage() {
         {parsed?.fieldErrors.technicalApplicationMonthInput ? (
           <p className="form-feedback form-feedback--error" role="alert">
             {parsed.fieldErrors.technicalApplicationMonthInput.message}
+          </p>
+        ) : null}
+      </SectionCard>
+
+      <SectionCard title="Minimum garanti d’augmentation">
+        <p className="form-help">
+          Le minimum s’applique aux salariés CDI/CDD actifs, y compris ceux de
+          moins de douze mois et les sous-performants. Les prestataires et
+          statuts exclus ne sont pas concernés.
+        </p>
+        <fieldset
+          className="field field--full"
+          data-testid="simulation-minimum-increase-mode"
+          disabled={isReadOnly}
+        >
+          <legend>Mode</legend>
+          <label className="choice">
+            <input
+              type="radio"
+              name="minimum-increase-mode"
+              value="none"
+              checked={draft.minimumIncreaseMode === "none"}
+              onChange={() => {
+                setMinimumIncreaseMode("none");
+              }}
+            />
+            Aucun minimum
+          </label>
+          <label className="choice">
+            <input
+              type="radio"
+              name="minimum-increase-mode"
+              value="fixed_monthly_amount"
+              checked={draft.minimumIncreaseMode === "fixed_monthly_amount"}
+              onChange={() => {
+                setMinimumIncreaseMode("fixed_monthly_amount");
+              }}
+            />
+            Montant forfaitaire mensuel
+          </label>
+          <label className="choice">
+            <input
+              type="radio"
+              name="minimum-increase-mode"
+              value="percentage_of_base_salary"
+              checked={draft.minimumIncreaseMode === "percentage_of_base_salary"}
+              onChange={() => {
+                setMinimumIncreaseMode("percentage_of_base_salary");
+              }}
+            />
+            Pourcentage du salaire de base
+          </label>
+        </fieldset>
+        {draft.minimumIncreaseMode === "fixed_monthly_amount" ? (
+          <label
+            className="field field--full"
+            htmlFor="simulation-minimum-monthly-amount"
+          >
+            Montant forfaitaire mensuel (FCFA)
+            <input
+              id="simulation-minimum-monthly-amount"
+              data-testid="simulation-minimum-monthly-amount"
+              inputMode="numeric"
+              autoComplete="off"
+              disabled={isReadOnly}
+              value={draft.minimumMonthlyAmountInput}
+              aria-invalid={Boolean(
+                parsed?.fieldErrors.minimumMonthlyAmountInput,
+              )}
+              onChange={(event) => {
+                setMinimumMonthlyAmountInput(event.target.value);
+              }}
+            />
+            <span className="form-help">
+              Montant mensuel total garanti, promotion comprise.
+            </span>
+          </label>
+        ) : null}
+        {draft.minimumIncreaseMode === "percentage_of_base_salary" ? (
+          <label
+            className="field field--full"
+            htmlFor="simulation-minimum-increase-rate"
+          >
+            Taux minimum (%)
+            <input
+              id="simulation-minimum-increase-rate"
+              data-testid="simulation-minimum-increase-rate"
+              inputMode="decimal"
+              autoComplete="off"
+              disabled={isReadOnly}
+              value={draft.minimumIncreaseRatePercentInput}
+              aria-invalid={Boolean(
+                parsed?.fieldErrors.minimumIncreaseRatePercentInput,
+              )}
+              onChange={(event) => {
+                setMinimumIncreaseRatePercentInput(event.target.value);
+              }}
+            />
+            <span className="form-help">
+              Pourcentage du salaire de base applicable chaque mois, promotion
+              comprise.
+            </span>
+          </label>
+        ) : null}
+        {parsed?.fieldErrors.minimumIncreaseMode ? (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {parsed.fieldErrors.minimumIncreaseMode.message}
+          </p>
+        ) : null}
+        {parsed?.fieldErrors.minimumMonthlyAmountInput ? (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {parsed.fieldErrors.minimumMonthlyAmountInput.message}
+          </p>
+        ) : null}
+        {parsed?.fieldErrors.minimumIncreaseRatePercentInput ? (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {parsed.fieldErrors.minimumIncreaseRatePercentInput.message}
           </p>
         ) : null}
       </SectionCard>

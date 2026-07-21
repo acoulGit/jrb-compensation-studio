@@ -180,6 +180,15 @@ Champ UI `retroactivityStartMonthInput` (défaut `"1"`). Empreintes
 configuration / sources : token `retroStart:`. Contrat de calcul **v3**.
 Sauvegarde snapshot bloquée tant que `result_schema_version` reste à 2.
 
+### Configuration — minimum garanti (H2D-2)
+
+Section UI « Minimum garanti d’augmentation » : modes exclusifs none /
+forfait / pourcentage. Empreintes : `minMode` / `minAmt` / `minRate` /
+`minInc:v1`. Contrat de calcul **v4**. Enveloppe : promotions, minimum
+réservé, disponible après, parts minimum / au-dessus. Erreur dédiée
+`MINIMUM_GUARANTEE_EXCEEDS_BUDGET` (ne pas recommander d’augmenter le
+minimum). Persistance schema v2 toujours refusée pour contrat ≥ 3.
+
 ### Coût brut vs imputable
 
 | Champ | Sémantique |
@@ -193,6 +202,10 @@ Sauvegarde snapshot bloquée tant que `result_schema_version` reste à 2.
 - `NO_COMPENSATORY_ALLOCATION_CAPACITY` — titre + budget cible / coût promo /
   disponible / expositions ; message : réduire l’enveloppe ou revoir
   l’éligibilité (**pas** « Augmentez le budget »).
+- `MINIMUM_GUARANTEE_EXCEEDS_BUDGET` — enveloppe / promotions / minimum
+  requis / dépassement ; proposer d’augmenter l’enveloppe, réduire ou
+  désactiver le minimum, ou revoir la population (**pas** d’augmenter le
+  minimum).
 
 ### Recette visuelle (manuel)
 

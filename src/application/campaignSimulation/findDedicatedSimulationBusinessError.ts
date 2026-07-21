@@ -1,7 +1,8 @@
 /**
- * Messages d’erreur métier dédiés (Lot 2A-H2C-2B).
+ * Messages d’erreur métier dédiés (Lot 2A-H2C-2B / H2D-2).
  * Préserve les codes PROMOTION_COST_EXCEEDS_BUDGET /
- * NO_COMPENSATORY_ALLOCATION_CAPACITY sans message technique générique.
+ * NO_COMPENSATORY_ALLOCATION_CAPACITY /
+ * MINIMUM_GUARANTEE_EXCEEDS_BUDGET sans message technique générique.
  * Reconnaissance uniquement par `issue.code` — jamais par texte de message.
  */
 
@@ -13,7 +14,10 @@ import {
 } from "./formatExactBudgetDisplay";
 
 export interface DedicatedSimulationBusinessError {
-  code: "PROMOTION_COST_EXCEEDS_BUDGET" | "NO_COMPENSATORY_ALLOCATION_CAPACITY";
+  code:
+    | "PROMOTION_COST_EXCEEDS_BUDGET"
+    | "NO_COMPENSATORY_ALLOCATION_CAPACITY"
+    | "MINIMUM_GUARANTEE_EXCEEDS_BUDGET";
   title: string;
   message: string;
   details: readonly { label: string; value: string }[];
@@ -55,6 +59,42 @@ const NO_CAPACITY_USER_MESSAGE =
 export function findDedicatedSimulationBusinessError(
   issues: readonly CampaignSimulationExecutionIssue[],
 ): DedicatedSimulationBusinessError | null {
+  const minimum = issues.find(
+    (issue) => issue.code === "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
+  );
+  if (minimum) {
+    const budget = formatBudgetish(
+      detailString(minimum.details, "annualBudgetTargetFcfa"),
+    );
+    const promotions = formatBudgetish(
+      detailString(minimum.details, "totalAnnualPromotionBudgetCostFcfa"),
+    );
+    const floor = formatBudgetish(
+      detailString(minimum.details, "totalMinimumComplementFloorCostFcfa"),
+    );
+    const overrunRaw = detailString(minimum.details, "overrunFcfa");
+    let overrun = overrunRaw ? formatBudgetish(overrunRaw) : "—";
+    if (overrunRaw && /^(-?\d+)\/(\d+)$/.exec(overrunRaw)) {
+      const match = /^(-?\d+)\/(\d+)$/.exec(overrunRaw)!;
+      overrun = formatSignedExactAmountAsFcfa({
+        numerator: BigInt(match[1]!),
+        denominator: BigInt(match[2]!),
+      });
+    }
+    return {
+      code: "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
+      title: "Promotions et minimum garanti dépassent l’enveloppe",
+      message:
+        "L’enveloppe ne permet pas de financer les promotions et le minimum garanti. Augmentez l’enveloppe, réduisez ou désactivez le minimum, ou revoyez la population de la campagne.",
+      details: [
+        { label: "Budget cible", value: budget },
+        { label: "Coût des promotions", value: promotions },
+        { label: "Minimum complémentaire requis", value: floor },
+        { label: "Dépassement exact", value: overrun },
+      ],
+    };
+  }
+
   const promotion = issues.find(
     (issue) => issue.code === "PROMOTION_COST_EXCEEDS_BUDGET",
   );

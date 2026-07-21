@@ -71,6 +71,18 @@ export interface PromotionAwareEnvelopeSummaryView {
   totalAnnualPromotionBudgetCostLabel: string;
   availableAnnualCompensatoryBudgetFcfa: ExactAmount;
   availableAnnualCompensatoryBudgetLabel: string;
+  /** Coût minimum garanti réservé (Σ planchers). */
+  totalMinimumComplementFloorCostFcfa: bigint;
+  totalMinimumComplementFloorCostLabel: string;
+  /** Budget disponible après promotions et minimum. */
+  availableBudgetAfterPromotionsAndMinimumFcfa: ExactAmount;
+  availableBudgetAfterPromotionsAndMinimumLabel: string;
+  /** Part minimum réellement payée. */
+  actualMinimumComplementPaidCostFcfa: bigint;
+  actualMinimumComplementPaidCostLabel: string;
+  /** Part au-dessus du minimum réellement payée. */
+  actualCompensationAboveMinimumCostFcfa: bigint;
+  actualCompensationAboveMinimumCostLabel: string;
   totalAnnualTheoreticalCompensatoryCostFcfa: ExactAmount;
   totalAnnualTheoreticalCompensatoryCostLabel: string;
   /** Coût effectif de campagne du complément compensatoire. */
@@ -159,6 +171,21 @@ export interface MonthlyCompensationTrajectoryView {
   includedInCampaignEnvelope: boolean;
   promotionActive: boolean;
   promotionStatus: string;
+  isMinimumIncreasePopulationEmployee: boolean;
+  guaranteedTotalIncreaseExact: ExactAmount;
+  guaranteedTotalIncreaseLabel: string;
+  applicablePromotionIncrementFcfa: bigint;
+  applicablePromotionIncrementLabel: string;
+  requiredMinimumComplementExact: ExactAmount;
+  requiredMinimumComplementLabel: string;
+  minimumComplementFloorFcfa: bigint;
+  minimumComplementFloorLabel: string;
+  weightedComplementExact: ExactAmount;
+  weightedComplementLabel: string;
+  theoreticalComplementExact: ExactAmount;
+  theoreticalComplementLabel: string;
+  actualComplementAboveMinimumFcfa: bigint;
+  actualComplementAboveMinimumLabel: string;
 }
 
 export interface SimulationPopulationSummaryView {
@@ -195,6 +222,11 @@ export interface SimulationPopulationSummaryView {
   totalAnnualPromotionSeniorityImpactFcfa: bigint;
   totalCombinedAnnualSeniorityImpactFcfa: bigint;
   compensatoryCalibrationRate: ExactAmount;
+  minimumIncreaseMode: string;
+  minimumIncreasePopulationEmployeeCount: number;
+  totalMinimumComplementFloorCostFcfa: bigint;
+  actualMinimumComplementPaidCostFcfa: bigint;
+  actualCompensationAboveMinimumCostFcfa: bigint;
 }
 
 export interface EmployeeSimulationResultView {
@@ -319,6 +351,24 @@ export interface EmployeeSimulationResultView {
   technicalMonthCompensatoryComplementLabel: string;
   technicalMonthFinalSalaryFcfa: bigint;
   technicalMonthFinalSalaryLabel: string;
+  isMinimumIncreasePopulationEmployee: boolean;
+  minimumIncreaseExclusionReason: string | null;
+  campaignPeriodMinimumComplementFloorCostFcfa: bigint;
+  campaignPeriodMinimumComplementFloorCostLabel: string;
+  campaignPeriodCompensationAboveMinimumCostFcfa: bigint;
+  campaignPeriodCompensationAboveMinimumCostLabel: string;
+  minimumCompensatoryReminderFcfa: bigint;
+  minimumCompensatoryReminderLabel: string;
+  aboveMinimumCompensatoryReminderFcfa: bigint;
+  aboveMinimumCompensatoryReminderLabel: string;
+  minimumRemainingYearDirectCostFcfa: bigint;
+  minimumRemainingYearDirectCostLabel: string;
+  aboveMinimumRemainingYearDirectCostFcfa: bigint;
+  aboveMinimumRemainingYearDirectCostLabel: string;
+  fullYearRunRateMinimumComplementCostFcfa: bigint;
+  fullYearRunRateMinimumComplementCostLabel: string;
+  fullYearRunRateCompensationAboveMinimumCostFcfa: bigint;
+  fullYearRunRateCompensationAboveMinimumCostLabel: string;
   monthlyCompensationTrajectory: readonly MonthlyCompensationTrajectoryView[];
   explanationSteps: readonly {
     step: string;

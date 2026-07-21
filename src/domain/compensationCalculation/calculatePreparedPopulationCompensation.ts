@@ -46,6 +46,10 @@ import {
 } from "./exactFraction";
 import type { CalculationExplanationStep } from "./models";
 import {
+  NO_MINIMUM_INCREASE_POLICY,
+  validateMinimumIncreasePolicy,
+} from "./minimumIncrease";
+import {
   buildEmployeePromotionAwareExposures,
   finalizeEmployeePromotionAwareCompensation,
   type EmployeePromotionAwareExposureResult,
@@ -248,6 +252,27 @@ export function calculatePreparedPopulationCompensation(
     BigInt(campaignPeriod.campaignCoveredMonthCount),
   );
 
+  const minimumIncreasePolicy =
+    input.minimumIncreasePolicy ?? NO_MINIMUM_INCREASE_POLICY;
+  try {
+    validateMinimumIncreasePolicy(minimumIncreasePolicy);
+  } catch (error) {
+    if (error instanceof CompensationCalculationError) {
+      throw new CompensationCalculationError(
+        "POPULATION_CALCULATION_FAILED",
+        error.message,
+        toIssueLikes([
+          {
+            code: error.code,
+            message: error.message,
+            step: "minimum_increase_policy",
+          },
+        ]),
+      );
+    }
+    throw error;
+  }
+
   // Tri déterministe non mutable
   const sortedPrepared = [...preparedEmployees].sort((left, right) =>
     compareEmployeeIdAsc(left.employeeId, right.employeeId),
@@ -292,6 +317,8 @@ export function calculatePreparedPopulationCompensation(
         performanceFactors: input.references.performanceFactors,
         potentialFactors: input.references.potentialFactors,
         nineBoxFactors: input.references.nineBoxFactors,
+        minimumIncreasePolicy,
+        roundingStepFcfa: stepFcfa,
       });
       exposuresByEmployeeId.set(prepared.employeeId, exposures);
     } catch (error) {
@@ -346,10 +373,72 @@ export function calculatePreparedPopulationCompensation(
     );
   }
 
-  // Étape 5 — enveloppe compensatoire disponible + taux unique de calibrage.
+  // Étape 5 — enveloppe compensatoire disponible + planchers + taux unique.
   const availableAnnualCompensatoryBudget = subtractFractions(
     annualBudgetTarget,
     exactAmountFromInteger(totalAnnualPromotionBudgetCostFcfa),
+  );
+
+  let totalMinimumComplementFloorCostFcfa = 0n;
+  let minimumIncreasePopulationEmployeeCount = 0;
+  let minimumIncreaseExposureCount = 0;
+  for (const exposures of exposuresByEmployeeId.values()) {
+    if (exposures.isMinimumIncreasePopulationEmployee) {
+      minimumIncreasePopulationEmployeeCount += 1;
+    }
+    for (const month of exposures.months) {
+      if (month.month < retroactivityStartMonth) {
+        continue;
+      }
+      const floor = month.minimumComplementFloorFcfa ?? 0n;
+      totalMinimumComplementFloorCostFcfa += floor;
+      if (floor > 0n) {
+        minimumIncreaseExposureCount += 1;
+      }
+    }
+  }
+
+  if (
+    compareFractions(
+      exactAmountFromInteger(
+        totalAnnualPromotionBudgetCostFcfa + totalMinimumComplementFloorCostFcfa,
+      ),
+      annualBudgetTarget,
+    ) > 0
+  ) {
+    const overrun = subtractFractions(
+      exactAmountFromInteger(
+        totalAnnualPromotionBudgetCostFcfa + totalMinimumComplementFloorCostFcfa,
+      ),
+      annualBudgetTarget,
+    );
+    throw new CompensationCalculationError(
+      "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
+      "L’enveloppe ne permet pas de financer les promotions et le minimum garanti.",
+      toIssueLikes([
+        {
+          code: "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
+          message:
+            "L’enveloppe ne permet pas de financer les promotions et le minimum garanti.",
+          step: "minimum_guarantee_budget_check",
+          details: {
+            annualBudgetTargetFcfa: formatExactAmount(annualBudgetTarget),
+            totalAnnualPromotionBudgetCostFcfa:
+              totalAnnualPromotionBudgetCostFcfa.toString(),
+            totalMinimumComplementFloorCostFcfa:
+              totalMinimumComplementFloorCostFcfa.toString(),
+            overrunFcfa: formatExactAmount(overrun),
+            minimumIncreasePopulationEmployeeCount,
+            minimumIncreaseExposureCount,
+          },
+        },
+      ]),
+    );
+  }
+
+  const availableBudgetAfterPromotionsAndMinimumFcfa = subtractFractions(
+    availableAnnualCompensatoryBudget,
+    exactAmountFromInteger(totalMinimumComplementFloorCostFcfa),
   );
 
   const calibrationExposures: PromotionCompensatoryExposure[] = [];
@@ -364,6 +453,7 @@ export function calculatePreparedPopulationCompensation(
         salary: month.baseSalaryFcfa,
         factor: month.effectiveCompensationFactor,
         promotionRateOffset: month.promotionRateOffset,
+        minimumComplementFloorFcfa: month.minimumComplementFloorFcfa ?? 0n,
       });
     }
   }
@@ -376,12 +466,43 @@ export function calculatePreparedPopulationCompensation(
     });
   } catch (error) {
     if (error instanceof CompensationCalculationError) {
+      if (error.code === "MINIMUM_GUARANTEE_EXCEEDS_BUDGET") {
+        const overrun = subtractFractions(
+          exactAmountFromInteger(
+            totalAnnualPromotionBudgetCostFcfa +
+              totalMinimumComplementFloorCostFcfa,
+          ),
+          annualBudgetTarget,
+        );
+        throw new CompensationCalculationError(
+          "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
+          "L’enveloppe ne permet pas de financer les promotions et le minimum garanti.",
+          toIssueLikes([
+            {
+              code: "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
+              message:
+                "L’enveloppe ne permet pas de financer les promotions et le minimum garanti.",
+              step: "compensatory_calibration",
+              details: {
+                annualBudgetTargetFcfa: formatExactAmount(annualBudgetTarget),
+                totalAnnualPromotionBudgetCostFcfa:
+                  totalAnnualPromotionBudgetCostFcfa.toString(),
+                totalMinimumComplementFloorCostFcfa:
+                  totalMinimumComplementFloorCostFcfa.toString(),
+                overrunFcfa: formatExactAmount(overrun),
+                minimumIncreasePopulationEmployeeCount,
+                minimumIncreaseExposureCount,
+              },
+            },
+          ]),
+        );
+      }
       if (error.code === "NO_COMPENSATORY_ALLOCATION_CAPACITY") {
         const eligibleExposureCount = calibrationExposures.filter(
           (exposure) => !isZeroFraction(exposure.factor),
         ).length;
         const message =
-          "Un budget reste disponible après prise en compte des promotions, mais aucun salarié éligible ne présente une capacité d'allocation positive. Réduisez l'enveloppe disponible ou revoyez la population et les règles d'éligibilité au complément compensatoire.";
+          "Un budget reste disponible après promotions et minimum garanti, mais aucune exposition ne présente de capacité d’allocation positive au-dessus du plancher. Réduisez l’enveloppe disponible ou revoyez la population et les règles d’éligibilité.";
         throw new CompensationCalculationError(
           "NO_COMPENSATORY_ALLOCATION_CAPACITY",
           message,
@@ -394,8 +515,13 @@ export function calculatePreparedPopulationCompensation(
                 annualBudgetTargetFcfa: formatExactAmount(annualBudgetTarget),
                 totalAnnualPromotionBudgetCostFcfa:
                   totalAnnualPromotionBudgetCostFcfa.toString(),
+                totalMinimumComplementFloorCostFcfa:
+                  totalMinimumComplementFloorCostFcfa.toString(),
                 availableAnnualCompensatoryBudgetFcfa: formatExactAmount(
                   availableAnnualCompensatoryBudget,
+                ),
+                availableBudgetAfterPromotionsAndMinimumFcfa: formatExactAmount(
+                  availableBudgetAfterPromotionsAndMinimumFcfa,
                 ),
                 eligibleExposureCount,
               },
@@ -451,6 +577,9 @@ export function calculatePreparedPopulationCompensation(
         costPreview: exposures.costPreview,
         isPromotionBudgetPopulationEmployee:
           exposures.isPromotionBudgetPopulationEmployee,
+        minimumIncreasePolicy,
+        isMinimumIncreasePopulationEmployee:
+          exposures.isMinimumIncreasePopulationEmployee,
       });
     } catch (error) {
       finalizeIssues.push(wrapEmployeeError(prepared.employeeId, error, "finalize_compensation"));
@@ -676,6 +805,24 @@ export function calculatePreparedPopulationCompensation(
         finalized.fullYearRunRateCombinedBaseMeasureCostFcfa,
       fullYearRunRateSeniorityImpactFcfa:
         finalized.fullYearRunRateSeniorityImpactFcfa,
+      isMinimumIncreasePopulationEmployee:
+        exposures.isMinimumIncreasePopulationEmployee,
+      minimumIncreaseExclusionReason: exposures.minimumIncreaseExclusionReason,
+      campaignPeriodMinimumComplementFloorCostFcfa:
+        finalized.campaignPeriodMinimumComplementFloorCostFcfa,
+      campaignPeriodCompensationAboveMinimumCostFcfa:
+        finalized.campaignPeriodCompensationAboveMinimumCostFcfa,
+      minimumCompensatoryReminderFcfa: finalized.minimumCompensatoryReminderFcfa,
+      aboveMinimumCompensatoryReminderFcfa:
+        finalized.aboveMinimumCompensatoryReminderFcfa,
+      minimumRemainingYearDirectCostFcfa:
+        finalized.minimumRemainingYearDirectCostFcfa,
+      aboveMinimumRemainingYearDirectCostFcfa:
+        finalized.aboveMinimumRemainingYearDirectCostFcfa,
+      fullYearRunRateMinimumComplementCostFcfa:
+        finalized.fullYearRunRateMinimumComplementCostFcfa,
+      fullYearRunRateCompensationAboveMinimumCostFcfa:
+        finalized.fullYearRunRateCompensationAboveMinimumCostFcfa,
       blockingReason: prepared.blockingReason,
       explanationSteps: employeeSteps,
     });
@@ -739,6 +886,14 @@ export function calculatePreparedPopulationCompensation(
   let fullYearRunRateCompensatoryCostFcfa = 0n;
   let fullYearRunRateCombinedBaseMeasureCostFcfa = 0n;
   let fullYearRunRateSeniorityImpactFcfa = 0n;
+  let actualMinimumComplementPaidCostFcfa = 0n;
+  let actualCompensationAboveMinimumCostFcfa = 0n;
+  let minimumCompensatoryReminderFcfa = 0n;
+  let aboveMinimumCompensatoryReminderFcfa = 0n;
+  let minimumRemainingYearDirectCostFcfa = 0n;
+  let aboveMinimumRemainingYearDirectCostFcfa = 0n;
+  let fullYearRunRateMinimumComplementCostFcfa = 0n;
+  let fullYearRunRateCompensationAboveMinimumCostFcfa = 0n;
 
   for (const employee of employees) {
     populationSalarySumFcfa += employee.salaryFcfa;
@@ -765,6 +920,21 @@ export function calculatePreparedPopulationCompensation(
       employee.promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa;
     totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa +=
       employee.promotionSeniorityFromTechnicalMonthToDecemberFcfa;
+    actualMinimumComplementPaidCostFcfa +=
+      employee.campaignPeriodMinimumComplementFloorCostFcfa;
+    actualCompensationAboveMinimumCostFcfa +=
+      employee.campaignPeriodCompensationAboveMinimumCostFcfa;
+    minimumCompensatoryReminderFcfa += employee.minimumCompensatoryReminderFcfa;
+    aboveMinimumCompensatoryReminderFcfa +=
+      employee.aboveMinimumCompensatoryReminderFcfa;
+    minimumRemainingYearDirectCostFcfa +=
+      employee.minimumRemainingYearDirectCostFcfa;
+    aboveMinimumRemainingYearDirectCostFcfa +=
+      employee.aboveMinimumRemainingYearDirectCostFcfa;
+    fullYearRunRateMinimumComplementCostFcfa +=
+      employee.fullYearRunRateMinimumComplementCostFcfa;
+    fullYearRunRateCompensationAboveMinimumCostFcfa +=
+      employee.fullYearRunRateCompensationAboveMinimumCostFcfa;
     const december = employee.monthlyCompensationTrajectory.find(
       (entry) => entry.month === 12,
     )!;
@@ -905,6 +1075,21 @@ export function calculatePreparedPopulationCompensation(
     totalCombinedAnnualSeniorityImpactFcfa,
     totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa,
     totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa,
+    minimumIncreaseMode: minimumIncreasePolicy.mode,
+    minimumMonthlyAmountFcfa: minimumIncreasePolicy.minimumMonthlyAmountFcfa,
+    minimumIncreaseRate: minimumIncreasePolicy.minimumIncreaseRate,
+    minimumIncreasePopulationEmployeeCount,
+    minimumIncreaseExposureCount,
+    totalMinimumComplementFloorCostFcfa,
+    availableBudgetAfterPromotionsAndMinimumFcfa,
+    actualMinimumComplementPaidCostFcfa,
+    actualCompensationAboveMinimumCostFcfa,
+    minimumCompensatoryReminderFcfa,
+    aboveMinimumCompensatoryReminderFcfa,
+    minimumRemainingYearDirectCostFcfa,
+    aboveMinimumRemainingYearDirectCostFcfa,
+    fullYearRunRateMinimumComplementCostFcfa,
+    fullYearRunRateCompensationAboveMinimumCostFcfa,
   };
 
   const explanationSteps: CalculationExplanationStep[] = [
@@ -1034,6 +1219,21 @@ export function calculatePreparedPopulationCompensation(
     totalCombinedAnnualSeniorityImpactFcfa,
     totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa,
     totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa,
+    minimumIncreaseMode: minimumIncreasePolicy.mode,
+    minimumMonthlyAmountFcfa: minimumIncreasePolicy.minimumMonthlyAmountFcfa,
+    minimumIncreaseRate: minimumIncreasePolicy.minimumIncreaseRate,
+    minimumIncreasePopulationEmployeeCount,
+    minimumIncreaseExposureCount,
+    totalMinimumComplementFloorCostFcfa,
+    availableBudgetAfterPromotionsAndMinimumFcfa,
+    actualMinimumComplementPaidCostFcfa,
+    actualCompensationAboveMinimumCostFcfa,
+    minimumCompensatoryReminderFcfa,
+    aboveMinimumCompensatoryReminderFcfa,
+    minimumRemainingYearDirectCostFcfa,
+    aboveMinimumRemainingYearDirectCostFcfa,
+    fullYearRunRateMinimumComplementCostFcfa,
+    fullYearRunRateCompensationAboveMinimumCostFcfa,
     populationSummary,
     explanationSteps,
   };

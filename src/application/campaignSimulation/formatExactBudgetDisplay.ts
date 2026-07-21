@@ -223,9 +223,19 @@ export function buildConfigurationFingerprint(parts: {
   promotionCompensatoryCalibrationContractVersion?: number;
   /** Version du contrat de trajectoire mensuelle promotion-aware (Lot 2A-H2C-2). */
   promotionAwareCompensationContractVersion?: number;
+  /** Mode de minimum garanti (Lot 2A-H2D-2). */
+  minimumIncreaseMode?: string;
+  /** Montant forfaitaire mensuel (mode fixed). */
+  minimumMonthlyAmountFcfa?: bigint | null;
+  /** Numérateur du taux minimum (mode percentage). */
+  minimumIncreaseRateNumerator?: bigint | null;
+  /** Dénominateur du taux minimum (mode percentage). */
+  minimumIncreaseRateDenominator?: bigint | null;
+  /** Version du contrat minimum garanti. */
+  minimumIncreaseContractVersion?: number;
 }): string {
   return [
-    `contract:v${parts.calculationContractVersion ?? 3}`,
+    `contract:v${parts.calculationContractVersion ?? 4}`,
     `months:${(parts.annualBudgetPeriodMonths ?? 12n).toString()}`,
     `charges:${parts.employerChargesIncluded === true ? "1" : "0"}`,
     String(parts.campaignId),
@@ -242,5 +252,16 @@ export function buildConfigurationFingerprint(parts: {
     `promotion:v${parts.promotionTrajectoryContractVersion ?? 1}`,
     `calibration:v${parts.promotionCompensatoryCalibrationContractVersion ?? 1}`,
     `promoAware:v${parts.promotionAwareCompensationContractVersion ?? 1}`,
+    `minMode:${parts.minimumIncreaseMode ?? "none"}`,
+    `minAmt:${parts.minimumMonthlyAmountFcfa?.toString() ?? ""}`,
+    `minRate:${
+      parts.minimumIncreaseRateNumerator !== undefined &&
+      parts.minimumIncreaseRateNumerator !== null &&
+      parts.minimumIncreaseRateDenominator !== undefined &&
+      parts.minimumIncreaseRateDenominator !== null
+        ? `${parts.minimumIncreaseRateNumerator}/${parts.minimumIncreaseRateDenominator}`
+        : ""
+    }`,
+    `minInc:v${parts.minimumIncreaseContractVersion ?? 1}`,
   ].join("|");
 }

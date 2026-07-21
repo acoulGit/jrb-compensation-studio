@@ -18,6 +18,8 @@ import type {
   PromotionEvent,
   PromotionInclusionStatus,
 } from "./promotionTrajectory";
+import type { MinimumIncreaseExclusionReason } from "./minimumIncreasePopulation";
+import type { MinimumIncreaseMode, MinimumIncreasePolicy } from "./minimumIncrease";
 import type { PromotionBudgetEmploymentStatus } from "./promotionBudgetPopulation";
 import type { RoundingPolicy } from "./populationAllocationModels";
 
@@ -101,6 +103,11 @@ export interface PreparedPopulationCalculationInput {
   retroactivityStartMonth?: number;
   /** Mois d’application technique (1 = janvier … 12 = décembre). */
   technicalApplicationMonth: number;
+  /**
+   * Politique de minimum garanti d’augmentation (Lot 2A-H2D-2).
+   * Défaut métier = aucun minimum (parité H2D-1).
+   */
+  minimumIncreasePolicy?: MinimumIncreasePolicy;
 }
 
 export interface PopulationCalculationIssue {
@@ -270,6 +277,26 @@ export interface EmployeeCompensationCalculationResult {
   fullYearRunRateCompensatoryCostFcfa: bigint;
   fullYearRunRateCombinedBaseMeasureCostFcfa: bigint;
   fullYearRunRateSeniorityImpactFcfa: bigint;
+  /** Appartenance à la population du minimum garanti (Lot 2A-H2D-2). */
+  isMinimumIncreasePopulationEmployee: boolean;
+  /** Motif d’exclusion du minimum — null si inclus. */
+  minimumIncreaseExclusionReason: MinimumIncreaseExclusionReason;
+  /** Σ planchers de complément sur la période de campagne. */
+  campaignPeriodMinimumComplementFloorCostFcfa: bigint;
+  /** Σ (complément arrondi − plancher) sur la période de campagne. */
+  campaignPeriodCompensationAboveMinimumCostFcfa: bigint;
+  /** Part minimum du rappel compensatoire. */
+  minimumCompensatoryReminderFcfa: bigint;
+  /** Part au-dessus du minimum du rappel compensatoire. */
+  aboveMinimumCompensatoryReminderFcfa: bigint;
+  /** Part minimum du paiement direct compensatoire. */
+  minimumRemainingYearDirectCostFcfa: bigint;
+  /** Part au-dessus du minimum du paiement direct compensatoire. */
+  aboveMinimumRemainingYearDirectCostFcfa: bigint;
+  /** Plein effet décembre : plancher × 12. */
+  fullYearRunRateMinimumComplementCostFcfa: bigint;
+  /** Plein effet décembre : au-dessus du minimum × 12. */
+  fullYearRunRateCompensationAboveMinimumCostFcfa: bigint;
   blockingReason?: MatrixBlockingReason;
   explanationSteps: CalculationExplanationStep[];
 }
@@ -326,6 +353,25 @@ export interface MonthlyCompensationTrajectoryEntry {
   promotionSeniorityImpactFcfa: bigint;
   /** Part de l'incidence d'ancienneté attribuable au complément compensatoire. */
   compensatorySeniorityImpactFcfa: bigint;
+  /** Appartenance à la population du minimum (propagée pour audit). */
+  isMinimumIncreasePopulationEmployee: boolean;
+  /** Montant total garanti exact (avant déduction promo / ceil). */
+  guaranteedTotalIncreaseExact: ExactAmount;
+  /** Incrément de promotion applicable ce mois (contribue au minimum). */
+  applicablePromotionIncrementFcfa: bigint;
+  /** Complément minimum exact requis après contribution promo. */
+  requiredMinimumComplementExact: ExactAmount;
+  /** Plancher payable (multiple du pas d’arrondi). */
+  minimumComplementFloorFcfa: bigint;
+  /** Complément pondéré exact = salaire × max(0, rate×f − o). */
+  weightedComplementExact: ExactAmount;
+  /**
+   * Complément théorique exact = max(plancher exact, weighted).
+   * (Le plancher est un entier exact.)
+   */
+  theoreticalComplementExact: ExactAmount;
+  /** Complément arrondi au-dessus du plancher (= rounded − floor). */
+  actualComplementAboveMinimumFcfa: bigint;
 }
 
 export interface PopulationCalculationSummary {
@@ -394,6 +440,39 @@ export interface PopulationCalculationSummary {
   totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
   /** Σ incidence ancienneté promo du mois technique à décembre. */
   totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa: bigint;
+  /** Mode de minimum garanti résolu (Lot 2A-H2D-2). */
+  minimumIncreaseMode: MinimumIncreaseMode;
+  /** Montant forfaitaire résolu — null hors mode forfaitaire. */
+  minimumMonthlyAmountFcfa: bigint | null;
+  /** Taux minimum résolu — null hors mode pourcentage. */
+  minimumIncreaseRate: ExactAmount | null;
+  /** Nombre de salariés de la population du minimum. */
+  minimumIncreasePopulationEmployeeCount: number;
+  /** Nombre d’expositions mensuelles avec plancher > 0. */
+  minimumIncreaseExposureCount: number;
+  /** Σ planchers de complément réservés sur la période. */
+  totalMinimumComplementFloorCostFcfa: bigint;
+  /**
+   * Budget restant après promotions et planchers :
+   * availableAnnualCompensatoryBudget − totalMinimumComplementFloorCost.
+   */
+  availableBudgetAfterPromotionsAndMinimumFcfa: ExactAmount;
+  /** Σ part minimum réellement payée (planchers). */
+  actualMinimumComplementPaidCostFcfa: bigint;
+  /** Σ part au-dessus du minimum réellement payée. */
+  actualCompensationAboveMinimumCostFcfa: bigint;
+  /** Σ part minimum du rappel. */
+  minimumCompensatoryReminderFcfa: bigint;
+  /** Σ part au-dessus du minimum du rappel. */
+  aboveMinimumCompensatoryReminderFcfa: bigint;
+  /** Σ part minimum du paiement direct. */
+  minimumRemainingYearDirectCostFcfa: bigint;
+  /** Σ part au-dessus du minimum du paiement direct. */
+  aboveMinimumRemainingYearDirectCostFcfa: bigint;
+  /** Plein effet : Σ planchers décembre × 12. */
+  fullYearRunRateMinimumComplementCostFcfa: bigint;
+  /** Plein effet : Σ au-dessus du minimum décembre × 12. */
+  fullYearRunRateCompensationAboveMinimumCostFcfa: bigint;
 }
 
 export interface PreparedPopulationCalculationResult {
@@ -437,6 +516,21 @@ export interface PreparedPopulationCalculationResult {
   totalCombinedAnnualSeniorityImpactFcfa: bigint;
   totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
   totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa: bigint;
+  minimumIncreaseMode: MinimumIncreaseMode;
+  minimumMonthlyAmountFcfa: bigint | null;
+  minimumIncreaseRate: ExactAmount | null;
+  minimumIncreasePopulationEmployeeCount: number;
+  minimumIncreaseExposureCount: number;
+  totalMinimumComplementFloorCostFcfa: bigint;
+  availableBudgetAfterPromotionsAndMinimumFcfa: ExactAmount;
+  actualMinimumComplementPaidCostFcfa: bigint;
+  actualCompensationAboveMinimumCostFcfa: bigint;
+  minimumCompensatoryReminderFcfa: bigint;
+  aboveMinimumCompensatoryReminderFcfa: bigint;
+  minimumRemainingYearDirectCostFcfa: bigint;
+  aboveMinimumRemainingYearDirectCostFcfa: bigint;
+  fullYearRunRateMinimumComplementCostFcfa: bigint;
+  fullYearRunRateCompensationAboveMinimumCostFcfa: bigint;
   populationSummary: PopulationCalculationSummary;
   explanationSteps: CalculationExplanationStep[];
 }

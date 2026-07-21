@@ -143,6 +143,7 @@ export async function saveCurrentCampaignSimulation(
     campaignYear: validatedConfiguration.campaignYear,
     retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
+    minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
   });
 
   if (currentFingerprint !== result.sourceFingerprint) {

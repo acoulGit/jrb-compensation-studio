@@ -200,6 +200,9 @@ export function SimulationResultsPanel({
   }
 
   const showPromotionColumns = result.budgetSummary.hasStructuredPromotions;
+  const showMinimumColumns =
+    result.populationSummary.minimumIncreaseMode !== "none" ||
+    result.populationSummary.totalMinimumComplementFloorCostFcfa > 0n;
 
   return (
     <>
@@ -286,6 +289,12 @@ export function SimulationResultsPanel({
                 {showPromotionColumns ? (
                   <th scope="col">Coût promotion imputable</th>
                 ) : null}
+                {showMinimumColumns ? (
+                  <th scope="col">Complément minimum (période)</th>
+                ) : null}
+                {showMinimumColumns ? (
+                  <th scope="col">Complément au-dessus du minimum</th>
+                ) : null}
                 <th scope="col">Complément mensuel au mois d’application</th>
                 <th scope="col">Rappel complément</th>
                 <th scope="col">Coût annuel complément</th>
@@ -359,6 +368,20 @@ export function SimulationResultsPanel({
                       data-testid={`simulation-promo-budget-${employee.employeeId}`}
                     >
                       {employee.annualPromotionBudgetCostLabel}
+                    </td>
+                  ) : null}
+                  {showMinimumColumns ? (
+                    <td
+                      data-testid={`simulation-minimum-floor-${employee.employeeId}`}
+                    >
+                      {employee.campaignPeriodMinimumComplementFloorCostLabel}
+                    </td>
+                  ) : null}
+                  {showMinimumColumns ? (
+                    <td
+                      data-testid={`simulation-above-minimum-${employee.employeeId}`}
+                    >
+                      {employee.campaignPeriodCompensationAboveMinimumCostLabel}
                     </td>
                   ) : null}
                   <td
@@ -503,6 +526,18 @@ function EnvelopeSummary({
         </dd>
       </div>
       <div>
+        <dt>Minimum garanti réservé</dt>
+        <dd data-testid="simulation-summary-minimum-floor-cost">
+          {envelope.totalMinimumComplementFloorCostLabel}
+        </dd>
+      </div>
+      <div>
+        <dt>Budget disponible après promotions et minimum</dt>
+        <dd data-testid="simulation-summary-available-after-minimum">
+          {envelope.availableBudgetAfterPromotionsAndMinimumLabel}
+        </dd>
+      </div>
+      <div>
         <dt>Budget disponible pour le complément compensatoire</dt>
         <dd data-testid="simulation-summary-available-compensatory">
           {envelope.availableAnnualCompensatoryBudgetLabel}
@@ -518,6 +553,18 @@ function EnvelopeSummary({
         <dt>Coût effectif de campagne — complément</dt>
         <dd data-testid="simulation-summary-actual">
           {envelope.totalAnnualActualCompensatoryCostLabel}
+        </dd>
+      </div>
+      <div>
+        <dt>Part minimum du complément</dt>
+        <dd data-testid="simulation-summary-minimum-paid">
+          {envelope.actualMinimumComplementPaidCostLabel}
+        </dd>
+      </div>
+      <div>
+        <dt>Part au-dessus du minimum</dt>
+        <dd data-testid="simulation-summary-above-minimum">
+          {envelope.actualCompensationAboveMinimumCostLabel}
         </dd>
       </div>
       <div>
@@ -1040,6 +1087,8 @@ function EmployeeDetailDrawer({
                     <th scope="col">Taux promotion déduit</th>
                     <th scope="col">Taux complémentaire</th>
                     <th scope="col">Complément théorique</th>
+                    <th scope="col">Plancher minimum</th>
+                    <th scope="col">Au-dessus du minimum</th>
                     <th scope="col">Complément arrondi</th>
                     <th scope="col">Coût promotion du mois</th>
                     <th scope="col">Salaire final</th>
@@ -1062,6 +1111,8 @@ function EmployeeDetailDrawer({
                       <td>{entry.promotionRateOffsetLabel}</td>
                       <td>{entry.compensatoryComplementRateLabel}</td>
                       <td>{entry.theoreticalCompensatoryComplementLabel}</td>
+                      <td>{entry.minimumComplementFloorLabel}</td>
+                      <td>{entry.actualComplementAboveMinimumLabel}</td>
                       <td>{entry.roundedCompensatoryComplementLabel}</td>
                       <td>{entry.promotionBudgetCostLabel}</td>
                       <td>{entry.finalSalaryLabel}</td>

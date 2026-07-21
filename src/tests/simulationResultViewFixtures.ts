@@ -22,6 +22,17 @@ export function emptyEnvelopeSummary(
     totalAnnualPromotionBudgetCostLabel: ZERO_LABEL,
     availableAnnualCompensatoryBudgetFcfa: { numerator: 0n, denominator: 1n },
     availableAnnualCompensatoryBudgetLabel: ZERO_LABEL,
+    totalMinimumComplementFloorCostFcfa: 0n,
+    totalMinimumComplementFloorCostLabel: ZERO_LABEL,
+    availableBudgetAfterPromotionsAndMinimumFcfa: {
+      numerator: 0n,
+      denominator: 1n,
+    },
+    availableBudgetAfterPromotionsAndMinimumLabel: ZERO_LABEL,
+    actualMinimumComplementPaidCostFcfa: 0n,
+    actualMinimumComplementPaidCostLabel: ZERO_LABEL,
+    actualCompensationAboveMinimumCostFcfa: 0n,
+    actualCompensationAboveMinimumCostLabel: ZERO_LABEL,
     totalAnnualTheoreticalCompensatoryCostFcfa: {
       numerator: 0n,
       denominator: 1n,
@@ -217,6 +228,24 @@ export function withPromotionAwareEmployeeDefaults(
     | "technicalMonthCompensatoryComplementLabel"
     | "technicalMonthFinalSalaryFcfa"
     | "technicalMonthFinalSalaryLabel"
+    | "isMinimumIncreasePopulationEmployee"
+    | "minimumIncreaseExclusionReason"
+    | "campaignPeriodMinimumComplementFloorCostFcfa"
+    | "campaignPeriodMinimumComplementFloorCostLabel"
+    | "campaignPeriodCompensationAboveMinimumCostFcfa"
+    | "campaignPeriodCompensationAboveMinimumCostLabel"
+    | "minimumCompensatoryReminderFcfa"
+    | "minimumCompensatoryReminderLabel"
+    | "aboveMinimumCompensatoryReminderFcfa"
+    | "aboveMinimumCompensatoryReminderLabel"
+    | "minimumRemainingYearDirectCostFcfa"
+    | "minimumRemainingYearDirectCostLabel"
+    | "aboveMinimumRemainingYearDirectCostFcfa"
+    | "aboveMinimumRemainingYearDirectCostLabel"
+    | "fullYearRunRateMinimumComplementCostFcfa"
+    | "fullYearRunRateMinimumComplementCostLabel"
+    | "fullYearRunRateCompensationAboveMinimumCostFcfa"
+    | "fullYearRunRateCompensationAboveMinimumCostLabel"
     | "monthlyCompensationTrajectory"
     | "retroactivityStartMonth"
     | "campaignCoveredMonthCount"
@@ -275,6 +304,24 @@ export function withPromotionAwareEmployeeDefaults(
     technicalMonthCompensatoryComplementLabel: "x",
     technicalMonthFinalSalaryFcfa: employee.monthlyFinalSalaryFcfa,
     technicalMonthFinalSalaryLabel: "x",
+    isMinimumIncreasePopulationEmployee: true,
+    minimumIncreaseExclusionReason: null,
+    campaignPeriodMinimumComplementFloorCostFcfa: 0n,
+    campaignPeriodMinimumComplementFloorCostLabel: ZERO_LABEL,
+    campaignPeriodCompensationAboveMinimumCostFcfa: 0n,
+    campaignPeriodCompensationAboveMinimumCostLabel: ZERO_LABEL,
+    minimumCompensatoryReminderFcfa: 0n,
+    minimumCompensatoryReminderLabel: ZERO_LABEL,
+    aboveMinimumCompensatoryReminderFcfa: 0n,
+    aboveMinimumCompensatoryReminderLabel: ZERO_LABEL,
+    minimumRemainingYearDirectCostFcfa: 0n,
+    minimumRemainingYearDirectCostLabel: ZERO_LABEL,
+    aboveMinimumRemainingYearDirectCostFcfa: 0n,
+    aboveMinimumRemainingYearDirectCostLabel: ZERO_LABEL,
+    fullYearRunRateMinimumComplementCostFcfa: 0n,
+    fullYearRunRateMinimumComplementCostLabel: ZERO_LABEL,
+    fullYearRunRateCompensationAboveMinimumCostFcfa: 0n,
+    fullYearRunRateCompensationAboveMinimumCostLabel: ZERO_LABEL,
     monthlyCompensationTrajectory: [],
     retroactivityStartMonth: employee.retroactivityStartMonth ?? 1,
     campaignCoveredMonthCount:

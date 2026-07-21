@@ -4,7 +4,17 @@
  */
 
 import type { BudgetTargetInput } from "../../domain/compensationCalculation";
-import type { RoundingPolicy } from "../../domain/compensationCalculation";
+import type {
+  MinimumIncreaseMode,
+  MinimumIncreasePolicy,
+  RoundingPolicy,
+} from "../../domain/compensationCalculation";
+import {
+  MINIMUM_INCREASE_MODES,
+  NO_MINIMUM_INCREASE_POLICY,
+  minimumIncreaseRateFromPercentParts,
+  reduceFraction,
+} from "../../domain/compensationCalculation";
 import type { SimulationConfigurationCode } from "./simulationConfigurationCodes";
 
 export interface ParseSuccess<T> {
@@ -303,9 +313,124 @@ export function parseRetroactivityStartMonthInput(
   return { ok: true, value };
 }
 
+/**
+ * Parse un taux % de minimum garanti → fraction exacte.
+ * 3 → 3/100 ; 2,5 → 25/1000 = 1/40. Refuse scientifique / zéro / négatif.
+ */
+export function parseMinimumIncreaseRatePercentInput(
+  raw: string | null | undefined,
+): ParseResult<ReturnType<typeof reduceFraction>> {
+  if (raw === null || raw === undefined || raw.trim() === "") {
+    return {
+      ok: false,
+      code: "MISSING_MINIMUM_INCREASE_RATE",
+      message: "Le taux du minimum garanti est obligatoire.",
+    };
+  }
+  const trimmed = raw.trim();
+  const compact = stripAllowedSpaces(trimmed);
+  if (/[eE]/.test(compact)) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_INCREASE_RATE",
+      message:
+        "Le taux du minimum garanti ne doit pas utiliser la notation scientifique.",
+    };
+  }
+  if (compact.startsWith("-")) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_INCREASE_RATE",
+      message: "Le taux du minimum garanti ne peut pas être négatif.",
+    };
+  }
+  const separators = compact.match(/[.,]/g) ?? [];
+  if (separators.length > 1) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_INCREASE_RATE",
+      message:
+        "Le taux du minimum garanti ne doit contenir qu’un seul séparateur décimal.",
+    };
+  }
+  const match = /^(\d+)(?:[.,](\d+))?$/.exec(compact);
+  if (!match) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_INCREASE_RATE",
+      message: "Le taux du minimum garanti doit être un nombre (ex. 3 ou 2,5).",
+    };
+  }
+  const intPart = BigInt(match[1] ?? "0");
+  const fracPart = match[2] ?? "";
+  const rate = minimumIncreaseRateFromPercentParts(intPart, fracPart);
+  if (rate.numerator <= 0n) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_INCREASE_RATE",
+      message: "Le taux du minimum garanti doit être strictement positif.",
+    };
+  }
+  return { ok: true, value: rate };
+}
+
+/** Parse le montant forfaitaire du minimum (entier FCFA strictement > 0). */
+export function parseMinimumMonthlyAmountInput(
+  raw: string | null | undefined,
+): ParseResult<bigint> {
+  if (raw === null || raw === undefined || !raw.trim()) {
+    return {
+      ok: false,
+      code: "MISSING_MINIMUM_MONTHLY_AMOUNT",
+      message: "Le montant forfaitaire du minimum garanti est obligatoire.",
+    };
+  }
+  const compact = stripAllowedSpaces(raw.trim());
+  if (/[eE]/.test(compact)) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_MONTHLY_AMOUNT",
+      message:
+        "Le montant forfaitaire ne doit pas utiliser la notation scientifique.",
+    };
+  }
+  if (compact.includes(".") || compact.includes(",")) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_MONTHLY_AMOUNT",
+      message: "Le montant forfaitaire doit être un entier FCFA (sans décimale).",
+    };
+  }
+  if (compact.startsWith("-")) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_MONTHLY_AMOUNT",
+      message: "Le montant forfaitaire ne peut pas être négatif.",
+    };
+  }
+  if (!/^\d+$/.test(compact)) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_MONTHLY_AMOUNT",
+      message: "Le montant forfaitaire doit être un entier FCFA strictement positif.",
+    };
+  }
+  const value = BigInt(compact);
+  if (value <= 0n) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_MONTHLY_AMOUNT",
+      message: "Le montant forfaitaire du minimum garanti doit être strictement positif.",
+    };
+  }
+  return { ok: true, value };
+}
+
 export type BudgetTargetModeChoice =
   | "manual_amount"
   | "percentage_of_eligible_payroll";
+
+export type MinimumIncreaseModeChoice = MinimumIncreaseMode;
 
 export interface SimulationConfigurationDraftFields {
   budgetTargetMode: BudgetTargetModeChoice | null;
@@ -320,6 +445,12 @@ export interface SimulationConfigurationDraftFields {
   retroactivityStartMonthInput: string;
   /** Mois d’application technique 1–12 (saisie UI). */
   technicalApplicationMonthInput: string;
+  /** Mode de minimum garanti (Lot 2A-H2D-2). */
+  minimumIncreaseMode: MinimumIncreaseModeChoice;
+  /** Montant forfaitaire mensuel (texte UI). */
+  minimumMonthlyAmountInput: string;
+  /** Taux % du minimum (texte UI). */
+  minimumIncreaseRatePercentInput: string;
 }
 
 export interface ParsedSimulationConfiguration {
@@ -328,6 +459,7 @@ export interface ParsedSimulationConfiguration {
   campaignYear: number | null;
   retroactivityStartMonth: number | null;
   technicalApplicationMonth: number | null;
+  minimumIncreasePolicy: MinimumIncreasePolicy | null;
   fieldErrors: Partial<
     Record<
       | "budgetTargetMode"
@@ -338,13 +470,17 @@ export interface ParsedSimulationConfiguration {
       | "roundingStepInput"
       | "campaignYearInput"
       | "retroactivityStartMonthInput"
-      | "technicalApplicationMonthInput",
+      | "technicalApplicationMonthInput"
+      | "minimumIncreaseMode"
+      | "minimumMonthlyAmountInput"
+      | "minimumIncreaseRatePercentInput",
       ParseFailure
     >
   >;
   isBudgetComplete: boolean;
   isRoundingComplete: boolean;
   isApplicationCalendarComplete: boolean;
+  isMinimumIncreaseComplete: boolean;
   isConfigurationComplete: boolean;
 }
 
@@ -484,17 +620,110 @@ export function parseSimulationConfigurationDraft(
     isApplicationCalendarComplete = true;
   }
 
+  let minimumIncreasePolicy: MinimumIncreasePolicy | null = null;
+  let isMinimumIncreaseComplete = false;
+
+  const modeRaw = draft.minimumIncreaseMode;
+  if (
+    modeRaw === null ||
+    modeRaw === undefined ||
+    !(MINIMUM_INCREASE_MODES as readonly string[]).includes(modeRaw)
+  ) {
+    fieldErrors.minimumIncreaseMode = {
+      ok: false,
+      code:
+        modeRaw === null || modeRaw === undefined
+          ? "MISSING_MINIMUM_INCREASE_MODE"
+          : "UNSUPPORTED_MINIMUM_INCREASE_MODE",
+      message:
+        modeRaw === null || modeRaw === undefined
+          ? "Le mode de minimum garanti est obligatoire."
+          : `Mode de minimum garanti non supporté : ${String(modeRaw)}.`,
+    };
+  } else if (modeRaw === "none") {
+    if (draft.minimumMonthlyAmountInput.trim() !== "") {
+      fieldErrors.minimumMonthlyAmountInput = {
+        ok: false,
+        code: "INVALID_MINIMUM_INCREASE_CONFIGURATION",
+        message:
+          "En mode « aucun minimum », le montant forfaitaire doit être vide.",
+      };
+    }
+    if (draft.minimumIncreaseRatePercentInput.trim() !== "") {
+      fieldErrors.minimumIncreaseRatePercentInput = {
+        ok: false,
+        code: "INVALID_MINIMUM_INCREASE_CONFIGURATION",
+        message: "En mode « aucun minimum », le taux doit être vide.",
+      };
+    }
+    if (
+      !fieldErrors.minimumMonthlyAmountInput &&
+      !fieldErrors.minimumIncreaseRatePercentInput
+    ) {
+      minimumIncreasePolicy = NO_MINIMUM_INCREASE_POLICY;
+      isMinimumIncreaseComplete = true;
+    }
+  } else if (modeRaw === "fixed_monthly_amount") {
+    if (draft.minimumIncreaseRatePercentInput.trim() !== "") {
+      fieldErrors.minimumIncreaseRatePercentInput = {
+        ok: false,
+        code: "INVALID_MINIMUM_INCREASE_CONFIGURATION",
+        message: "En mode forfaitaire, le taux minimum doit être vide.",
+      };
+    }
+    const amount = parseMinimumMonthlyAmountInput(
+      draft.minimumMonthlyAmountInput,
+    );
+    if (!amount.ok) {
+      fieldErrors.minimumMonthlyAmountInput = amount;
+    } else if (!fieldErrors.minimumIncreaseRatePercentInput) {
+      minimumIncreasePolicy = {
+        mode: "fixed_monthly_amount",
+        minimumMonthlyAmountFcfa: amount.value,
+        minimumIncreaseRate: null,
+      };
+      isMinimumIncreaseComplete = true;
+    }
+  } else {
+    // percentage_of_base_salary
+    if (draft.minimumMonthlyAmountInput.trim() !== "") {
+      fieldErrors.minimumMonthlyAmountInput = {
+        ok: false,
+        code: "INVALID_MINIMUM_INCREASE_CONFIGURATION",
+        message: "En mode pourcentage, le montant forfaitaire doit être vide.",
+      };
+    }
+    const rate = parseMinimumIncreaseRatePercentInput(
+      draft.minimumIncreaseRatePercentInput,
+    );
+    if (!rate.ok) {
+      fieldErrors.minimumIncreaseRatePercentInput = rate;
+    } else if (!fieldErrors.minimumMonthlyAmountInput) {
+      minimumIncreasePolicy = {
+        mode: "percentage_of_base_salary",
+        minimumMonthlyAmountFcfa: null,
+        minimumIncreaseRate: rate.value,
+      };
+      isMinimumIncreaseComplete = true;
+    }
+  }
+
   return {
     budgetTarget,
     roundingPolicy,
     campaignYear,
     retroactivityStartMonth,
     technicalApplicationMonth,
+    minimumIncreasePolicy,
     fieldErrors,
     isBudgetComplete,
     isRoundingComplete,
     isApplicationCalendarComplete,
+    isMinimumIncreaseComplete,
     isConfigurationComplete:
-      isBudgetComplete && isRoundingComplete && isApplicationCalendarComplete,
+      isBudgetComplete &&
+      isRoundingComplete &&
+      isApplicationCalendarComplete &&
+      isMinimumIncreaseComplete,
   };
 }

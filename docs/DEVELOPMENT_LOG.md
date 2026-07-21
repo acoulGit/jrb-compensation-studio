@@ -903,3 +903,21 @@ reproductible** avec cette fixture. `31 110` reste un montant **illustratif**
 des tests unitaires H2A/H2B (rappel / ancienneté), pas le résultat de
 Population Test 1. Aucune régression moteur H2D-1 ni H2C détectée sur cette
 recette ; tests renforcés sur les valeurs mesurées.
+## 2026-07-21 — Lot 2A-H2D-2 minimum garanti d'augmentation
+
+### Objectif
+
+Ajouter un minimum garanti d'augmentation optionnel (modes exclusifs),
+passer le contrat de calcul a **v4**, reserver les planchers avant
+allocation du reliquat, et exposer config / resultats / erreurs.
+
+### Livrables
+
+- Domaine : minimumIncrease.ts, minimumIncreasePopulation.ts, planchers
+  sur expositions, solveur floor-aware, agregats periode / rappel / plein effet
+- Config / UI : section minimum, fingerprints minMode/minAmt/minRate
+- Erreur dediee MINIMUM_GUARANTEE_EXCEEDS_BUDGET
+- Tests : minimumIncreaseGuarantee.test.ts + alignement contrat v4
+- Docs : BUSINESS_RULES / CALCULATION_CONTRACT / CAMPAIGN_SIMULATION /
+  DATA_DICTIONARY / SIMULATION_PERSISTENCE
+- Migrations 0001-0006 et stash inchanges ; aucun commit

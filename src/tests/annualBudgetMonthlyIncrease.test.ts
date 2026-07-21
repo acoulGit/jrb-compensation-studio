@@ -112,7 +112,7 @@ function buildRecipeInput(): PreparedPopulationCalculationInput {
 
 describe("Lot 2A-H1 — budget annuel / augmentation mensuelle", () => {
   it("expose les constantes de contrat v3", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(3);
+    expect(CALCULATION_CONTRACT_VERSION).toBe(4);
     expect(ANNUAL_BUDGET_PERIOD_MONTHS).toBe(12n);
     expect(RESULT_SCHEMA_VERSION).toBe(2);
     expect(isCurrentResultSchemaVersion(2)).toBe(true);

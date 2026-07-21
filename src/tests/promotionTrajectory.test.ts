@@ -12,6 +12,7 @@ import {
   buildPromotionEvent,
   parsePromotionDateIso,
   promotionRateFromAmounts,
+  NO_MINIMUM_INCREASE_POLICY,
 } from "../domain/compensationCalculation";
 import type { PreparedEmployeeCalculationInput } from "../domain/compensationCalculation";
 
@@ -351,6 +352,7 @@ describe("Lot 2A-H2C-1 — trajectoire N-1 / N", () => {
       campaignYear: 2026,
       retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
+    minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     });
     const fpPromo = buildSimulationSourceFingerprint({
       campaignId: 1,
@@ -364,6 +366,7 @@ describe("Lot 2A-H2C-1 — trajectoire N-1 / N", () => {
       campaignYear: 2026,
       retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
+    minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     });
     expect(fpBase).not.toBe(fpPromo);
     expect(PROMOTION_TRAJECTORY_CONTRACT_VERSION).toBe(1);
