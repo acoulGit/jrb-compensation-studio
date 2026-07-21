@@ -161,18 +161,24 @@ métier dans React.
 
 ### Structure des écrans
 
-1. **Synthèse de l’enveloppe** — budget cible, coût promotions imputé,
-   budget disponible complément, théorique / réel complément, coût combiné,
-   écart d’arrondi signé.
+1. **Synthèse de l’enveloppe** — enveloppe de la période d’effet, coût
+   promotions imputé, budget disponible complément, théorique / coût effectif
+   de campagne, delta de période, coût à plein effet sur 12 mois (informatif).
 2. **Calendrier de paiement** — promotions déjà payées vs période restante ;
    rappel + paiement direct du **complément** uniquement
-   (jamais « rappel de promotion »).
+   (jamais « rappel de promotion ») ; mois avant rétro = « Hors période ».
 3. **Incidences d’ancienneté — hors budget** — ventilation promotion /
    complément / totale.
 4. **Tableau salariés** — colonnes promotion / éligibilité / coûts ;
    colonnes promotion masquées s’il n’y a aucune promotion structurée.
 5. **Détail salarié** — blocs Promotion, Complément, Ancienneté,
    Trajectoire mensuelle (12 mois, défilement horizontal).
+
+### Configuration — rétroactivité (H2D-1)
+
+Champ UI `retroactivityStartMonthInput` (défaut `"1"`). Empreintes
+configuration / sources : token `retroStart:`. Contrat de calcul **v3**.
+Sauvegarde snapshot bloquée tant que `result_schema_version` reste à 2.
 
 ### Coût brut vs imputable
 

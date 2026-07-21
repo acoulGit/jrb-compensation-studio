@@ -1,25 +1,20 @@
 /**
  * Trajectoire mensuelle de rémunération consciente des promotions
- * (Lot 2A-H2C-2). Combine, mois par mois (janvier → décembre) :
- * - la trajectoire salariale de base (grade/famille/salaire) issue de
- *   `buildPromotionAwareMonthlySalaryTrajectory` (Lot 2A-H2C-1) ;
- * - le calcul matriciel individuel (S0, position, évaluation) ;
- * - le complément compensatoire résolu via le taux de calibrage unique
- *   (Lot 2A-H2C-2, voir `promotionCompensatoryCalibration.ts`) ;
- * - l'incidence d'ancienneté ventilée entre part « promotion seule » et
- *   part « complément compensatoire ».
+ * (Lot 2A-H2C-2 / Lot 2A-H2D-1). Combine, mois par mois (janvier → décembre) :
+ * - la trajectoire salariale de base (grade/famille/salaire) ;
+ * - le calcul matriciel individuel ;
+ * - le complément compensatoire (nul avant retroactivityStartMonth) ;
+ * - l'incidence d'ancienneté ventilée promotion / compensatoire.
  *
- * Étape 1 — `buildEmployeePromotionAwareExposures` : construit, pour un
- * salarié, les 12 expositions mensuelles (salaire, facteur, décalage de
- * taux) nécessaires à la résolution du taux de calibrage compensatoire
- * unique de la population, AVANT que ce taux ne soit connu.
- *
- * Étape 2 — `finalizeEmployeePromotionAwareCompensation` : une fois le
- * taux de calibrage résolu, calcule les montants définitifs (arrondis,
- * salaire final, coût promotion, incidence d'ancienneté) pour ce salarié.
+ * Les agrégats de campagne ne couvrent que [rétroactivité … décembre].
+ * Le coût à plein effet (décembre × 12) est informatif et hors calibrage.
  */
 
 import { validateApplicationCalendar } from "./baseSalaryReminder";
+import {
+  FULL_YEAR_MONTH_COUNT,
+  isMonthInCampaignPeriod,
+} from "./campaignPeriod";
 import { calculateIndividualMatrixWeight } from "./calculateIndividualMatrixWeight";
 import { CompensationCalculationError } from "./errors";
 import {
@@ -85,7 +80,6 @@ export interface EmployeePromotionAwareExposureResult {
   promotionYear: number | null;
   promotionMonth: number | null;
   isPromotionBudgetPopulationEmployee: boolean;
-  /** Éligibilité effective à la mesure (prédicat documenté). */
   compensatoryMeasureEligible: boolean;
 }
 
@@ -104,6 +98,7 @@ export interface BuildEmployeePromotionAwareExposuresInput {
   potentialLevel?: PotentialLevel;
   campaignYear: number;
   technicalApplicationMonth: number;
+  retroactivityStartMonth?: number;
   evaluationMode: NineBoxMode;
   salaryGrid: readonly PreparedSalaryGridCell[];
   salaryPositions: readonly SalaryPositionInputRow[];
@@ -116,14 +111,17 @@ export interface BuildEmployeePromotionAwareExposuresInput {
 export function buildEmployeePromotionAwareExposures(
   input: BuildEmployeePromotionAwareExposuresInput,
 ): EmployeePromotionAwareExposureResult {
+  const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
   validateApplicationCalendar({
     campaignYear: input.campaignYear,
     technicalApplicationMonth: input.technicalApplicationMonth,
+    retroactivityStartMonth,
   });
 
   const trajectoryResult = buildPromotionAwareMonthlySalaryTrajectory({
     campaignYear: input.campaignYear,
     technicalApplicationMonth: input.technicalApplicationMonth,
+    retroactivityStartMonth,
     decemberBaseSalaryFcfa: input.decemberBaseSalaryFcfa,
     currentGradeCode: input.currentGradeCode,
     currentJobFamilyCode: input.currentJobFamilyCode,
@@ -167,12 +165,19 @@ export function buildEmployeePromotionAwareExposures(
         matrixWeight.exactWeightNumerator,
         BigInt(matrixWeight.exactWeightScale),
       );
-      const effectiveCompensationFactor = compensatoryMeasureEligible
-        ? blockedEffectiveFactor
-        : exactAmountFromInteger(0n);
+      const inCampaignPeriod = isMonthInCampaignPeriod(
+        entry.month,
+        retroactivityStartMonth,
+      );
+      const effectiveCompensationFactor =
+        compensatoryMeasureEligible && inCampaignPeriod
+          ? blockedEffectiveFactor
+          : exactAmountFromInteger(0n);
 
       const countsForPromotionThisMonth =
-        trajectoryResult.costPreview.includedInSimulation && entry.promotionActive;
+        trajectoryResult.costPreview.includedInSimulation &&
+        entry.promotionActive &&
+        inCampaignPeriod;
 
       return {
         month: entry.month,
@@ -212,12 +217,11 @@ export interface FinalizeEmployeePromotionAwareCompensationInput {
   hireDate: string;
   campaignYear: number;
   technicalApplicationMonth: number;
+  retroactivityStartMonth?: number;
   months: readonly EmployeeMonthlyExposureContext[];
   calibrationRate: ExactAmount;
   roundingPolicy: { mode: "nearest_half_up"; stepFcfa: bigint };
-  /** Aperçu d’inclusion H2C-1 (coût brut informatif inclus). */
   costPreview: PromotionCampaignCostPreview;
-  /** Appartenance à la population de consommation du budget promotion. */
   isPromotionBudgetPopulationEmployee: boolean;
 }
 
@@ -229,9 +233,7 @@ export interface FinalizeEmployeePromotionAwareCompensationResult {
   baseSalaryReminderFcfa: bigint;
   remainingYearDirectIncreaseCostFcfa: bigint;
   annualPromotionBudgetCostFcfa: bigint;
-  /** Coût promo imputable déjà payé avant le mois technique. */
   promotionCostAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
-  /** Coût promo imputable du mois technique à décembre. */
   promotionCostFromTechnicalMonthToDecemberFcfa: bigint;
   seniorityReminderFcfa: bigint;
   remainingYearDirectSeniorityImpactFcfa: bigint;
@@ -241,6 +243,10 @@ export interface FinalizeEmployeePromotionAwareCompensationResult {
   promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
   promotionSeniorityFromTechnicalMonthToDecemberFcfa: bigint;
   technicalApplicationMonthSeniorityRatePercent: number;
+  fullYearRunRatePromotionCostFcfa: bigint;
+  fullYearRunRateCompensatoryCostFcfa: bigint;
+  fullYearRunRateCombinedBaseMeasureCostFcfa: bigint;
+  fullYearRunRateSeniorityImpactFcfa: bigint;
 }
 
 function maxZero(amount: ExactAmount): ExactAmount {
@@ -253,13 +259,29 @@ function nonNegative(value: bigint): bigint {
   return value < 0n ? 0n : value;
 }
 
+function resolvePaymentTiming(
+  month: number,
+  retroactivityStartMonth: number,
+  technicalApplicationMonth: number,
+): "outside_campaign" | "reminder" | "direct" {
+  if (month < retroactivityStartMonth) {
+    return "outside_campaign";
+  }
+  if (month < technicalApplicationMonth) {
+    return "reminder";
+  }
+  return "direct";
+}
+
 /** Finalise la trajectoire mensuelle d'un salarié une fois le taux de calibrage résolu. */
 export function finalizeEmployeePromotionAwareCompensation(
   input: FinalizeEmployeePromotionAwareCompensationInput,
 ): FinalizeEmployeePromotionAwareCompensationResult {
+  const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
   validateApplicationCalendar({
     campaignYear: input.campaignYear,
     technicalApplicationMonth: input.technicalApplicationMonth,
+    retroactivityStartMonth,
   });
 
   const hire = parseHireDateIso(input.hireDate);
@@ -274,46 +296,71 @@ export function finalizeEmployeePromotionAwareCompensation(
 
   const trajectory: MonthlyCompensationTrajectoryEntry[] = input.months.map(
     (month) => {
+      const coveredByCampaignPeriod = isMonthInCampaignPeriod(
+        month.month,
+        retroactivityStartMonth,
+      );
       const targetCompensatoryRate = multiplyFractions(
         input.calibrationRate,
         month.effectiveCompensationFactor,
       );
-      const compensatoryComplementRate = maxZero(
-        subtractFractions(targetCompensatoryRate, month.promotionRateOffset),
-      );
-      const theoreticalCompensatoryComplement = multiplyFractions(
-        exactAmountFromInteger(month.baseSalaryFcfa),
-        compensatoryComplementRate,
-      );
-      const roundedCompensatoryComplementFcfa = roundFractionToStepHalfUp(
-        theoreticalCompensatoryComplement,
-        stepFcfa,
-      );
-      const finalSalaryFcfa = month.baseSalaryFcfa + roundedCompensatoryComplementFcfa;
+      const compensatoryComplementRate = coveredByCampaignPeriod
+        ? maxZero(
+            subtractFractions(targetCompensatoryRate, month.promotionRateOffset),
+          )
+        : exactAmountFromInteger(0n);
+      const theoreticalCompensatoryComplement = coveredByCampaignPeriod
+        ? multiplyFractions(
+            exactAmountFromInteger(month.baseSalaryFcfa),
+            compensatoryComplementRate,
+          )
+        : exactAmountFromInteger(0n);
+      const roundedCompensatoryComplementFcfa = coveredByCampaignPeriod
+        ? roundFractionToStepHalfUp(theoreticalCompensatoryComplement, stepFcfa)
+        : 0n;
+      const finalSalaryFcfa =
+        month.baseSalaryFcfa + roundedCompensatoryComplementFcfa;
+      const promotionBudgetCostFcfa =
+        imputesPromotionToBudget && coveredByCampaignPeriod
+          ? month.promotionAmountForMonthFcfa
+          : 0n;
       const combinedIncreaseFcfa =
-        month.promotionAmountForMonthFcfa + roundedCompensatoryComplementFcfa;
-      const paymentTiming: "reminder" | "direct" =
-        month.month < input.technicalApplicationMonth ? "reminder" : "direct";
+        promotionBudgetCostFcfa + roundedCompensatoryComplementFcfa;
+      const paymentTiming = resolvePaymentTiming(
+        month.month,
+        retroactivityStartMonth,
+        input.technicalApplicationMonth,
+      );
       const seniorityRatePercent = seniorityRatePercentAt(
         hire,
         input.campaignYear,
         month.month,
       );
+      // Trajectoire complète : ancienneté promo visible toute l’année ;
+      // agrégats de campagne filtrés plus bas.
+      const rawPromotionAmountForSeniority =
+        input.costPreview.includedInSimulation && month.promotionActive
+          ? input.costPreview.promotionAmountFcfa
+          : 0n;
+      const promotionAmountForSeniority = month.promotionActive
+        ? rawPromotionAmountForSeniority
+        : 0n;
+      const combinedForSeniority =
+        promotionAmountForSeniority + roundedCompensatoryComplementFcfa;
       const totalSeniorityImpactFcfa = ceilFcfaPercentOfAmount(
-        combinedIncreaseFcfa,
+        combinedForSeniority,
         seniorityRatePercent,
       );
       const promotionSeniorityImpactFcfa = ceilFcfaPercentOfAmount(
-        month.promotionAmountForMonthFcfa,
+        promotionAmountForSeniority,
         seniorityRatePercent,
       );
       const compensatorySeniorityImpactFcfa = nonNegative(
         totalSeniorityImpactFcfa - promotionSeniorityImpactFcfa,
       );
-      // Coût mensuel imputable à l’enveloppe (0 hors population / promo exclue).
-      const promotionBudgetCostFcfa = imputesPromotionToBudget
-        ? month.promotionAmountForMonthFcfa
-        : 0n;
+      const includedInCampaignEnvelope =
+        coveredByCampaignPeriod &&
+        (promotionBudgetCostFcfa > 0n || roundedCompensatoryComplementFcfa > 0n);
 
       return {
         month: month.month,
@@ -326,13 +373,17 @@ export function finalizeEmployeePromotionAwareCompensation(
         theoreticalCompensationFactor: month.theoreticalCompensationFactor,
         effectiveCompensationFactor: month.effectiveCompensationFactor,
         promotionRateOffset: month.promotionRateOffset,
-        targetCompensatoryRate,
+        targetCompensatoryRate: coveredByCampaignPeriod
+          ? targetCompensatoryRate
+          : exactAmountFromInteger(0n),
         compensatoryComplementRate,
         theoreticalCompensatoryComplement,
         roundedCompensatoryComplementFcfa,
         finalSalaryFcfa,
         promotionBudgetCostFcfa,
         combinedIncreaseFcfa,
+        coveredByCampaignPeriod,
+        includedInCampaignEnvelope,
         paymentTiming,
         seniorityRatePercent,
         totalSeniorityImpactFcfa,
@@ -342,7 +393,8 @@ export function finalizeEmployeePromotionAwareCompensation(
     },
   );
 
-  let annualTheoreticalCompensatoryAllocation: ExactAmount = exactAmountFromInteger(0n);
+  let annualTheoreticalCompensatoryAllocation: ExactAmount =
+    exactAmountFromInteger(0n);
   let annualActualCompensatoryCostFcfa = 0n;
   let baseSalaryReminderFcfa = 0n;
   let remainingYearDirectIncreaseCostFcfa = 0n;
@@ -355,6 +407,10 @@ export function finalizeEmployeePromotionAwareCompensation(
   let promotionSeniorityFromTechnicalMonthToDecemberFcfa = 0n;
 
   for (const entry of trajectory) {
+    if (!entry.coveredByCampaignPeriod) {
+      continue;
+    }
+
     annualTheoreticalCompensatoryAllocation = addFractions(
       annualTheoreticalCompensatoryAllocation,
       entry.theoreticalCompensatoryComplement,
@@ -363,11 +419,13 @@ export function finalizeEmployeePromotionAwareCompensation(
     annualPromotionSeniorityImpactFcfa += entry.promotionSeniorityImpactFcfa;
 
     if (entry.month < input.technicalApplicationMonth) {
-      promotionCostAlreadyPaidBeforeTechnicalMonthFcfa += entry.promotionBudgetCostFcfa;
+      promotionCostAlreadyPaidBeforeTechnicalMonthFcfa +=
+        entry.promotionBudgetCostFcfa;
       promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa +=
         entry.promotionSeniorityImpactFcfa;
     } else {
-      promotionCostFromTechnicalMonthToDecemberFcfa += entry.promotionBudgetCostFcfa;
+      promotionCostFromTechnicalMonthToDecemberFcfa +=
+        entry.promotionBudgetCostFcfa;
       promotionSeniorityFromTechnicalMonthToDecemberFcfa +=
         entry.promotionSeniorityImpactFcfa;
     }
@@ -375,13 +433,14 @@ export function finalizeEmployeePromotionAwareCompensation(
     if (entry.paymentTiming === "reminder") {
       baseSalaryReminderFcfa += entry.roundedCompensatoryComplementFcfa;
       seniorityReminderFcfa += entry.compensatorySeniorityImpactFcfa;
-    } else {
-      remainingYearDirectIncreaseCostFcfa += entry.roundedCompensatoryComplementFcfa;
-      remainingYearDirectSeniorityImpactFcfa += entry.compensatorySeniorityImpactFcfa;
+    } else if (entry.paymentTiming === "direct") {
+      remainingYearDirectIncreaseCostFcfa +=
+        entry.roundedCompensatoryComplementFcfa;
+      remainingYearDirectSeniorityImpactFcfa +=
+        entry.compensatorySeniorityImpactFcfa;
     }
   }
 
-  /** Coût annuel imputable à l’enveloppe (jamais le coût brut informatif seul). */
   const annualPromotionBudgetCostFcfa = promotionAnnualBudgetCostFcfa({
     costPreview: input.costPreview,
     isPromotionBudgetPopulationEmployee: input.isPromotionBudgetPopulationEmployee,
@@ -413,6 +472,23 @@ export function finalizeEmployeePromotionAwareCompensation(
     );
   }
 
+  const decemberEntry = trajectory.find((entry) => entry.month === 12)!;
+  // Plein effet : rythme de décembre, même si hors population budget (informatif).
+  const decemberPromoForRunRate =
+    input.costPreview.includedInSimulation && decemberEntry.promotionActive
+      ? input.costPreview.promotionAmountFcfa
+      : 0n;
+  const fullYearRunRatePromotionCostFcfa =
+    decemberPromoForRunRate * BigInt(FULL_YEAR_MONTH_COUNT);
+  const fullYearRunRateCompensatoryCostFcfa =
+    decemberEntry.roundedCompensatoryComplementFcfa *
+    BigInt(FULL_YEAR_MONTH_COUNT);
+  const fullYearRunRateCombinedBaseMeasureCostFcfa =
+    (decemberPromoForRunRate + decemberEntry.roundedCompensatoryComplementFcfa) *
+    BigInt(FULL_YEAR_MONTH_COUNT);
+  const fullYearRunRateSeniorityImpactFcfa =
+    decemberEntry.totalSeniorityImpactFcfa * BigInt(FULL_YEAR_MONTH_COUNT);
+
   const technicalApplicationMonthSeniorityRatePercent = seniorityRatePercentAt(
     hire,
     input.campaignYear,
@@ -437,5 +513,9 @@ export function finalizeEmployeePromotionAwareCompensation(
     promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa,
     promotionSeniorityFromTechnicalMonthToDecemberFcfa,
     technicalApplicationMonthSeniorityRatePercent,
+    fullYearRunRatePromotionCostFcfa,
+    fullYearRunRateCompensatoryCostFcfa,
+    fullYearRunRateCombinedBaseMeasureCostFcfa,
+    fullYearRunRateSeniorityImpactFcfa,
   };
 }

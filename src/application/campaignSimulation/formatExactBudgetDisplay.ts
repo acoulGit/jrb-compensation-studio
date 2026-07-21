@@ -211,6 +211,8 @@ export function buildConfigurationFingerprint(parts: {
   employerChargesIncluded?: boolean;
   /** Année de campagne explicite (Lot 2A-H2A). */
   campaignYear?: number;
+  /** Début de rétroactivité 1–12 (Lot 2A-H2D-1). */
+  retroactivityStartMonth?: number;
   /** Mois d’application technique 1–12 (Lot 2A-H2A). */
   technicalApplicationMonth?: number;
   /** Version du contrat d’incidence d’ancienneté (Lot 2A-H2B). */
@@ -223,7 +225,7 @@ export function buildConfigurationFingerprint(parts: {
   promotionAwareCompensationContractVersion?: number;
 }): string {
   return [
-    `contract:v${parts.calculationContractVersion ?? 2}`,
+    `contract:v${parts.calculationContractVersion ?? 3}`,
     `months:${(parts.annualBudgetPeriodMonths ?? 12n).toString()}`,
     `charges:${parts.employerChargesIncluded === true ? "1" : "0"}`,
     String(parts.campaignId),
@@ -234,6 +236,7 @@ export function buildConfigurationFingerprint(parts: {
     parts.roundingMode,
     parts.roundingStep.toString(),
     `year:${parts.campaignYear ?? ""}`,
+    `retroStart:${parts.retroactivityStartMonth ?? ""}`,
     `appMonth:${parts.technicalApplicationMonth ?? ""}`,
     `seniority:v${parts.seniorityImpactContractVersion ?? 1}`,
     `promotion:v${parts.promotionTrajectoryContractVersion ?? 1}`,

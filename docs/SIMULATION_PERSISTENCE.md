@@ -15,10 +15,17 @@ repositories créés ici.
 | Version | Statut | Lecture |
 | --- | --- | --- |
 | 1 | Obsolète (budget traité comme mensuel) | Afficher un avertissement ; **ne pas** recalculer ni convertir |
-| 2 | Courante | Budget/totaux annuels ; montants salariés mensuels |
+| 2 | Courante pour écritures historiques (contrat ≤ 2) | Budget/totaux annuels ; montants salariés mensuels |
+| 3 | À consolider (contrat 3 / période configurable) | Non écrit tant que non livré |
 
 Nouvelles écritures : `RESULT_SCHEMA_VERSION = 2` (Rust + memory). Schéma SQL
 0005 inchangé ; pas de migration 0006 (dérivation exacte × 12).
+
+**Lot 2A-H2D-1** : un résultat avec `calculationContractVersion >= 3` est
+**refusé** à l’enregistrement tant que le schema snapshot reste à 2
+(`assertSimulationResultPersistable` →
+`SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION`). Le calcul et
+l’affichage restent possibles.
 
 ## Snapshot immuable
 

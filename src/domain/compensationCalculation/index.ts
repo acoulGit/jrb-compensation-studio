@@ -22,6 +22,7 @@ export {
   ANNUAL_BUDGET_PERIOD_MONTHS,
   CALCULATION_CONTRACT_VERSION,
   EMPLOYER_CHARGES_INCLUDED,
+  FULL_YEAR_MONTH_COUNT,
   RESULT_SCHEMA_VERSION,
   RESULT_SCHEMA_VERSION_LEGACY,
 } from "./calculationContract";
@@ -40,6 +41,16 @@ export {
   type ApplicationCalendarInput,
   type BaseSalaryReminderBreakdown,
 } from "./baseSalaryReminder";
+export {
+  computeCampaignPeriodBreakdown,
+  computePromotionBudgetStartMonth,
+  computePromotionCampaignPeriodMonthCount,
+  isMonthInCampaignPeriod,
+  validateCampaignPeriod,
+  validateRetroactivityStartMonth,
+  type CampaignPeriodBreakdown,
+  type CampaignPeriodInput,
+} from "./campaignPeriod";
 export {
   SENIORITY_IMPACT_CONTRACT_VERSION,
   anniversaryEffectYearMonth,

@@ -38,6 +38,7 @@ export {
   parseBudgetRatePercentToBps,
   parseNonNegativeFcfaAmount,
   parseRoundingStepFcfa,
+  parseRetroactivityStartMonthInput,
   parseSimulationConfigurationDraft,
   type ParseFailure,
   type ParseResult,

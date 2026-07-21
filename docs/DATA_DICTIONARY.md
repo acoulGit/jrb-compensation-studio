@@ -357,8 +357,11 @@ Résultats de domaine purs (non stockés) :
 | Concept | Nature |
 | --- | --- |
 | `PopulationCalculationSummary` | Synthèse annuelle/mensuelle + calendrier |
-| `CALCULATION_CONTRACT_VERSION` | `2` (H1 ; inchangé en H2C-2) |
-| `RESULT_SCHEMA_VERSION` | `2` (snapshots ; inchangé en H2A/H2B/H2C-2) |
+| `CALCULATION_CONTRACT_VERSION` | `3` (H2D-1 — période d’effet configurable) |
+| `RESULT_SCHEMA_VERSION` | `2` (snapshots ; contrat 3 non enregistrable tant que schema v3 absent) |
+| `retroactivityStartMonth` | Début de rétroactivité 1–12 (défaut 1) |
+| `campaignCoveredMonthCount` | `13 − retroactivityStartMonth` |
+| `fullYearRunRate*` | Indicateurs plein effet décembre × 12 (hors calibrage) |
 | `POPULATION_CALCULATION_FAILED` | Échec atomique + `issues[]` |
 
 Éligibilité, masse auto, TPA/CNSS/charges, prime historique, persistance des

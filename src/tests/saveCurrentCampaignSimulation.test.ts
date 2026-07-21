@@ -66,13 +66,23 @@ function sampleResult(
       annualTotalRoundingDelta: { numerator: -3n, denominator: 1n },
       isTheoreticalBudgetExactlyAllocated: true,
       campaignYear: 2027,
+      retroactivityStartMonth: 1,
       technicalApplicationMonth: 1,
+      campaignCoveredMonthCount: 12,
       totalBaseSalaryReminderFcfa: 0n,
       totalRemainingYearDirectIncreaseCostFcfa: 24999600n,
       totalAnnualActualBaseIncreaseCostFcfa: 24999600n,
       totalSeniorityReminderFcfa: 0n,
       totalRemainingYearDirectSeniorityImpactFcfa: 0n,
       totalAnnualSeniorityImpactFcfa: 0n,
+      fullYearRunRatePromotionCostFcfa: 0n,
+      fullYearRunRatePromotionCostLabel: "0 FCFA",
+      fullYearRunRateCompensatoryCostFcfa: 24999600n,
+      fullYearRunRateCompensatoryCostLabel: "x",
+      fullYearRunRateCombinedBaseMeasureCostFcfa: 24999600n,
+      fullYearRunRateCombinedBaseMeasureCostLabel: "x",
+      fullYearRunRateSeniorityImpactFcfa: 0n,
+      fullYearRunRateSeniorityImpactLabel: "0 FCFA",
       promotedIncludedEmployeeCount: 0,
       totalAnnualPromotionBudgetCostFcfa: 0n,
       availableAnnualCompensatoryBudget: { numerator: 25000003n, denominator: 1n },
@@ -306,6 +316,7 @@ async function setupSuccessContext(options?: {
     budgetTarget,
     roundingPolicy,
     campaignYear: 2027,
+    retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
   });
   const configurationFingerprint = buildConfigurationFingerprint({
@@ -315,6 +326,7 @@ async function setupSuccessContext(options?: {
     roundingMode: roundingPolicy.mode,
     roundingStep: roundingPolicy.stepFcfa,
     campaignYear: 2027,
+    retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
   });
 
@@ -382,6 +394,7 @@ async function setupSuccessContext(options?: {
     budgetTarget,
     roundingPolicy,
     campaignYear: 2027,
+    retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
     readinessReport: {
       campaignId: campaign.id,

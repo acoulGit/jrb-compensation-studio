@@ -55,6 +55,7 @@ export interface SimulationSourceFingerprintInput {
   budgetTarget: BudgetTargetInput;
   roundingPolicy: RoundingPolicy;
   campaignYear: number;
+  retroactivityStartMonth: number;
   technicalApplicationMonth: number;
 }
 
@@ -139,6 +140,7 @@ export function buildSimulationSourceFingerprint(
     roundingMode: input.roundingPolicy.mode,
     roundingStep: BigInt(input.roundingPolicy.stepFcfa),
     campaignYear: input.campaignYear,
+    retroactivityStartMonth: input.retroactivityStartMonth,
     technicalApplicationMonth: input.technicalApplicationMonth,
     seniorityImpactContractVersion: SENIORITY_IMPACT_CONTRACT_VERSION,
     promotionTrajectoryContractVersion: PROMOTION_TRAJECTORY_CONTRACT_VERSION,

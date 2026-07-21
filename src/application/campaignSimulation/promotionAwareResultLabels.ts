@@ -187,10 +187,20 @@ export function formatCompensatoryIneligibilityReasonLabel(
 export function formatPromotionPaymentStatusLabel(
   entry: Pick<
     MonthlyCompensationTrajectoryEntry,
-    "promotionActive" | "promotionBudgetCostFcfa" | "month"
+    | "promotionActive"
+    | "promotionBudgetCostFcfa"
+    | "month"
+    | "paymentTiming"
+    | "coveredByCampaignPeriod"
   >,
   technicalApplicationMonth: number,
 ): string {
+  if (
+    entry.paymentTiming === "outside_campaign" ||
+    entry.coveredByCampaignPeriod === false
+  ) {
+    return "Hors période";
+  }
   if (!entry.promotionActive || entry.promotionBudgetCostFcfa === 0n) {
     return "Non applicable";
   }
@@ -201,8 +211,11 @@ export function formatPromotionPaymentStatusLabel(
 }
 
 export function formatCompensatoryPaymentStatusLabel(
-  paymentTiming: "reminder" | "direct",
+  paymentTiming: "outside_campaign" | "reminder" | "direct",
 ): string {
+  if (paymentTiming === "outside_campaign") {
+    return "Hors période";
+  }
   return paymentTiming === "reminder" ? "Rappel" : "Paiement direct";
 }
 

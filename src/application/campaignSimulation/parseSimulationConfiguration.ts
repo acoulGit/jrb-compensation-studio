@@ -271,6 +271,38 @@ export function parseTechnicalApplicationMonthInput(
   return { ok: true, value };
 }
 
+/** Parse le mois de début de rétroactivité (1 = janvier … 12 = décembre). */
+export function parseRetroactivityStartMonthInput(
+  raw: string | null | undefined,
+): ParseResult<number> {
+  if (raw === null || raw === undefined || raw.trim() === "") {
+    return {
+      ok: false,
+      code: "MISSING_RETROACTIVITY_START_MONTH",
+      message: "Le mois de début de rétroactivité est obligatoire.",
+    };
+  }
+  const compact = stripAllowedSpaces(raw.trim());
+  if (!/^\d{1,2}$/.test(compact)) {
+    return {
+      ok: false,
+      code: "INVALID_RETROACTIVITY_START_MONTH",
+      message:
+        "Le mois de début de rétroactivité doit être un entier entre 1 et 12.",
+    };
+  }
+  const value = Number(compact);
+  if (!Number.isInteger(value) || value < 1 || value > 12) {
+    return {
+      ok: false,
+      code: "INVALID_RETROACTIVITY_START_MONTH",
+      message:
+        "Le mois de début de rétroactivité doit être un entier entre 1 et 12.",
+    };
+  }
+  return { ok: true, value };
+}
+
 export type BudgetTargetModeChoice =
   | "manual_amount"
   | "percentage_of_eligible_payroll";
@@ -284,6 +316,8 @@ export interface SimulationConfigurationDraftFields {
   roundingStepInput: string;
   /** Année de campagne (saisie UI — jamais Date.now() côté moteur). */
   campaignYearInput: string;
+  /** Début de rétroactivité 1–12 (saisie UI). Défaut = 1. */
+  retroactivityStartMonthInput: string;
   /** Mois d’application technique 1–12 (saisie UI). */
   technicalApplicationMonthInput: string;
 }
@@ -292,6 +326,7 @@ export interface ParsedSimulationConfiguration {
   budgetTarget: BudgetTargetInput | null;
   roundingPolicy: RoundingPolicy | null;
   campaignYear: number | null;
+  retroactivityStartMonth: number | null;
   technicalApplicationMonth: number | null;
   fieldErrors: Partial<
     Record<
@@ -302,6 +337,7 @@ export interface ParsedSimulationConfiguration {
       | "roundingMode"
       | "roundingStepInput"
       | "campaignYearInput"
+      | "retroactivityStartMonthInput"
       | "technicalApplicationMonthInput",
       ParseFailure
     >
@@ -397,6 +433,7 @@ export function parseSimulationConfigurationDraft(
   }
 
   let campaignYear: number | null = null;
+  let retroactivityStartMonth: number | null = null;
   let technicalApplicationMonth: number | null = null;
   let isApplicationCalendarComplete = false;
 
@@ -405,6 +442,15 @@ export function parseSimulationConfigurationDraft(
     fieldErrors.campaignYearInput = year;
   } else {
     campaignYear = year.value;
+  }
+
+  const retro = parseRetroactivityStartMonthInput(
+    draft.retroactivityStartMonthInput,
+  );
+  if (!retro.ok) {
+    fieldErrors.retroactivityStartMonthInput = retro;
+  } else {
+    retroactivityStartMonth = retro.value;
   }
 
   const month = parseTechnicalApplicationMonthInput(
@@ -416,7 +462,25 @@ export function parseSimulationConfigurationDraft(
     technicalApplicationMonth = month.value;
   }
 
-  if (campaignYear !== null && technicalApplicationMonth !== null) {
+  if (
+    retroactivityStartMonth !== null &&
+    technicalApplicationMonth !== null &&
+    retroactivityStartMonth > technicalApplicationMonth
+  ) {
+    fieldErrors.retroactivityStartMonthInput = {
+      ok: false,
+      code: "RETROACTIVITY_MONTH_AFTER_APPLICATION_MONTH",
+      message:
+        "Le début de rétroactivité ne peut pas être postérieur au mois d’application technique.",
+    };
+    retroactivityStartMonth = null;
+  }
+
+  if (
+    campaignYear !== null &&
+    retroactivityStartMonth !== null &&
+    technicalApplicationMonth !== null
+  ) {
     isApplicationCalendarComplete = true;
   }
 
@@ -424,6 +488,7 @@ export function parseSimulationConfigurationDraft(
     budgetTarget,
     roundingPolicy,
     campaignYear,
+    retroactivityStartMonth,
     technicalApplicationMonth,
     fieldErrors,
     isBudgetComplete,

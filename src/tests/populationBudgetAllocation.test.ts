@@ -230,7 +230,7 @@ describe("Lot 2A-3 — resolveBudgetTarget", () => {
     expect(first).toEqual(second);
     expect(input).toEqual(snapshot);
     const codes = first.explanationSteps.map((step) => step.code);
-    expect(codes).toContain("BUDGET_TARGET_PERCENTAGE_ANNUAL");
+    expect(codes).toContain("BUDGET_TARGET_PERCENTAGE_PERIOD");
     expect(codes).toContain("BUDGET_TARGET_EXACT");
   });
 });
@@ -691,7 +691,7 @@ describe("Lot 2A-3 — roundPopulationAllocations", () => {
       "NO_FORCED_BUDGET_RECONCILIATION",
     );
     expect(result.explanationSteps.map((s) => s.code)).toContain(
-      "BUDGET_TARGET_MANUAL_ANNUAL",
+      "BUDGET_TARGET_MANUAL_PERIOD",
     );
   });
 });

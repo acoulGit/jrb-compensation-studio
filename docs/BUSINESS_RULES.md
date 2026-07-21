@@ -266,16 +266,20 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
   initialiser le formulaire UI.
 - `technicalApplicationMonth` : mois d’application technique (1 = janvier …
   12 = décembre), rattaché à `campaignYear`.
-- Effet financier rétroactif au **1er janvier** de l’année de campagne.
-- Formules (BigInt FCFA) :
-  - `retroactiveMonths = technicalApplicationMonth - 1`
+- `retroactivityStartMonth` (Lot **2A-H2D-1**, contrat v3) : début de la
+  période d’effet (1–12, défaut janvier). Doit être ≤ mois d’application.
+- Effet financier rétroactif au **mois de rétroactivité** (plus seulement
+  au 1er janvier).
+- Formules (BigInt FCFA) — avec `retro = retroactivityStartMonth` :
+  - `campaignCoveredMonthCount = 13 - retro`
+  - `retroactiveMonths = technicalApplicationMonth - retro`
   - `remainingDirectPaymentMonths = 13 - technicalApplicationMonth`
-  - `baseSalaryReminderFcfa = monthlyFinalIncreaseFcfa × retroactiveMonths`
-  - `remainingYearDirectIncreaseCostFcfa = monthlyFinalIncreaseFcfa × remainingDirectPaymentMonths`
-  - `annualActualBaseIncreaseCostFcfa = monthlyFinalIncreaseFcfa × 12`
-- Invariant : `rappel + paiement direct = coût annuel`.
-- Le rappel est un **décalage de paiement**, pas un coût additionnel au
-  budget annuel (pas de double comptage).
+  - rappel / direct = sommes des mois couverts (complément variable possible)
+  - `annual*` = alias du **coût effectif de campagne** (période couverte)
+  - `fullYearRunRate*` = décembre × 12 (informatif, hors calibrage)
+- Invariant : `rappel + paiement direct = coût effectif de campagne`.
+- Le rappel est un **décalage de paiement**, pas un coût additionnel à
+  l’enveloppe (pas de double comptage).
 - Hors périmètre H2A : ancienneté, TPA, CNSS, charges patronales, autres
   incidences, rappel d’ancienneté (Lot 2A-H2B).
 

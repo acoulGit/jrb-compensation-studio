@@ -489,13 +489,13 @@ function EnvelopeSummary({
         </dd>
       </div>
       <div>
-        <dt>Budget annuel cible</dt>
+        <dt>Enveloppe de la période d’effet</dt>
         <dd data-testid="simulation-summary-budget-target">
           {envelope.annualBudgetTargetLabel}
         </dd>
       </div>
       <div>
-        <dt>Coût annuel des promotions imputé au budget</dt>
+        <dt>Coût des promotions imputé à l’enveloppe</dt>
         <dd data-testid="simulation-summary-promotion-budget-cost">
           {result.budgetSummary.hasImputedPromotionBudgetCost
             ? envelope.totalAnnualPromotionBudgetCostLabel
@@ -509,27 +509,33 @@ function EnvelopeSummary({
         </dd>
       </div>
       <div>
-        <dt>Complément compensatoire théorique annuel</dt>
+        <dt>Complément compensatoire théorique (période)</dt>
         <dd data-testid="simulation-summary-theoretical">
           {envelope.totalAnnualTheoreticalCompensatoryCostLabel}
         </dd>
       </div>
       <div>
-        <dt>Complément compensatoire réel après arrondi</dt>
+        <dt>Coût effectif de campagne — complément</dt>
         <dd data-testid="simulation-summary-actual">
           {envelope.totalAnnualActualCompensatoryCostLabel}
         </dd>
       </div>
       <div>
-        <dt>Coût réel combiné promotions + complément</dt>
+        <dt>Coût effectif de campagne — promotions + complément</dt>
         <dd data-testid="simulation-summary-combined-actual">
           {envelope.totalAnnualActualCombinedBaseMeasureCostLabel}
         </dd>
       </div>
       <div>
-        <dt>Écart d’arrondi par rapport au budget cible</dt>
+        <dt>Delta de période</dt>
         <dd data-testid="simulation-summary-rounding-delta">
           {envelope.annualCombinedRoundingDeltaLabel}
+        </dd>
+      </div>
+      <div>
+        <dt>Coût à plein effet sur 12 mois — combiné</dt>
+        <dd data-testid="simulation-summary-full-year-run-rate">
+          {result.budgetSummary.fullYearRunRateCombinedBaseMeasureCostLabel}
         </dd>
       </div>
       <div>
@@ -580,7 +586,7 @@ function PaymentCalendarSection({
               </dd>
             </div>
             <div>
-              <dt>Coût annuel total des promotions</dt>
+              <dt>Coût total des promotions (période d’effet)</dt>
               <dd data-testid="simulation-promo-annual-total">
                 {calendar.totalAnnualPromotionBudgetCostLabel}
               </dd>
@@ -613,7 +619,7 @@ function PaymentCalendarSection({
             </dd>
           </div>
           <div>
-            <dt>Coût annuel réel du complément</dt>
+            <dt>Coût effectif de campagne du complément</dt>
             <dd data-testid="simulation-summary-annual-base-increase">
               {calendar.totalAnnualActualCompensatoryCostLabel}
             </dd>
@@ -628,7 +634,7 @@ function PaymentCalendarSection({
               : "false"
           }
         >
-          Rappel du complément + paiement direct = coût annuel réel du
+          Rappel du complément + paiement direct = coût effectif de campagne du
           complément
           {calendar.compensatoryReminderPlusDirectEqualsAnnual
             ? " (vérifié)"

@@ -285,6 +285,7 @@ async function buildValidated(options?: {
     budgetTarget,
     roundingPolicy,
     campaignYear: 2027,
+    retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
   });
 
@@ -306,6 +307,7 @@ async function buildValidated(options?: {
     roundingMode: roundingPolicy.mode,
     roundingStep: BigInt(roundingPolicy.stepFcfa),
     campaignYear: 2027,
+    retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
   });
 
@@ -314,6 +316,7 @@ async function buildValidated(options?: {
     budgetTarget,
     roundingPolicy,
     campaignYear: 2027,
+    retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
     readinessReport: await readinessModule.buildCampaignSimulationReadiness(
       { campaignId: campaign?.id ?? 1 },

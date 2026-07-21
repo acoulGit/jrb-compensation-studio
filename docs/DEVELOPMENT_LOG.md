@@ -858,3 +858,48 @@ message : ne plus conseiller d’augmenter le budget.
 - Carte : budget disponible / coût promo / cible / expositions depuis le moteur
 - Message : réduire l’enveloppe ou revoir l’éligibilité
 - `PROMOTION_COST_EXCEEDS_BUDGET` inchangé ; migrations / stash / aucun commit
+
+## 2026-07-21 — Lot 2A-H2D-1 rétroactivité configurable
+
+### Objectif
+
+Rendre le début de période d’effet configurable (`retroactivityStartMonth`),
+passer le contrat de calcul à **v3**, propager la vue / labels / tests, et
+bloquer la persistance schema v2 pour les résultats contrat 3.
+
+### Livrables
+
+- Moteur : période `[rétro … décembre]`, `outside_campaign`, `fullYearRunRate*`
+- Vue : `buildSimulationResultView` + labels « Enveloppe de la période d’effet »,
+  « Coût effectif de campagne », « Hors période », « Delta de période »
+- Tests : `configurableRetroactivity.test.ts` + alignement contrat v3
+- Docs : CALCULATION_CONTRACT / BUSINESS_RULES / CAMPAIGN_SIMULATION /
+  DATA_DICTIONARY / SIMULATION_PERSISTENCE
+- Migrations 0001–0006 et stash inchangés ; aucun commit
+
+### Limites
+
+- `RESULT_SCHEMA_VERSION = 2` : sauvegarde snapshot refusée pour contrat 3
+  jusqu’à consolidation schema v3 (lot ultérieur).
+
+## 2026-07-21 — Audit non-régression H2D-1 (recette 5 000 023)
+
+### Constat (CAS B)
+
+La fixture Population Test 1 (14 éligibles + 1 sous-performant, mode `none`,
+budget manuel 5 000 023, pas 5, rétro janvier) produit **sur tous les moteurs
+mesurés** :
+
+| Moteur | Coût réel | Delta |
+|---|---|---|
+| e985548 (H1 pré-H2C-2) | 5 000 040 | +17 |
+| 21dbbb6 (H2C) | 5 000 040 | +17 |
+| H2D-1 rétro=1 / omis | 5 000 040 | +17 |
+
+EMP-2002 mensuel arrondi mesuré : **30 205** FCFA (×12 = 362 460).
+
+Le brief H2D-1 citant 4 999 860 / −163 et EMP-2002 = 31 110 **n’est pas
+reproductible** avec cette fixture. `31 110` reste un montant **illustratif**
+des tests unitaires H2A/H2B (rappel / ancienneté), pas le résultat de
+Population Test 1. Aucune régression moteur H2D-1 ni H2C détectée sur cette
+recette ; tests renforcés sur les valeurs mesurées.

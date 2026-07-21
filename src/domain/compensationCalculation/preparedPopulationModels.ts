@@ -94,6 +94,11 @@ export interface PreparedPopulationCalculationInput {
   roundingPolicy: RoundingPolicy;
   /** Année de campagne explicite (déterministe — jamais Date.now() dans le moteur). */
   campaignYear: number;
+  /**
+   * Début de rétroactivité (1 = janvier … 12 = décembre).
+   * Défaut métier = 1 pour parité des simulations historiques (contrat v3).
+   */
+  retroactivityStartMonth?: number;
   /** Mois d’application technique (1 = janvier … 12 = décembre). */
   technicalApplicationMonth: number;
 }
@@ -185,11 +190,15 @@ export interface EmployeeCompensationCalculationResult {
   monthlyFinalSalaryFcfa: bigint;
   /** Année de campagne (calendrier d’application). */
   campaignYear: number;
+  /** Début de rétroactivité (1–12). */
+  retroactivityStartMonth: number;
   /** Mois d’application technique (1–12). */
   technicalApplicationMonth: number;
-  /** Mois de rappel = technicalApplicationMonth - 1 (0–11). */
+  /** Nombre de mois couverts par la campagne (13 − rétroactivité). */
+  campaignCoveredMonthCount: number;
+  /** Mois de rappel = technicalApplicationMonth − retroactivityStartMonth. */
   retroactiveMonths: number;
-  /** Mois restants payés directement = 13 - technicalApplicationMonth (1–12). */
+  /** Mois restants payés directement = 13 − technicalApplicationMonth. */
   remainingDirectPaymentMonths: number;
   /** Rappel de salaire de base versé au mois d’application. */
   baseSalaryReminderFcfa: bigint;
@@ -209,7 +218,7 @@ export interface EmployeeCompensationCalculationResult {
     month: number;
     ratePercent: number;
     monthlySeniorityImpactFcfa: bigint;
-    paymentTiming: "reminder" | "direct";
+    paymentTiming: "outside_campaign" | "reminder" | "direct";
   }[];
   /** Rappel d’incidence d’ancienneté (hors budget). */
   seniorityReminderFcfa: bigint;
@@ -256,6 +265,11 @@ export interface EmployeeCompensationCalculationResult {
   promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
   /** Incidence ancienneté promo du mois technique à décembre. */
   promotionSeniorityFromTechnicalMonthToDecemberFcfa: bigint;
+  /** Indicateurs informatifs plein effet (décembre × 12) — hors calibrage. */
+  fullYearRunRatePromotionCostFcfa: bigint;
+  fullYearRunRateCompensatoryCostFcfa: bigint;
+  fullYearRunRateCombinedBaseMeasureCostFcfa: bigint;
+  fullYearRunRateSeniorityImpactFcfa: bigint;
   blockingReason?: MatrixBlockingReason;
   explanationSteps: CalculationExplanationStep[];
 }
@@ -296,11 +310,15 @@ export interface MonthlyCompensationTrajectoryEntry {
   roundedCompensatoryComplementFcfa: bigint;
   /** Salaire final du mois = baseSalaryFcfa + roundedCompensatoryComplementFcfa. */
   finalSalaryFcfa: bigint;
-  /** Coût de promotion imputable au mois (0 hors mois actif inclus). */
+  /** Coût de promotion imputable au mois (0 hors mois actif inclus ou hors période). */
   promotionBudgetCostFcfa: bigint;
   /** promotionBudgetCostFcfa + roundedCompensatoryComplementFcfa. */
   combinedIncreaseFcfa: bigint;
-  paymentTiming: "reminder" | "direct";
+  /** Mois couvert par la période budgétaire [rétro … décembre]. */
+  coveredByCampaignPeriod: boolean;
+  /** Coût du mois inclus dans l’enveloppe de campagne. */
+  includedInCampaignEnvelope: boolean;
+  paymentTiming: "outside_campaign" | "reminder" | "direct";
   seniorityRatePercent: number;
   /** Incidence d'ancienneté sur l'augmentation combinée du mois. */
   totalSeniorityImpactFcfa: bigint;
@@ -334,14 +352,21 @@ export interface PopulationCalculationSummary {
   /** Somme des salaires MENSUELS de la population (trace informative). */
   populationSalarySumFcfa: bigint;
   campaignYear: number;
+  retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  campaignCoveredMonthCount: number;
   totalBaseSalaryReminderFcfa: bigint;
   totalRemainingYearDirectIncreaseCostFcfa: bigint;
   totalAnnualActualBaseIncreaseCostFcfa: bigint;
-  /** Totaux incidence d’ancienneté (hors budget — Lot 2A-H2B). */
+  /** Totaux incidence d’ancienneté de période (hors budget — Lot 2A-H2B / H2D-1). */
   totalSeniorityReminderFcfa: bigint;
   totalRemainingYearDirectSeniorityImpactFcfa: bigint;
   totalAnnualSeniorityImpactFcfa: bigint;
+  /** Indicateurs informatifs plein effet (décembre × 12) — hors calibrage. */
+  fullYearRunRatePromotionCostFcfa: bigint;
+  fullYearRunRateCompensatoryCostFcfa: bigint;
+  fullYearRunRateCombinedBaseMeasureCostFcfa: bigint;
+  fullYearRunRateSeniorityImpactFcfa: bigint;
   /** Nombre de salariés porteurs d'une promotion incluse dans la simulation. */
   promotedIncludedEmployeeCount: number;
   /** Taux mensuel de calibrage compensatoire résolu (Lot 2A-H2C-2). */
@@ -387,13 +412,19 @@ export interface PreparedPopulationCalculationResult {
   annualActualOperationCostFcfa: bigint;
   annualTotalRoundingDelta: ExactAmount;
   campaignYear: number;
+  retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  campaignCoveredMonthCount: number;
   totalBaseSalaryReminderFcfa: bigint;
   totalRemainingYearDirectIncreaseCostFcfa: bigint;
   totalAnnualActualBaseIncreaseCostFcfa: bigint;
   totalSeniorityReminderFcfa: bigint;
   totalRemainingYearDirectSeniorityImpactFcfa: bigint;
   totalAnnualSeniorityImpactFcfa: bigint;
+  fullYearRunRatePromotionCostFcfa: bigint;
+  fullYearRunRateCompensatoryCostFcfa: bigint;
+  fullYearRunRateCombinedBaseMeasureCostFcfa: bigint;
+  fullYearRunRateSeniorityImpactFcfa: bigint;
   promotedIncludedEmployeeCount: number;
   compensatoryCalibrationRate: ExactAmount;
   totalAnnualPromotionBudgetCostFcfa: bigint;

@@ -106,6 +106,7 @@ export function SimulationPage() {
     setRoundingStepInput,
     applyRoundingStepSuggestion,
     setCampaignYearInput,
+    setRetroactivityStartMonthInput,
     setTechnicalApplicationMonthInput,
     validateConfiguration,
     refreshReadiness,
@@ -506,9 +507,9 @@ export function SimulationPage() {
 
       <SectionCard title="Calendrier d’application">
         <p className="form-help">
-          L’effet financier commence au 1<sup>er</sup> janvier de l’année de
-          campagne. Le rappel de salaire de base est un décalage de paiement, pas
-          un coût additionnel au budget annuel.
+          L’enveloppe budgétaire couvre la période d’effet comprise entre le
+          début de rétroactivité et décembre. Le mois d’application technique
+          sépare le rappel et le paiement direct.
         </p>
         <div className="form-grid">
           <label
@@ -528,6 +529,30 @@ export function SimulationPage() {
                 setCampaignYearInput(event.target.value);
               }}
             />
+          </label>
+          <label
+            className="field field--full"
+            htmlFor="simulation-retroactivity-start-month"
+          >
+            Début de rétroactivité
+            <select
+              id="simulation-retroactivity-start-month"
+              data-testid="simulation-retroactivity-start-month"
+              disabled={isReadOnly}
+              value={draft.retroactivityStartMonthInput}
+              aria-invalid={Boolean(
+                parsed?.fieldErrors.retroactivityStartMonthInput,
+              )}
+              onChange={(event) => {
+                setRetroactivityStartMonthInput(event.target.value);
+              }}
+            >
+              {TECHNICAL_APPLICATION_MONTH_LABELS_FR.map((label, index) => (
+                <option key={label} value={String(index + 1)}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </label>
           <label
             className="field field--full"
@@ -554,9 +579,45 @@ export function SimulationPage() {
             </select>
           </label>
         </div>
+        {parsed?.retroactivityStartMonth !== null &&
+        parsed?.retroactivityStartMonth !== undefined &&
+        parsed?.technicalApplicationMonth !== null &&
+        parsed?.technicalApplicationMonth !== undefined ? (
+          <p className="form-help" data-testid="simulation-period-summary">
+            {(() => {
+              const retro = parsed.retroactivityStartMonth;
+              const app = parsed.technicalApplicationMonth;
+              const covered = 13 - retro;
+              const reminder = app - retro;
+              const direct = 13 - app;
+              const monthLabel = (m: number) =>
+                TECHNICAL_APPLICATION_MONTH_LABELS_FR[m - 1]!;
+              const reminderText =
+                reminder === 0
+                  ? "Rappel : aucun"
+                  : `Rappel : ${monthLabel(retro).toLowerCase()} à ${monthLabel(app - 1).toLowerCase()} — ${reminder} mois`;
+              return (
+                <>
+                  Période d’effet : {monthLabel(retro).toLowerCase()} à décembre
+                  — {covered} mois
+                  <br />
+                  {reminderText}
+                  <br />
+                  Paiement direct : {monthLabel(app).toLowerCase()} à décembre —{" "}
+                  {direct} mois
+                </>
+              );
+            })()}
+          </p>
+        ) : null}
         {parsed?.fieldErrors.campaignYearInput ? (
           <p className="form-feedback form-feedback--error" role="alert">
             {parsed.fieldErrors.campaignYearInput.message}
+          </p>
+        ) : null}
+        {parsed?.fieldErrors.retroactivityStartMonthInput ? (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {parsed.fieldErrors.retroactivityStartMonthInput.message}
           </p>
         ) : null}
         {parsed?.fieldErrors.technicalApplicationMonthInput ? (
@@ -566,7 +627,7 @@ export function SimulationPage() {
         ) : null}
       </SectionCard>
 
-      <SectionCard title="Budget annuel cible">
+      <SectionCard title="Enveloppe de la période d’effet">
         <fieldset disabled={isReadOnly} className="form-grid">
           <legend className="visually-hidden">Mode de budget</legend>
           <label className="field">
@@ -605,7 +666,7 @@ export function SimulationPage() {
 
         {draft.budgetTargetMode === "manual_amount" ? (
           <label className="field field--full" htmlFor="simulation-manual-budget">
-            Budget annuel cible — FCFA
+            Enveloppe de la période d’effet — FCFA
             <input
               id="simulation-manual-budget"
               data-testid="simulation-manual-budget"

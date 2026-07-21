@@ -160,6 +160,38 @@ export function validatePreparedPopulationCalculationInput(
     );
   }
 
+  const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
+  if (
+    !Number.isInteger(retroactivityStartMonth) ||
+    retroactivityStartMonth < 1 ||
+    retroactivityStartMonth > 12
+  ) {
+    issues.push(
+      issue({
+        code: "INVALID_RETROACTIVITY_START_MONTH",
+        message:
+          "Le mois de début de rétroactivité doit être un entier entre 1 et 12.",
+        field: "retroactivityStartMonth",
+        step: "validate_input",
+      }),
+    );
+  } else if (
+    Number.isInteger(input.technicalApplicationMonth) &&
+    input.technicalApplicationMonth >= 1 &&
+    input.technicalApplicationMonth <= 12 &&
+    retroactivityStartMonth > input.technicalApplicationMonth
+  ) {
+    issues.push(
+      issue({
+        code: "RETROACTIVITY_MONTH_AFTER_APPLICATION_MONTH",
+        message:
+          "Le début de rétroactivité ne peut pas être postérieur au mois d’application technique.",
+        field: "retroactivityStartMonth",
+        step: "validate_input",
+      }),
+    );
+  }
+
   const seenIds = new Set<string>();
   for (const employee of input.employees ?? []) {
     if (

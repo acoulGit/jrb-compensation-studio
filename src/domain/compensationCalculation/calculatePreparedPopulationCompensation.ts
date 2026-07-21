@@ -26,6 +26,10 @@
  */
 
 import { technicalApplicationMonthLabelFr, validateApplicationCalendar } from "./baseSalaryReminder";
+import {
+  computeCampaignPeriodBreakdown,
+  FULL_YEAR_MONTH_COUNT,
+} from "./campaignPeriod";
 import { calculatePreparedEmployeeCompensation } from "./calculatePreparedEmployeeCompensation";
 import { CompensationCalculationError } from "./errors";
 import {
@@ -72,7 +76,6 @@ import {
 } from "./validatePreparedPopulationCalculationInput";
 
 const ZERO: ExactAmount = exactAmountFromInteger(0n);
-const TWELVE: ExactAmount = exactAmountFromInteger(12n);
 
 function wrapEmployeeError(
   employeeId: string,
@@ -133,9 +136,35 @@ export function calculatePreparedPopulationCompensation(
   const issues: PopulationCalculationIssue[] = [...validation.issues];
 
   let budgetTargetResult;
+  const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
+  let campaignPeriod;
   try {
-    if (validation.isValid) {
-      budgetTargetResult = resolveBudgetTarget(input.budgetTarget);
+    campaignPeriod = computeCampaignPeriodBreakdown({
+      campaignYear: input.campaignYear,
+      retroactivityStartMonth,
+      technicalApplicationMonth: input.technicalApplicationMonth,
+    });
+  } catch (error) {
+    if (error instanceof CompensationCalculationError) {
+      issues.push({
+        code: error.code,
+        message: error.message,
+        step: "application_calendar",
+      });
+    } else {
+      issues.push({
+        code: "APPLICATION_CALENDAR_INVARIANT_FAILED",
+        message: "Calendrier d’application invalide.",
+        step: "application_calendar",
+      });
+    }
+  }
+
+  try {
+    if (validation.isValid && campaignPeriod) {
+      budgetTargetResult = resolveBudgetTarget(input.budgetTarget, {
+        campaignCoveredMonthCount: campaignPeriod.campaignCoveredMonthCount,
+      });
     }
   } catch (error) {
     if (error instanceof CompensationCalculationError) {
@@ -183,10 +212,18 @@ export function calculatePreparedPopulationCompensation(
     );
   }
 
+  if (!campaignPeriod) {
+    throw new CompensationCalculationError(
+      "POPULATION_CALCULATION_FAILED",
+      "Période de campagne introuvable après validation.",
+    );
+  }
+
   try {
     validateApplicationCalendar({
       campaignYear: input.campaignYear,
       technicalApplicationMonth: input.technicalApplicationMonth,
+      retroactivityStartMonth,
     });
   } catch (error) {
     if (error instanceof CompensationCalculationError) {
@@ -207,6 +244,9 @@ export function calculatePreparedPopulationCompensation(
 
   const stepFcfa = parseRoundingStepFcfa(input.roundingPolicy);
   const annualBudgetTarget = budgetTargetResult.exactAmount;
+  const campaignCoveredMonthsExact = exactAmountFromInteger(
+    BigInt(campaignPeriod.campaignCoveredMonthCount),
+  );
 
   // Tri déterministe non mutable
   const sortedPrepared = [...preparedEmployees].sort((left, right) =>
@@ -245,6 +285,7 @@ export function calculatePreparedPopulationCompensation(
         potentialLevel: raw.potentialLevel,
         campaignYear: input.campaignYear,
         technicalApplicationMonth: input.technicalApplicationMonth,
+        retroactivityStartMonth,
         evaluationMode: input.references.evaluationMode,
         salaryGrid: input.references.salaryGrid,
         salaryPositions: input.references.salaryPositions,
@@ -314,6 +355,9 @@ export function calculatePreparedPopulationCompensation(
   const calibrationExposures: PromotionCompensatoryExposure[] = [];
   for (const [employeeId, exposures] of exposuresByEmployeeId) {
     for (const month of exposures.months) {
+      if (month.month < retroactivityStartMonth) {
+        continue;
+      }
       calibrationExposures.push({
         employeeId,
         month: month.month,
@@ -380,7 +424,10 @@ export function calculatePreparedPopulationCompensation(
     );
   }
 
-  const calibrationCoefficient = multiplyFractions(compensatoryCalibrationRate, TWELVE);
+  const calibrationCoefficient = multiplyFractions(
+    compensatoryCalibrationRate,
+    campaignCoveredMonthsExact,
+  );
 
   // Étape 6 — finalisation par salarié.
   const finalizeIssues: PopulationCalculationIssue[] = [];
@@ -397,6 +444,7 @@ export function calculatePreparedPopulationCompensation(
         hireDate: prepared.hireDate,
         campaignYear: input.campaignYear,
         technicalApplicationMonth: input.technicalApplicationMonth,
+        retroactivityStartMonth,
         months: exposures.months,
         calibrationRate: compensatoryCalibrationRate,
         roundingPolicy: { mode: "nearest_half_up", stepFcfa },
@@ -434,8 +482,8 @@ export function calculatePreparedPopulationCompensation(
       annualTheoreticalAllocation,
     );
 
-    const retroactiveMonths = input.technicalApplicationMonth - 1;
-    const remainingDirectPaymentMonths = 13 - input.technicalApplicationMonth;
+    const retroactiveMonths = campaignPeriod.reminderMonthCount;
+    const remainingDirectPaymentMonths = campaignPeriod.directPaymentMonthCount;
 
     const combinedAnnualActualCostFcfa =
       annualActualCostFcfa + finalized.annualPromotionBudgetCostFcfa;
@@ -509,6 +557,7 @@ export function calculatePreparedPopulationCompensation(
         label: "Rappel de salaire de base (compensatoire)",
         inputValues: {
           campaignYear: input.campaignYear,
+          retroactivityStartMonth,
           technicalApplicationMonth: input.technicalApplicationMonth,
           technicalApplicationMonthLabel: technicalApplicationMonthLabelFr(
             input.technicalApplicationMonth,
@@ -518,7 +567,7 @@ export function calculatePreparedPopulationCompensation(
         },
         outputValue: finalized.baseSalaryReminderFcfa.toString(),
         formula:
-          "rappel = Σ compléments mensuels arrondis (mois < moisApplication) ; direct = Σ (mois ≥ moisApplication)",
+          "rappel = Σ compléments mensuels arrondis (rétro ≤ mois < moisApplication) ; direct = Σ (mois ≥ moisApplication)",
         reason:
           "Somme directe des mois (et non multiplication par un montant constant) car le complément peut varier avec la promotion.",
       },
@@ -579,7 +628,9 @@ export function calculatePreparedPopulationCompensation(
       annualRoundingDelta,
       monthlyFinalSalaryFcfa: decemberEntry.finalSalaryFcfa,
       campaignYear: input.campaignYear,
+      retroactivityStartMonth,
       technicalApplicationMonth: input.technicalApplicationMonth,
+      campaignCoveredMonthCount: campaignPeriod.campaignCoveredMonthCount,
       retroactiveMonths,
       remainingDirectPaymentMonths,
       baseSalaryReminderFcfa: finalized.baseSalaryReminderFcfa,
@@ -618,6 +669,13 @@ export function calculatePreparedPopulationCompensation(
         finalized.promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa,
       promotionSeniorityFromTechnicalMonthToDecemberFcfa:
         finalized.promotionSeniorityFromTechnicalMonthToDecemberFcfa,
+      fullYearRunRatePromotionCostFcfa: finalized.fullYearRunRatePromotionCostFcfa,
+      fullYearRunRateCompensatoryCostFcfa:
+        finalized.fullYearRunRateCompensatoryCostFcfa,
+      fullYearRunRateCombinedBaseMeasureCostFcfa:
+        finalized.fullYearRunRateCombinedBaseMeasureCostFcfa,
+      fullYearRunRateSeniorityImpactFcfa:
+        finalized.fullYearRunRateSeniorityImpactFcfa,
       blockingReason: prepared.blockingReason,
       explanationSteps: employeeSteps,
     });
@@ -677,6 +735,10 @@ export function calculatePreparedPopulationCompensation(
   let totalPromotionCostFromTechnicalMonthToDecemberFcfa = 0n;
   let totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa = 0n;
   let totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa = 0n;
+  let fullYearRunRatePromotionCostFcfa = 0n;
+  let fullYearRunRateCompensatoryCostFcfa = 0n;
+  let fullYearRunRateCombinedBaseMeasureCostFcfa = 0n;
+  let fullYearRunRateSeniorityImpactFcfa = 0n;
 
   for (const employee of employees) {
     populationSalarySumFcfa += employee.salaryFcfa;
@@ -703,6 +765,22 @@ export function calculatePreparedPopulationCompensation(
       employee.promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa;
     totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa +=
       employee.promotionSeniorityFromTechnicalMonthToDecemberFcfa;
+    const december = employee.monthlyCompensationTrajectory.find(
+      (entry) => entry.month === 12,
+    )!;
+    const decemberPromo =
+      employee.promotionInclusion.includedInSimulation && december.promotionActive
+        ? employee.promotionInclusion.promotionAmountFcfa
+        : 0n;
+    fullYearRunRatePromotionCostFcfa +=
+      decemberPromo * BigInt(FULL_YEAR_MONTH_COUNT);
+    fullYearRunRateCompensatoryCostFcfa +=
+      december.roundedCompensatoryComplementFcfa * BigInt(FULL_YEAR_MONTH_COUNT);
+    fullYearRunRateCombinedBaseMeasureCostFcfa +=
+      (decemberPromo + december.roundedCompensatoryComplementFcfa) *
+      BigInt(FULL_YEAR_MONTH_COUNT);
+    fullYearRunRateSeniorityImpactFcfa +=
+      december.totalSeniorityImpactFcfa * BigInt(FULL_YEAR_MONTH_COUNT);
     if (employee.promotionInclusion.includedInSimulation) {
       promotedIncludedEmployeeCount += 1;
     }
@@ -757,7 +835,7 @@ export function calculatePreparedPopulationCompensation(
   );
   const monthlyTheoreticalIncreaseTotal = divideFractions(
     annualTheoreticalAllocatedTotal,
-    TWELVE,
+    campaignCoveredMonthsExact,
   );
 
   if (
@@ -802,13 +880,19 @@ export function calculatePreparedPopulationCompensation(
     ),
     populationSalarySumFcfa,
     campaignYear: input.campaignYear,
+    retroactivityStartMonth,
     technicalApplicationMonth: input.technicalApplicationMonth,
+    campaignCoveredMonthCount: campaignPeriod.campaignCoveredMonthCount,
     totalBaseSalaryReminderFcfa,
     totalRemainingYearDirectIncreaseCostFcfa,
     totalAnnualActualBaseIncreaseCostFcfa,
     totalSeniorityReminderFcfa,
     totalRemainingYearDirectSeniorityImpactFcfa,
     totalAnnualSeniorityImpactFcfa,
+    fullYearRunRatePromotionCostFcfa,
+    fullYearRunRateCompensatoryCostFcfa,
+    fullYearRunRateCombinedBaseMeasureCostFcfa,
+    fullYearRunRateSeniorityImpactFcfa,
     promotedIncludedEmployeeCount,
     compensatoryCalibrationRate,
     totalAnnualPromotionBudgetCostFcfa,
@@ -925,13 +1009,19 @@ export function calculatePreparedPopulationCompensation(
     annualActualOperationCostFcfa,
     annualTotalRoundingDelta,
     campaignYear: input.campaignYear,
+    retroactivityStartMonth,
     technicalApplicationMonth: input.technicalApplicationMonth,
+    campaignCoveredMonthCount: campaignPeriod.campaignCoveredMonthCount,
     totalBaseSalaryReminderFcfa,
     totalRemainingYearDirectIncreaseCostFcfa,
     totalAnnualActualBaseIncreaseCostFcfa,
     totalSeniorityReminderFcfa,
     totalRemainingYearDirectSeniorityImpactFcfa,
     totalAnnualSeniorityImpactFcfa,
+    fullYearRunRatePromotionCostFcfa,
+    fullYearRunRateCompensatoryCostFcfa,
+    fullYearRunRateCombinedBaseMeasureCostFcfa,
+    fullYearRunRateSeniorityImpactFcfa,
     promotedIncludedEmployeeCount,
     compensatoryCalibrationRate,
     totalAnnualPromotionBudgetCostFcfa,

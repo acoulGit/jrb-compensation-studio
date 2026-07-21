@@ -141,6 +141,7 @@ export async function saveCurrentCampaignSimulation(
     budgetTarget: validatedConfiguration.budgetTarget,
     roundingPolicy: validatedConfiguration.roundingPolicy,
     campaignYear: validatedConfiguration.campaignYear,
+    retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
   });
 
@@ -158,7 +159,18 @@ export async function saveCurrentCampaignSimulation(
       expectedCampaignStatus: campaign.status,
       sourceImportFileName: currentBatch?.sourceFileName ?? null,
     });
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      (error as { code: string }).code ===
+        "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION"
+    ) {
+      return failure(
+        "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION",
+        error.message,
+      );
+    }
     return failure(
       "SIMULATION_SAVE_FAILED",
       "Le résultat de simulation n’a pas pu être préparé pour l’enregistrement.",

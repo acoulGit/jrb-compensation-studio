@@ -1,11 +1,17 @@
 /**
- * Calendrier d’application technique et rappel de salaire de base (Lot 2A-H2A).
+ * Calendrier d’application technique et rappel de salaire de base
+ * (Lot 2A-H2A / Lot 2A-H2D-1).
  *
- * Le rappel est un décalage de paiement, pas un coût additionnel au budget annuel.
- * annualActualBaseIncreaseCost = monthlyFinalIncrease × 12
- *   = rappel + coût des mois restants payés directement.
+ * Le rappel couvre [retroactivityStartMonth … technicalApplicationMonth − 1].
+ * Le paiement direct couvre [technicalApplicationMonth … décembre].
+ * Le coût de campagne = somme sur la période couverte (pas forcément 12 mois).
  */
 
+import {
+  computeCampaignPeriodBreakdown,
+  FULL_YEAR_MONTH_COUNT,
+  type CampaignPeriodBreakdown,
+} from "./campaignPeriod";
 import { CompensationCalculationError } from "./errors";
 
 export const TECHNICAL_APPLICATION_MONTH_MIN = 1;
@@ -32,16 +38,27 @@ export const TECHNICAL_APPLICATION_MONTH_LABELS_FR = [
 export interface ApplicationCalendarInput {
   campaignYear: number;
   technicalApplicationMonth: number;
+  /** Défaut métier = 1 (janvier) pour parité des simulations historiques. */
+  retroactivityStartMonth?: number;
 }
 
 export interface BaseSalaryReminderBreakdown {
   campaignYear: number;
+  retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  campaignCoveredMonthCount: number;
+  /** Alias historique : reminderMonthCount. */
   retroactiveMonths: number;
   remainingDirectPaymentMonths: number;
   baseSalaryReminderFcfa: bigint;
   remainingYearDirectIncreaseCostFcfa: bigint;
+  /**
+   * Coût effectif de campagne (période couverte).
+   * @deprecated nom — préférer sémantique `campaignPeriodActualBaseIncreaseCostFcfa`.
+   */
   annualActualBaseIncreaseCostFcfa: bigint;
+  /** Indicateur informatif : rythme de décembre × 12. */
+  fullYearRunRateBaseIncreaseCostFcfa: bigint;
 }
 
 export function technicalApplicationMonthLabelFr(month: number): string {
@@ -82,21 +99,28 @@ export function validateTechnicalApplicationMonth(month: number): void {
 }
 
 export function validateApplicationCalendar(input: ApplicationCalendarInput): void {
-  validateCampaignYear(input.campaignYear);
-  validateTechnicalApplicationMonth(input.technicalApplicationMonth);
+  const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
+  computeCampaignPeriodBreakdown({
+    campaignYear: input.campaignYear,
+    retroactivityStartMonth,
+    technicalApplicationMonth: input.technicalApplicationMonth,
+  });
 }
 
 /**
- * Ventile le coût annuel de l’augmentation de base entre rappel et paiement direct.
- * Ne modifie pas l’allocation ni l’arrondi mensuel.
+ * Ventile le coût de campagne d’une augmentation mensuelle constante
+ * entre rappel et paiement direct. Ne modifie pas l’allocation ni l’arrondi.
  */
 export function computeBaseSalaryReminderBreakdown(input: {
   campaignYear: number;
   technicalApplicationMonth: number;
+  retroactivityStartMonth?: number;
   monthlyFinalIncreaseFcfa: bigint;
 }): BaseSalaryReminderBreakdown {
-  validateApplicationCalendar({
+  const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
+  const period: CampaignPeriodBreakdown = computeCampaignPeriodBreakdown({
     campaignYear: input.campaignYear,
+    retroactivityStartMonth,
     technicalApplicationMonth: input.technicalApplicationMonth,
   });
 
@@ -113,37 +137,14 @@ export function computeBaseSalaryReminderBreakdown(input: {
     );
   }
 
-  const technicalApplicationMonth = input.technicalApplicationMonth;
-  const retroactiveMonths = technicalApplicationMonth - 1;
-  const remainingDirectPaymentMonths = 13 - technicalApplicationMonth;
-
-  if (retroactiveMonths < 0 || retroactiveMonths > 11) {
-    throw new CompensationCalculationError(
-      "INVALID_RETROACTIVE_MONTHS",
-      "Le nombre de mois de rappel doit être entre 0 et 11.",
-    );
-  }
-  if (
-    remainingDirectPaymentMonths < 1 ||
-    remainingDirectPaymentMonths > 12
-  ) {
-    throw new CompensationCalculationError(
-      "INVALID_REMAINING_DIRECT_PAYMENT_MONTHS",
-      "Le nombre de mois restants doit être entre 1 et 12.",
-    );
-  }
-  if (retroactiveMonths + remainingDirectPaymentMonths !== 12) {
-    throw new CompensationCalculationError(
-      "APPLICATION_CALENDAR_INVARIANT_FAILED",
-      "Incohérence calendrier : rappel + mois restants ≠ 12.",
-    );
-  }
-
   const monthly = input.monthlyFinalIncreaseFcfa;
-  const baseSalaryReminderFcfa = monthly * BigInt(retroactiveMonths);
+  const baseSalaryReminderFcfa = monthly * BigInt(period.reminderMonthCount);
   const remainingYearDirectIncreaseCostFcfa =
-    monthly * BigInt(remainingDirectPaymentMonths);
-  const annualActualBaseIncreaseCostFcfa = monthly * 12n;
+    monthly * BigInt(period.directPaymentMonthCount);
+  const annualActualBaseIncreaseCostFcfa =
+    monthly * BigInt(period.campaignCoveredMonthCount);
+  const fullYearRunRateBaseIncreaseCostFcfa =
+    monthly * BigInt(FULL_YEAR_MONTH_COUNT);
 
   if (
     baseSalaryReminderFcfa + remainingYearDirectIncreaseCostFcfa !==
@@ -151,17 +152,20 @@ export function computeBaseSalaryReminderBreakdown(input: {
   ) {
     throw new CompensationCalculationError(
       "BASE_SALARY_REMINDER_INVARIANT_FAILED",
-      "Incohérence rappel : rappel + paiement direct ≠ coût annuel.",
+      "Incohérence rappel : rappel + paiement direct ≠ coût de période.",
     );
   }
 
   return {
     campaignYear: input.campaignYear,
-    technicalApplicationMonth,
-    retroactiveMonths,
-    remainingDirectPaymentMonths,
+    retroactivityStartMonth,
+    technicalApplicationMonth: period.technicalApplicationMonth,
+    campaignCoveredMonthCount: period.campaignCoveredMonthCount,
+    retroactiveMonths: period.reminderMonthCount,
+    remainingDirectPaymentMonths: period.directPaymentMonthCount,
     baseSalaryReminderFcfa,
     remainingYearDirectIncreaseCostFcfa,
     annualActualBaseIncreaseCostFcfa,
+    fullYearRunRateBaseIncreaseCostFcfa,
   };
 }

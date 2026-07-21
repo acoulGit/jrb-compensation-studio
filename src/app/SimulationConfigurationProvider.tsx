@@ -76,6 +76,7 @@ interface SimulationConfigurationContextValue {
   setRoundingStepInput: (value: string) => void;
   applyRoundingStepSuggestion: (value: string) => void;
   setCampaignYearInput: (value: string) => void;
+  setRetroactivityStartMonthInput: (value: string) => void;
   setTechnicalApplicationMonthInput: (value: string) => void;
   validateConfiguration: () => Promise<boolean>;
   refreshReadiness: () => Promise<void>;
@@ -300,6 +301,16 @@ export function SimulationConfigurationProvider({
     [patchDraft],
   );
 
+  const setRetroactivityStartMonthInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({
+        ...current,
+        retroactivityStartMonthInput: value,
+      }));
+    },
+    [patchDraft],
+  );
+
   const setTechnicalApplicationMonthInput = useCallback(
     (value: string) => {
       patchDraft((current) => ({
@@ -320,6 +331,7 @@ export function SimulationConfigurationProvider({
         draft.roundingMode ?? "",
         draft.roundingStepInput,
         draft.campaignYearInput,
+        draft.retroactivityStartMonthInput,
         draft.technicalApplicationMonthInput,
       ].join("|")
     : "";
@@ -417,6 +429,7 @@ export function SimulationConfigurationProvider({
       budgetTarget: validatedConfiguration.budgetTarget,
       roundingPolicy: validatedConfiguration.roundingPolicy,
       campaignYear: validatedConfiguration.campaignYear,
+      retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
       technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
     });
 
@@ -436,13 +449,22 @@ export function SimulationConfigurationProvider({
 
   const resolvedBudgetDetails = useMemo(() => {
     if (!parsed?.budgetTarget) return null;
+    const coveredMonths = parsed.retroactivityStartMonth
+      ? 13 - parsed.retroactivityStartMonth
+      : 12;
     try {
-      const resolved = resolveBudgetTarget(parsed.budgetTarget);
+      const resolved = resolveBudgetTarget(parsed.budgetTarget, {
+        campaignCoveredMonthCount: coveredMonths,
+      });
       const label = formatExactAmountAsFcfa(resolved.exactAmount);
+      const periodHint =
+        coveredMonths === 12
+          ? "12 mois (janvier–décembre)"
+          : `${coveredMonths} mois (période d’effet)`;
       if (resolved.mode === "manual_amount") {
         return {
           mode: "manual_amount" as const,
-          lines: [`Budget annuel cible exact : ${label}`],
+          lines: [`Enveloppe de la période d’effet (${periodHint}) : ${label}`],
         };
       }
       const payroll = resolved.eligiblePayrollFcfa ?? 0n;
@@ -452,7 +474,8 @@ export function SimulationConfigurationProvider({
         lines: [
           `Assiette mensuelle : ${formatExactAmountAsFcfa({ numerator: payroll, denominator: 1n })}`,
           `Taux : ${formatBasisPointsAsPercent(rate)}`,
-          `Budget annuel cible exact : ${label}`,
+          `Mois couverts : ${coveredMonths}`,
+          `Enveloppe de la période d’effet : ${label}`,
         ],
       };
     } catch {
@@ -489,6 +512,7 @@ export function SimulationConfigurationProvider({
       !currentParsed.budgetTarget ||
       !currentParsed.roundingPolicy ||
       currentParsed.campaignYear === null ||
+      currentParsed.retroactivityStartMonth === null ||
       currentParsed.technicalApplicationMonth === null
     ) {
       return false;
@@ -530,6 +554,7 @@ export function SimulationConfigurationProvider({
       roundingMode: currentParsed.roundingPolicy.mode,
       roundingStep: BigInt(currentParsed.roundingPolicy.stepFcfa),
       campaignYear: currentParsed.campaignYear,
+      retroactivityStartMonth: currentParsed.retroactivityStartMonth,
       technicalApplicationMonth: currentParsed.technicalApplicationMonth,
     });
     const sourceFingerprint = buildSimulationSourceFingerprint({
@@ -542,6 +567,7 @@ export function SimulationConfigurationProvider({
       budgetTarget: currentParsed.budgetTarget,
       roundingPolicy: currentParsed.roundingPolicy,
       campaignYear: currentParsed.campaignYear,
+      retroactivityStartMonth: currentParsed.retroactivityStartMonth,
       technicalApplicationMonth: currentParsed.technicalApplicationMonth,
     });
 
@@ -550,6 +576,7 @@ export function SimulationConfigurationProvider({
       budgetTarget: currentParsed.budgetTarget,
       roundingPolicy: currentParsed.roundingPolicy,
       campaignYear: currentParsed.campaignYear,
+      retroactivityStartMonth: currentParsed.retroactivityStartMonth,
       technicalApplicationMonth: currentParsed.technicalApplicationMonth,
       readinessReport: report,
       validatedAtSessionSequence: nextSequence,
@@ -609,6 +636,7 @@ export function SimulationConfigurationProvider({
       setRoundingStepInput,
       applyRoundingStepSuggestion,
       setCampaignYearInput,
+      setRetroactivityStartMonthInput,
       setTechnicalApplicationMonthInput,
       validateConfiguration,
       refreshReadiness,
@@ -636,6 +664,7 @@ export function SimulationConfigurationProvider({
       setEligiblePayrollInput,
       setManualBudgetInput,
       setRoundingStepInput,
+      setRetroactivityStartMonthInput,
       setTechnicalApplicationMonthInput,
       validateConfiguration,
       validatedConfiguration,

@@ -90,6 +90,14 @@ export function withPromotionAwareBudgetSummary(
     | "seniorityImpactSummary"
     | "hasStructuredPromotions"
     | "hasImputedPromotionBudgetCost"
+    | "fullYearRunRatePromotionCostFcfa"
+    | "fullYearRunRatePromotionCostLabel"
+    | "fullYearRunRateCompensatoryCostFcfa"
+    | "fullYearRunRateCompensatoryCostLabel"
+    | "fullYearRunRateCombinedBaseMeasureCostFcfa"
+    | "fullYearRunRateCombinedBaseMeasureCostLabel"
+    | "fullYearRunRateSeniorityImpactFcfa"
+    | "fullYearRunRateSeniorityImpactLabel"
   > &
     Partial<
       Pick<
@@ -99,6 +107,14 @@ export function withPromotionAwareBudgetSummary(
         | "seniorityImpactSummary"
         | "hasStructuredPromotions"
         | "hasImputedPromotionBudgetCost"
+        | "fullYearRunRatePromotionCostFcfa"
+        | "fullYearRunRatePromotionCostLabel"
+        | "fullYearRunRateCompensatoryCostFcfa"
+        | "fullYearRunRateCompensatoryCostLabel"
+        | "fullYearRunRateCombinedBaseMeasureCostFcfa"
+        | "fullYearRunRateCombinedBaseMeasureCostLabel"
+        | "fullYearRunRateSeniorityImpactFcfa"
+        | "fullYearRunRateSeniorityImpactLabel"
       >
     >,
 ): SimulationBudgetSummaryView {
@@ -131,6 +147,26 @@ export function withPromotionAwareBudgetSummary(
     }),
     seniorityImpactSummary:
       base.seniorityImpactSummary ?? emptySeniorityImpactSummary(),
+    fullYearRunRatePromotionCostFcfa:
+      base.fullYearRunRatePromotionCostFcfa ?? 0n,
+    fullYearRunRatePromotionCostLabel:
+      base.fullYearRunRatePromotionCostLabel ?? ZERO_LABEL,
+    fullYearRunRateCompensatoryCostFcfa:
+      base.fullYearRunRateCompensatoryCostFcfa ??
+      base.annualActualOperationCostFcfa,
+    fullYearRunRateCompensatoryCostLabel:
+      base.fullYearRunRateCompensatoryCostLabel ??
+      base.annualActualOperationCostLabel,
+    fullYearRunRateCombinedBaseMeasureCostFcfa:
+      base.fullYearRunRateCombinedBaseMeasureCostFcfa ??
+      base.annualActualOperationCostFcfa,
+    fullYearRunRateCombinedBaseMeasureCostLabel:
+      base.fullYearRunRateCombinedBaseMeasureCostLabel ??
+      base.annualActualOperationCostLabel,
+    fullYearRunRateSeniorityImpactFcfa:
+      base.fullYearRunRateSeniorityImpactFcfa ?? 0n,
+    fullYearRunRateSeniorityImpactLabel:
+      base.fullYearRunRateSeniorityImpactLabel ?? ZERO_LABEL,
     hasStructuredPromotions: base.hasStructuredPromotions ?? false,
     hasImputedPromotionBudgetCost: base.hasImputedPromotionBudgetCost ?? false,
   };
@@ -182,6 +218,16 @@ export function withPromotionAwareEmployeeDefaults(
     | "technicalMonthFinalSalaryFcfa"
     | "technicalMonthFinalSalaryLabel"
     | "monthlyCompensationTrajectory"
+    | "retroactivityStartMonth"
+    | "campaignCoveredMonthCount"
+    | "fullYearRunRatePromotionCostFcfa"
+    | "fullYearRunRatePromotionCostLabel"
+    | "fullYearRunRateCompensatoryCostFcfa"
+    | "fullYearRunRateCompensatoryCostLabel"
+    | "fullYearRunRateCombinedBaseMeasureCostFcfa"
+    | "fullYearRunRateCombinedBaseMeasureCostLabel"
+    | "fullYearRunRateSeniorityImpactFcfa"
+    | "fullYearRunRateSeniorityImpactLabel"
   > &
     Partial<EmployeeSimulationResultView>,
 ): EmployeeSimulationResultView {
@@ -230,6 +276,30 @@ export function withPromotionAwareEmployeeDefaults(
     technicalMonthFinalSalaryFcfa: employee.monthlyFinalSalaryFcfa,
     technicalMonthFinalSalaryLabel: "x",
     monthlyCompensationTrajectory: [],
+    retroactivityStartMonth: employee.retroactivityStartMonth ?? 1,
+    campaignCoveredMonthCount:
+      employee.campaignCoveredMonthCount ??
+      13 - (employee.retroactivityStartMonth ?? 1),
+    fullYearRunRatePromotionCostFcfa:
+      employee.fullYearRunRatePromotionCostFcfa ?? 0n,
+    fullYearRunRatePromotionCostLabel:
+      employee.fullYearRunRatePromotionCostLabel ?? ZERO_LABEL,
+    fullYearRunRateCompensatoryCostFcfa:
+      employee.fullYearRunRateCompensatoryCostFcfa ??
+      employee.annualActualCostFcfa ??
+      0n,
+    fullYearRunRateCompensatoryCostLabel:
+      employee.fullYearRunRateCompensatoryCostLabel ?? ZERO_LABEL,
+    fullYearRunRateCombinedBaseMeasureCostFcfa:
+      employee.fullYearRunRateCombinedBaseMeasureCostFcfa ??
+      employee.annualActualCostFcfa ??
+      0n,
+    fullYearRunRateCombinedBaseMeasureCostLabel:
+      employee.fullYearRunRateCombinedBaseMeasureCostLabel ?? ZERO_LABEL,
+    fullYearRunRateSeniorityImpactFcfa:
+      employee.fullYearRunRateSeniorityImpactFcfa ?? 0n,
+    fullYearRunRateSeniorityImpactLabel:
+      employee.fullYearRunRateSeniorityImpactLabel ?? ZERO_LABEL,
     ...employee,
   };
 }

@@ -26,6 +26,8 @@ export interface ValidatedCampaignSimulationConfiguration {
   roundingPolicy: RoundingPolicy;
   /** Année de campagne explicite (déterministe). */
   campaignYear: number;
+  /** Début de rétroactivité (1–12). Défaut = 1. */
+  retroactivityStartMonth: number;
   /** Mois d’application technique (1–12). */
   technicalApplicationMonth: number;
   readinessReport: CampaignSimulationReadinessReport;
@@ -54,6 +56,7 @@ export function createEmptyConfigurationDraft(
     roundingMode: "nearest_half_up",
     roundingStepInput: "",
     campaignYearInput: String(uiDefaultYear),
+    retroactivityStartMonthInput: "1",
     technicalApplicationMonthInput: "1",
   };
 }

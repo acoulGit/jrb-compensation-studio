@@ -122,6 +122,8 @@ function mapTrajectoryEntry(
       entry.paymentTiming,
     ),
     paymentTiming: entry.paymentTiming,
+    coveredByCampaignPeriod: entry.coveredByCampaignPeriod,
+    includedInCampaignEnvelope: entry.includedInCampaignEnvelope,
     promotionActive: entry.promotionActive,
     promotionStatus: entry.promotionStatus,
   };
@@ -219,7 +221,9 @@ function mapEmployee(
     ),
     monthlyFinalSalaryFcfa: employee.monthlyFinalSalaryFcfa,
     campaignYear: employee.campaignYear,
+    retroactivityStartMonth: employee.retroactivityStartMonth,
     technicalApplicationMonth: employee.technicalApplicationMonth,
+    campaignCoveredMonthCount: employee.campaignCoveredMonthCount,
     retroactiveMonths: employee.retroactiveMonths,
     remainingDirectPaymentMonths: employee.remainingDirectPaymentMonths,
     baseSalaryReminderFcfa: employee.baseSalaryReminderFcfa,
@@ -241,6 +245,25 @@ function mapEmployee(
     remainingYearDirectSeniorityImpactFcfa:
       employee.remainingYearDirectSeniorityImpactFcfa,
     annualSeniorityImpactFcfa: employee.annualSeniorityImpactFcfa,
+    fullYearRunRatePromotionCostFcfa: employee.fullYearRunRatePromotionCostFcfa,
+    fullYearRunRatePromotionCostLabel: formatFcfaInteger(
+      employee.fullYearRunRatePromotionCostFcfa,
+    ),
+    fullYearRunRateCompensatoryCostFcfa:
+      employee.fullYearRunRateCompensatoryCostFcfa,
+    fullYearRunRateCompensatoryCostLabel: formatFcfaInteger(
+      employee.fullYearRunRateCompensatoryCostFcfa,
+    ),
+    fullYearRunRateCombinedBaseMeasureCostFcfa:
+      employee.fullYearRunRateCombinedBaseMeasureCostFcfa,
+    fullYearRunRateCombinedBaseMeasureCostLabel: formatFcfaInteger(
+      employee.fullYearRunRateCombinedBaseMeasureCostFcfa,
+    ),
+    fullYearRunRateSeniorityImpactFcfa:
+      employee.fullYearRunRateSeniorityImpactFcfa,
+    fullYearRunRateSeniorityImpactLabel: formatFcfaInteger(
+      employee.fullYearRunRateSeniorityImpactFcfa,
+    ),
     compensatoryMeasureEligible: employee.compensatoryMeasureEligible,
     isPromotionBudgetPopulationEmployee:
       employee.isPromotionBudgetPopulationEmployee,
@@ -535,6 +558,26 @@ export function buildSimulationResultView(input: {
     envelopeSummary: buildEnvelopeSummary(engineResult),
     paymentCalendar: buildPaymentCalendar(engineResult),
     seniorityImpactSummary: buildSeniorityImpactSummary(engineResult),
+    fullYearRunRatePromotionCostFcfa:
+      engineResult.fullYearRunRatePromotionCostFcfa,
+    fullYearRunRatePromotionCostLabel: formatFcfaInteger(
+      engineResult.fullYearRunRatePromotionCostFcfa,
+    ),
+    fullYearRunRateCompensatoryCostFcfa:
+      engineResult.fullYearRunRateCompensatoryCostFcfa,
+    fullYearRunRateCompensatoryCostLabel: formatFcfaInteger(
+      engineResult.fullYearRunRateCompensatoryCostFcfa,
+    ),
+    fullYearRunRateCombinedBaseMeasureCostFcfa:
+      engineResult.fullYearRunRateCombinedBaseMeasureCostFcfa,
+    fullYearRunRateCombinedBaseMeasureCostLabel: formatFcfaInteger(
+      engineResult.fullYearRunRateCombinedBaseMeasureCostFcfa,
+    ),
+    fullYearRunRateSeniorityImpactFcfa:
+      engineResult.fullYearRunRateSeniorityImpactFcfa,
+    fullYearRunRateSeniorityImpactLabel: formatFcfaInteger(
+      engineResult.fullYearRunRateSeniorityImpactFcfa,
+    ),
     hasStructuredPromotions,
     hasImputedPromotionBudgetCost:
       engineResult.totalAnnualPromotionBudgetCostFcfa > 0n,
@@ -551,7 +594,9 @@ export function buildSimulationResultView(input: {
     isTheoreticalBudgetExactlyAllocated:
       summary.isTheoreticalBudgetExactlyAllocated,
     campaignYear: summary.campaignYear,
+    retroactivityStartMonth: summary.retroactivityStartMonth,
     technicalApplicationMonth: summary.technicalApplicationMonth,
+    campaignCoveredMonthCount: summary.campaignCoveredMonthCount,
     totalBaseSalaryReminderFcfa: summary.totalBaseSalaryReminderFcfa,
     totalRemainingYearDirectIncreaseCostFcfa:
       summary.totalRemainingYearDirectIncreaseCostFcfa,
@@ -561,6 +606,25 @@ export function buildSimulationResultView(input: {
     totalRemainingYearDirectSeniorityImpactFcfa:
       summary.totalRemainingYearDirectSeniorityImpactFcfa,
     totalAnnualSeniorityImpactFcfa: summary.totalAnnualSeniorityImpactFcfa,
+    fullYearRunRatePromotionCostFcfa: summary.fullYearRunRatePromotionCostFcfa,
+    fullYearRunRatePromotionCostLabel: formatFcfaInteger(
+      summary.fullYearRunRatePromotionCostFcfa,
+    ),
+    fullYearRunRateCompensatoryCostFcfa:
+      summary.fullYearRunRateCompensatoryCostFcfa,
+    fullYearRunRateCompensatoryCostLabel: formatFcfaInteger(
+      summary.fullYearRunRateCompensatoryCostFcfa,
+    ),
+    fullYearRunRateCombinedBaseMeasureCostFcfa:
+      summary.fullYearRunRateCombinedBaseMeasureCostFcfa,
+    fullYearRunRateCombinedBaseMeasureCostLabel: formatFcfaInteger(
+      summary.fullYearRunRateCombinedBaseMeasureCostFcfa,
+    ),
+    fullYearRunRateSeniorityImpactFcfa:
+      summary.fullYearRunRateSeniorityImpactFcfa,
+    fullYearRunRateSeniorityImpactLabel: formatFcfaInteger(
+      summary.fullYearRunRateSeniorityImpactFcfa,
+    ),
     promotedIncludedEmployeeCount: summary.promotedIncludedEmployeeCount,
     totalAnnualPromotionBudgetCostFcfa: summary.totalAnnualPromotionBudgetCostFcfa,
     availableAnnualCompensatoryBudget: summary.availableAnnualCompensatoryBudget,

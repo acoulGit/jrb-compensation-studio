@@ -235,7 +235,7 @@ describe("Lot 2A-H2C-2B — mapping vue sans promotion", () => {
       .join(" ");
     expect(rateLabels).not.toMatch(/\//);
     expect(rateLabels).not.toMatch(/numerator/);
-    expect(CALCULATION_CONTRACT_VERSION).toBe(2);
+    expect(CALCULATION_CONTRACT_VERSION).toBe(3);
     expect(RESULT_SCHEMA_VERSION).toBe(2);
     expect(SENIORITY_IMPACT_CONTRACT_VERSION).toBe(1);
   });
@@ -490,21 +490,23 @@ describe("Lot 2A-H2C-2B — parité fixture vue", () => {
     );
     expect(
       view.budgetSummary.envelopeSummary.totalAnnualActualCompensatoryCostFcfa,
-    ).toBe(engine.annualActualOperationCostFcfa);
+    ).toBe(5_000_040n);
+    expect(engine.annualActualOperationCostFcfa).toBe(5_000_040n);
     expect(
-      view.budgetSummary.envelopeSummary.annualCombinedRoundingDeltaLabel,
-    ).toMatch(/[\u2212+-]/);
+      fractionsEqual(
+        engine.annualTotalRoundingDelta,
+        exactAmountFromInteger(17n),
+      ),
+    ).toBe(true);
     const empEngine = engine.employees.find((e) => e.employeeId === "EMP-2002")!;
     const empView = view.employees.find((e) => e.employeeId === "EMP-2002")!;
     expect(empView.technicalMonthCompensatoryComplementFcfa).toBe(
       empEngine.monthlyFinalRoundedIncreaseFcfa,
     );
-    if (engine.annualActualOperationCostFcfa === 4_999_860n) {
-      expect(empView.technicalMonthCompensatoryComplementFcfa).toBe(31_110n);
-      expect(
-        view.budgetSummary.envelopeSummary.annualCombinedRoundingDeltaLabel,
-      ).toMatch(/\u2212163/);
-    }
+    expect(empView.technicalMonthCompensatoryComplementFcfa).toBe(30_205n);
+    expect(
+      view.budgetSummary.envelopeSummary.annualCombinedRoundingDeltaLabel,
+    ).toMatch(/\+17|17/);
     expect(view.budgetSummary.hasStructuredPromotions).toBe(false);
   });
 });

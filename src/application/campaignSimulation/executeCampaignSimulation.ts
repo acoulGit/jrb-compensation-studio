@@ -164,6 +164,7 @@ export async function executeCampaignSimulation(
     roundingPolicy: validatedConfiguration.roundingPolicy,
     campaignYear: validatedConfiguration.campaignYear,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
+    retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
   });
 
   const currentConfigFingerprint = buildConfigurationFingerprint({
@@ -184,6 +185,7 @@ export async function executeCampaignSimulation(
     roundingMode: validatedConfiguration.roundingPolicy.mode,
     roundingStep: BigInt(validatedConfiguration.roundingPolicy.stepFcfa),
     campaignYear: validatedConfiguration.campaignYear,
+    retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
   });
 
@@ -226,6 +228,7 @@ export async function executeCampaignSimulation(
     roundingPolicy: validatedConfiguration.roundingPolicy,
     campaignYear: validatedConfiguration.campaignYear,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
+    retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
   };
 
   let engineResult;

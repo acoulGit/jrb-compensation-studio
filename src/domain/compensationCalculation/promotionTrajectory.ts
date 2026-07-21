@@ -1,12 +1,17 @@
 /**
- * Promotion événementielle et trajectoire salariale mensuelle (Lot 2A-H2C-1).
+ * Promotion événementielle et trajectoire salariale mensuelle
+ * (Lot 2A-H2C-1 / Lot 2A-H2D-1).
  *
- * Ne modifie pas encore l’allocation budgétaire (H2C-2).
- * Le coût campagne (`promotionCampaignCostFcfa`) est préparé mais n’est
- * **jamais** additionné au budget cible dans ce sous-lot.
+ * Trajectoire calendaire janvier–décembre conservée.
+ * Le coût campagne imputable est limité à l’intersection entre l’effet
+ * de la promotion et la période budgétaire [rétroactivité … décembre].
  * Déterministe : parse année/mois ISO sans Date.now() ni fuseau.
  */
 
+import {
+  computePromotionCampaignPeriodMonthCount,
+  FULL_YEAR_MONTH_COUNT,
+} from "./campaignPeriod";
 import { exactAmountFromInteger, reduceFraction, type ExactAmount } from "./exactFraction";
 
 export const PROMOTION_TRAJECTORY_CONTRACT_VERSION = 1 as const;
@@ -238,10 +243,13 @@ export function validatePromotionAgainstDecemberSnapshot(input: {
 /**
  * Trajectoire mensuelle janvier–décembre pour l’année de campagne.
  * La promotion est payée dès son mois d’effet (pas de rappel de promotion).
+ * Le coût campagne imputable est borné par `retroactivityStartMonth`.
  */
 export function buildPromotionAwareMonthlySalaryTrajectory(input: {
   campaignYear: number;
   technicalApplicationMonth: number;
+  /** Défaut = 1 (janvier) — parité historique. */
+  retroactivityStartMonth?: number;
   decemberBaseSalaryFcfa: bigint;
   currentGradeCode: string;
   currentJobFamilyCode: string;
@@ -257,12 +265,29 @@ export function buildPromotionAwareMonthlySalaryTrajectory(input: {
       "Le mois d’application technique doit être entre 1 et 12.",
     );
   }
+  const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
+  if (
+    !Number.isInteger(retroactivityStartMonth) ||
+    retroactivityStartMonth < 1 ||
+    retroactivityStartMonth > 12
+  ) {
+    throw new PromotionValidationError(
+      "INVALID_RETROACTIVITY_START_MONTH",
+      "Le mois de début de rétroactivité doit être entre 1 et 12.",
+    );
+  }
+  if (retroactivityStartMonth > input.technicalApplicationMonth) {
+    throw new PromotionValidationError(
+      "RETROACTIVITY_MONTH_AFTER_APPLICATION_MONTH",
+      "Le début de rétroactivité ne peut pas être postérieur au mois d’application technique.",
+    );
+  }
 
   const baselineGrade = input.currentGradeCode.trim().toUpperCase();
   const baselineFamily = input.currentJobFamilyCode.trim().toUpperCase();
 
   if (!input.promotion) {
-    const trajectory = Array.from({ length: 12 }, (_, index) => ({
+    const trajectory = Array.from({ length: FULL_YEAR_MONTH_COUNT }, (_, index) => ({
       month: index + 1,
       baseSalaryFcfa: input.decemberBaseSalaryFcfa,
       gradeCode: baselineGrade,
@@ -298,7 +323,7 @@ export function buildPromotionAwareMonthlySalaryTrajectory(input: {
     !isPreviousYear && promotionMonth > input.technicalApplicationMonth;
 
   if (excluded) {
-    const trajectory = Array.from({ length: 12 }, (_, index) => ({
+    const trajectory = Array.from({ length: FULL_YEAR_MONTH_COUNT }, (_, index) => ({
       month: index + 1,
       baseSalaryFcfa: input.decemberBaseSalaryFcfa,
       gradeCode: baselineGrade,
@@ -322,7 +347,7 @@ export function buildPromotionAwareMonthlySalaryTrajectory(input: {
   }
 
   const trajectory: MonthlySalaryTrajectoryEntry[] = [];
-  for (let month = 1; month <= 12; month += 1) {
+  for (let month = 1; month <= FULL_YEAR_MONTH_COUNT; month += 1) {
     if (isPreviousYear) {
       trajectory.push({
         month,
@@ -365,9 +390,12 @@ export function buildPromotionAwareMonthlySalaryTrajectory(input: {
     }
   }
 
-  const promotionApplicableMonths = isPreviousYear
-    ? 12
-    : 13 - promotionMonth;
+  const promotionApplicableMonths = computePromotionCampaignPeriodMonthCount({
+    includedInSimulation: true,
+    retroactivityStartMonth,
+    isPreviousYearPromotion: isPreviousYear,
+    promotionMonth,
+  });
   const promotionCampaignCostFcfa =
     input.promotion.promotionAmountFcfa * BigInt(promotionApplicableMonths);
 

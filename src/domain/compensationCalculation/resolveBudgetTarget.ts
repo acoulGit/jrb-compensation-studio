@@ -1,6 +1,6 @@
-/** Résolution exacte du budget cible ANNUEL (Lot 2A-3 / correctif 2A-H1). */
+/** Résolution exacte du budget cible de période (Lot 2A-3 / H1 / H2D-1). */
 
-import { ANNUAL_BUDGET_PERIOD_MONTHS } from "./calculationContract";
+import { FULL_YEAR_MONTH_COUNT } from "./calculationContract";
 import { CompensationCalculationError } from "./errors";
 import {
   exactAmountFromInteger,
@@ -48,17 +48,41 @@ function isKnownMode(mode: string): mode is BudgetTargetMode {
   return (BUDGET_TARGET_MODES as readonly string[]).includes(mode);
 }
 
+export interface ResolveBudgetTargetOptions {
+  /**
+   * Nombre de mois couverts par la campagne (13 − retroactivityStartMonth).
+   * Défaut = 12 pour parité contrat v2 / rétroactivité janvier.
+   */
+  campaignCoveredMonthCount?: number;
+}
+
 /**
- * Résout le budget cible ANNUEL exact (fraction rationnelle).
+ * Résout le budget cible exact de la période d’effet (fraction rationnelle).
  * Aucun arrondi. Mode toujours explicite.
  *
- * - `manual_amount` : montant saisi = budget annuel cible.
- * - `percentage_of_eligible_payroll` : `eligiblePayrollFcfa` = masse MENSUELLE
- *   éligible ; annualisée × 12 avant application du taux.
+ * - `manual_amount` : montant saisi = enveloppe de la période d’effet
+ *   (sans annualisation automatique).
+ * - `percentage_of_eligible_payroll` :
+ *   masse mensuelle × mois couverts × taux.
  */
 export function resolveBudgetTarget(
   input: BudgetTargetInput,
+  options?: ResolveBudgetTargetOptions,
 ): ResolvedBudgetTarget {
+  const campaignCoveredMonthCount =
+    options?.campaignCoveredMonthCount ?? FULL_YEAR_MONTH_COUNT;
+  if (
+    !Number.isInteger(campaignCoveredMonthCount) ||
+    campaignCoveredMonthCount < 1 ||
+    campaignCoveredMonthCount > FULL_YEAR_MONTH_COUNT
+  ) {
+    throw new CompensationCalculationError(
+      "INVALID_BUDGET_TARGET",
+      "Le nombre de mois couverts par la campagne doit être un entier entre 1 et 12.",
+    );
+  }
+  const coveredMonths = BigInt(campaignCoveredMonthCount);
+
   if (!isKnownMode(input.mode)) {
     throw new CompensationCalculationError(
       "UNSUPPORTED_BUDGET_TARGET_MODE",
@@ -86,23 +110,23 @@ export function resolveBudgetTarget(
     const exactAmount = exactAmountFromInteger(manualBudgetFcfa);
     const explanationSteps: CalculationExplanationStep[] = [
       {
-        code: "BUDGET_TARGET_MANUAL_ANNUAL",
-        label: "Budget cible annuel — montant manuel",
+        code: "BUDGET_TARGET_MANUAL_PERIOD",
+        label: "Budget cible de période — montant manuel",
         inputValues: {
           mode: "manual_amount",
           manualBudgetFcfa: manualBudgetFcfa.toString(),
-          annualBudgetPeriodMonths: ANNUAL_BUDGET_PERIOD_MONTHS.toString(),
+          campaignCoveredMonthCount: campaignCoveredMonthCount.toString(),
           employerChargesIncluded: false,
           ignoredForeignFields: ignoredForeignFields.join(",") || null,
         },
         outputValue: formatExactAmount(exactAmount),
-        formula: "annualBudgetTarget = manualBudgetFcfa / 1",
+        formula: "campaignPeriodBudgetTarget = manualBudgetFcfa / 1",
         reason:
-          "Le montant saisi est le coût annuel des augmentations (12 mois), hors charges patronales.",
+          "Le montant saisi est l’enveloppe de la période d’effet (sans annualisation), hors charges patronales.",
       },
       {
         code: "BUDGET_TARGET_EXACT",
-        label: "Budget annuel cible exact",
+        label: "Budget de période cible exact",
         inputValues: {
           numerator: exactAmount.numerator.toString(),
           denominator: exactAmount.denominator.toString(),
@@ -136,12 +160,13 @@ export function resolveBudgetTarget(
       sourceValues: {
         mode: "manual_amount",
         manualBudgetFcfa: manualBudgetFcfa.toString(),
+        campaignCoveredMonthCount: campaignCoveredMonthCount.toString(),
       },
       explanationSteps,
     };
   }
 
-  // percentage_of_eligible_payroll — assiette mensuelle annualisée × 12
+  // percentage_of_eligible_payroll — masse mensuelle × mois couverts
   const eligibleMonthlyPayrollFcfa = parseNonNegativeInteger(
     input.eligiblePayrollFcfa,
     "MISSING_ELIGIBLE_PAYROLL",
@@ -157,44 +182,45 @@ export function resolveBudgetTarget(
     "Le taux de budget doit être un entier ≥ 0 (basis points).",
   );
 
-  const eligibleAnnualPayrollFcfa =
-    eligibleMonthlyPayrollFcfa * ANNUAL_BUDGET_PERIOD_MONTHS;
+  const eligiblePeriodPayrollFcfa =
+    eligibleMonthlyPayrollFcfa * coveredMonths;
 
   const exactAmount: ExactAmount = reduceFraction(
-    eligibleAnnualPayrollFcfa * budgetRateBasisPoints,
+    eligiblePeriodPayrollFcfa * budgetRateBasisPoints,
     10_000n,
   );
 
   const explanationSteps: CalculationExplanationStep[] = [
     {
-      code: "BUDGET_TARGET_PERCENTAGE_ANNUALIZE_PAYROLL",
-      label: "Annualisation de la masse salariale éligible",
+      code: "BUDGET_TARGET_PERCENTAGE_PERIOD_PAYROLL",
+      label: "Assiette de période à partir de la masse mensuelle éligible",
       inputValues: {
         eligibleMonthlyPayrollFcfa: eligibleMonthlyPayrollFcfa.toString(),
-        annualBudgetPeriodMonths: ANNUAL_BUDGET_PERIOD_MONTHS.toString(),
+        campaignCoveredMonthCount: campaignCoveredMonthCount.toString(),
       },
-      outputValue: eligibleAnnualPayrollFcfa.toString(),
-      formula: "eligibleAnnualPayroll = eligibleMonthlyPayroll × 12",
+      outputValue: eligiblePeriodPayrollFcfa.toString(),
+      formula:
+        "eligiblePeriodPayroll = eligibleMonthlyPayroll × campaignCoveredMonthCount",
       reason:
-        "L’assiette saisie est mensuelle ; le budget cible est un coût annuel.",
+        "L’assiette saisie est mensuelle (31/12 N-1) ; le budget cible couvre la période d’effet.",
     },
     {
-      code: "BUDGET_TARGET_PERCENTAGE_ANNUAL",
-      label: "Budget cible annuel — pourcentage de l’assiette annuelle",
+      code: "BUDGET_TARGET_PERCENTAGE_PERIOD",
+      label: "Budget cible de période — pourcentage de l’assiette",
       inputValues: {
         mode: "percentage_of_eligible_payroll",
-        eligibleAnnualPayrollFcfa: eligibleAnnualPayrollFcfa.toString(),
+        eligiblePeriodPayrollFcfa: eligiblePeriodPayrollFcfa.toString(),
         budgetRateBasisPoints: budgetRateBasisPoints.toString(),
         employerChargesIncluded: false,
       },
       outputValue: formatExactAmount(exactAmount),
       formula:
-        "annualBudgetTarget = reduce(eligibleAnnualPayroll × budgetRateBasisPoints, 10000)",
+        "campaignPeriodBudgetTarget = reduce(eligiblePeriodPayroll × budgetRateBasisPoints, 10000)",
       reason: "400 bps = 4,00 % ; calcul exact sans arrondi.",
     },
     {
       code: "BUDGET_TARGET_EXACT",
-      label: "Budget annuel cible exact",
+      label: "Budget de période cible exact",
       inputValues: {
         numerator: exactAmount.numerator.toString(),
         denominator: exactAmount.denominator.toString(),
@@ -216,7 +242,8 @@ export function resolveBudgetTarget(
     sourceValues: {
       mode: "percentage_of_eligible_payroll",
       eligibleMonthlyPayrollFcfa: eligibleMonthlyPayrollFcfa.toString(),
-      eligibleAnnualPayrollFcfa: eligibleAnnualPayrollFcfa.toString(),
+      eligiblePeriodPayrollFcfa: eligiblePeriodPayrollFcfa.toString(),
+      campaignCoveredMonthCount: campaignCoveredMonthCount.toString(),
       budgetRateBasisPoints: budgetRateBasisPoints.toString(),
     },
     explanationSteps,

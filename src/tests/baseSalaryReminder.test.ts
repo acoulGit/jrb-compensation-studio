@@ -319,10 +319,12 @@ describe("Lot 2A-H2A — fingerprint", () => {
     };
     const january = buildConfigurationFingerprint({
       ...base,
+      retroactivityStartMonth: 1,
       technicalApplicationMonth: 1,
     });
     const july = buildConfigurationFingerprint({
       ...base,
+      retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
     });
     expect(january).not.toBe(july);

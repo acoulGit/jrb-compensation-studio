@@ -3,7 +3,7 @@
  * (Lot 2B-4A / sémantique schema v2 — correctif 2A-H1).
  *
  * Mapping colonnes persistées (result_schema_version = 2) :
- * - budget_target = annuel
+ * - budget_target = annuel (contrat 2 / rétro janvier implicite)
  * - theoretical_total = allocation annuelle totale
  * - actual_operation_amount = coût annuel réel
  * - total_rounding_delta = écart annuel
@@ -12,9 +12,16 @@
  * - final_rounded_increase = augmentation mensuelle finale
  * - individual_rounding_delta = écart mensuel
  * - final_salary = salaire mensuel final
+ *
+ * Contrat 3 (période configurable) : sauvegarde refusée tant que le schema v3
+ * n’est pas consolidé — voir `assertSimulationResultPersistable`.
  */
 
-import { RESULT_SCHEMA_VERSION } from "../../domain/compensationCalculation";
+import {
+  CALCULATION_CONTRACT_VERSION,
+  RESULT_SCHEMA_VERSION,
+} from "../../domain/compensationCalculation";
+import { CompensationCalculationError } from "../../domain/compensationCalculation";
 import type { CampaignSimulationExecutionResult } from "./campaignSimulationExecutionModels";
 import {
   bigintToCanonicalText,
@@ -24,6 +31,26 @@ import type {
   SaveSimulationEmployeeDto,
   SaveSimulationRunDto,
 } from "./simulationPersistenceModels";
+
+/**
+ * Interdit la sauvegarde silencieuse d’un résultat contrat 3 dans un snapshot
+ * schema v2 incomplet. N’affecte pas le calcul ni l’affichage.
+ */
+export function assertSimulationResultPersistable(input: {
+  calculationContractVersion: number;
+  resultSchemaVersion?: number;
+}): void {
+  const schemaVersion = input.resultSchemaVersion ?? RESULT_SCHEMA_VERSION;
+  if (
+    input.calculationContractVersion >= 3 &&
+    schemaVersion < 3
+  ) {
+    throw new CompensationCalculationError(
+      "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION",
+      "Cette simulation utilise le contrat de période configurable et ne peut pas encore être enregistrée dans l’ancien format d’historique. Finalisez la consolidation de persistance avant l’enregistrement.",
+    );
+  }
+}
 
 function mapEmployee(
   employee: CampaignSimulationExecutionResult["employees"][number],
@@ -91,6 +118,13 @@ export function mapExecutionResultToSaveDto(input: {
   sourceImportFileName: string | null;
 }): SaveSimulationRunDto {
   const { result } = input;
+
+  assertSimulationResultPersistable({
+    calculationContractVersion:
+      result.calculationContractVersion ?? CALCULATION_CONTRACT_VERSION,
+    resultSchemaVersion: RESULT_SCHEMA_VERSION,
+  });
+
   const budget = result.budgetSummary;
   const population = result.populationSummary;
   const budgetTarget = exactAmountToCanonicalTexts(budget.exactBudgetTarget);

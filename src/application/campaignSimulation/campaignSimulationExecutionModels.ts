@@ -22,23 +22,23 @@ export type SimulationExecutionStatus =
 
 export interface SimulationBudgetSummaryView {
   budgetTargetMode: BudgetTargetInput["mode"];
-  /** Budget annuel cible exact. */
+  /** Enveloppe de la période d’effet (alias historique : budget annuel). */
   exactBudgetTarget: ExactAmount;
   exactBudgetTargetLabel: string;
   manualBudgetFcfa?: bigint;
   /** Masse mensuelle éligible saisie (mode pourcentage). */
   eligiblePayrollFcfa?: bigint;
   budgetRateBasisPoints?: bigint;
-  /** Coût annuel réel après arrondi. */
+  /** Coût effectif de campagne (période couverte) après arrondi. */
   annualActualOperationCostFcfa: bigint;
   annualActualOperationCostLabel: string;
-  /** Écart annuel d’arrondi. */
+  /** Delta de période (écart d’arrondi vs enveloppe). */
   annualTotalRoundingDelta: ExactAmount;
   annualTotalRoundingDeltaLabel: string;
-  /** Allocation théorique annuelle totale. */
+  /** Allocation théorique totale sur la période d’effet. */
   annualTheoreticalAllocatedTotal: ExactAmount;
   annualTheoreticalAllocatedTotalLabel: string;
-  /** Augmentation mensuelle théorique totale (= annuel / 12). */
+  /** Augmentation mensuelle théorique totale (= théorique période / mois couverts). */
   monthlyTheoreticalIncreaseTotal: ExactAmount;
   monthlyTheoreticalIncreaseTotalLabel: string;
   roundingMode: RoundingPolicy["mode"];
@@ -47,14 +47,24 @@ export interface SimulationBudgetSummaryView {
   envelopeSummary: PromotionAwareEnvelopeSummaryView;
   paymentCalendar: PaymentCalendarSummaryView;
   seniorityImpactSummary: SeniorityImpactSummaryView;
+  /** Indicateurs informatifs plein effet (décembre × 12) — hors calibrage. */
+  fullYearRunRatePromotionCostFcfa: bigint;
+  fullYearRunRatePromotionCostLabel: string;
+  fullYearRunRateCompensatoryCostFcfa: bigint;
+  fullYearRunRateCompensatoryCostLabel: string;
+  fullYearRunRateCombinedBaseMeasureCostFcfa: bigint;
+  fullYearRunRateCombinedBaseMeasureCostLabel: string;
+  fullYearRunRateSeniorityImpactFcfa: bigint;
+  fullYearRunRateSeniorityImpactLabel: string;
   /** True si au moins un salarié a une promotion structurée (affichage conditionnel). */
   hasStructuredPromotions: boolean;
   /** True si au moins un coût promotion imputable > 0. */
   hasImputedPromotionBudgetCost: boolean;
 }
 
-/** Synthèse budgétaire population (Lot 2A-H2C-2B). */
+/** Synthèse budgétaire population (Lot 2A-H2C-2B / H2D-1). */
 export interface PromotionAwareEnvelopeSummaryView {
+  /** Alias transitionnel : enveloppe de la période d’effet. */
   annualBudgetTargetFcfa: ExactAmount;
   annualBudgetTargetLabel: string;
   totalAnnualPromotionBudgetCostFcfa: bigint;
@@ -63,10 +73,12 @@ export interface PromotionAwareEnvelopeSummaryView {
   availableAnnualCompensatoryBudgetLabel: string;
   totalAnnualTheoreticalCompensatoryCostFcfa: ExactAmount;
   totalAnnualTheoreticalCompensatoryCostLabel: string;
+  /** Coût effectif de campagne du complément compensatoire. */
   totalAnnualActualCompensatoryCostFcfa: bigint;
   totalAnnualActualCompensatoryCostLabel: string;
   totalAnnualActualCombinedBaseMeasureCostFcfa: bigint;
   totalAnnualActualCombinedBaseMeasureCostLabel: string;
+  /** Delta de période vs enveloppe. */
   annualCombinedRoundingDeltaFcfa: ExactAmount;
   annualCombinedRoundingDeltaLabel: string;
   compensatoryCalibrationRate: ExactAmount;
@@ -87,7 +99,7 @@ export interface PaymentCalendarSummaryView {
   totalRemainingYearDirectCompensatoryCostLabel: string;
   totalAnnualActualCompensatoryCostFcfa: bigint;
   totalAnnualActualCompensatoryCostLabel: string;
-  /** Invariant visuel : rappel + direct = annuel réel. */
+  /** Invariant visuel : rappel + direct = coût effectif de campagne. */
   compensatoryReminderPlusDirectEqualsAnnual: boolean;
 }
 
@@ -142,7 +154,9 @@ export interface MonthlyCompensationTrajectoryView {
   totalSeniorityImpactLabel: string;
   promotionPaymentStatusLabel: string;
   compensatoryPaymentStatusLabel: string;
-  paymentTiming: "reminder" | "direct";
+  paymentTiming: "outside_campaign" | "reminder" | "direct";
+  coveredByCampaignPeriod: boolean;
+  includedInCampaignEnvelope: boolean;
   promotionActive: boolean;
   promotionStatus: string;
 }
@@ -157,13 +171,23 @@ export interface SimulationPopulationSummaryView {
   annualTotalRoundingDelta: ExactAmount;
   isTheoreticalBudgetExactlyAllocated: boolean;
   campaignYear: number;
+  retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  campaignCoveredMonthCount: number;
   totalBaseSalaryReminderFcfa: bigint;
   totalRemainingYearDirectIncreaseCostFcfa: bigint;
   totalAnnualActualBaseIncreaseCostFcfa: bigint;
   totalSeniorityReminderFcfa: bigint;
   totalRemainingYearDirectSeniorityImpactFcfa: bigint;
   totalAnnualSeniorityImpactFcfa: bigint;
+  fullYearRunRatePromotionCostFcfa: bigint;
+  fullYearRunRatePromotionCostLabel: string;
+  fullYearRunRateCompensatoryCostFcfa: bigint;
+  fullYearRunRateCompensatoryCostLabel: string;
+  fullYearRunRateCombinedBaseMeasureCostFcfa: bigint;
+  fullYearRunRateCombinedBaseMeasureCostLabel: string;
+  fullYearRunRateSeniorityImpactFcfa: bigint;
+  fullYearRunRateSeniorityImpactLabel: string;
   promotedIncludedEmployeeCount: number;
   totalAnnualPromotionBudgetCostFcfa: bigint;
   availableAnnualCompensatoryBudget: ExactAmount;
@@ -222,7 +246,9 @@ export interface EmployeeSimulationResultView {
   /** Nouveau salaire mensuel. */
   monthlyFinalSalaryFcfa: bigint;
   campaignYear: number;
+  retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  campaignCoveredMonthCount: number;
   retroactiveMonths: number;
   remainingDirectPaymentMonths: number;
   baseSalaryReminderFcfa: bigint;
@@ -234,11 +260,19 @@ export interface EmployeeSimulationResultView {
     month: number;
     ratePercent: number;
     monthlySeniorityImpactFcfa: bigint;
-    paymentTiming: "reminder" | "direct";
+    paymentTiming: "outside_campaign" | "reminder" | "direct";
   }[];
   seniorityReminderFcfa: bigint;
   remainingYearDirectSeniorityImpactFcfa: bigint;
   annualSeniorityImpactFcfa: bigint;
+  fullYearRunRatePromotionCostFcfa: bigint;
+  fullYearRunRatePromotionCostLabel: string;
+  fullYearRunRateCompensatoryCostFcfa: bigint;
+  fullYearRunRateCompensatoryCostLabel: string;
+  fullYearRunRateCombinedBaseMeasureCostFcfa: bigint;
+  fullYearRunRateCombinedBaseMeasureCostLabel: string;
+  fullYearRunRateSeniorityImpactFcfa: bigint;
+  fullYearRunRateSeniorityImpactLabel: string;
   /** Lot 2A-H2C-2B — champs promotion / complément / trajectoire. */
   compensatoryMeasureEligible: boolean;
   isPromotionBudgetPopulationEmployee: boolean;

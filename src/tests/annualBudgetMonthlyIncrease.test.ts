@@ -111,8 +111,8 @@ function buildRecipeInput(): PreparedPopulationCalculationInput {
 }
 
 describe("Lot 2A-H1 — budget annuel / augmentation mensuelle", () => {
-  it("expose les constantes de contrat v2", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(2);
+  it("expose les constantes de contrat v3", () => {
+    expect(CALCULATION_CONTRACT_VERSION).toBe(3);
     expect(ANNUAL_BUDGET_PERIOD_MONTHS).toBe(12n);
     expect(RESULT_SCHEMA_VERSION).toBe(2);
     expect(isCurrentResultSchemaVersion(2)).toBe(true);
@@ -202,6 +202,14 @@ describe("Lot 2A-H1 — budget annuel / augmentation mensuelle", () => {
       ),
     ).toBe(true);
 
+    expect(result.annualActualOperationCostFcfa).toBe(5_000_040n);
+    expect(
+      fractionsEqual(
+        result.annualTotalRoundingDelta,
+        exactAmountFromInteger(17n),
+      ),
+    ).toBe(true);
+    expect(emp2002.monthlyFinalRoundedIncreaseFcfa).toBe(30_205n);
     expect(result.annualActualOperationCostFcfa).toBe(
       result.employees.reduce((sum, e) => sum + e.annualActualCostFcfa, 0n),
     );

@@ -349,6 +349,7 @@ describe("Lot 2A-H2C-1 — trajectoire N-1 / N", () => {
       budgetTarget: { mode: "manual_amount", manualBudgetFcfa: 1 },
       roundingPolicy: { mode: "nearest_half_up", stepFcfa: 1 },
       campaignYear: 2026,
+      retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
     });
     const fpPromo = buildSimulationSourceFingerprint({
@@ -361,6 +362,7 @@ describe("Lot 2A-H2C-1 — trajectoire N-1 / N", () => {
       budgetTarget: { mode: "manual_amount", manualBudgetFcfa: 1 },
       roundingPolicy: { mode: "nearest_half_up", stepFcfa: 1 },
       campaignYear: 2026,
+      retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
     });
     expect(fpBase).not.toBe(fpPromo);
@@ -371,6 +373,7 @@ describe("Lot 2A-H2C-1 — trajectoire N-1 / N", () => {
       manualBudget: 1n,
       roundingMode: "nearest_half_up",
       roundingStep: 1n,
+      retroactivityStartMonth: 1,
       promotionTrajectoryContractVersion: 1,
     });
     const configB = buildConfigurationFingerprint({
@@ -379,6 +382,7 @@ describe("Lot 2A-H2C-1 — trajectoire N-1 / N", () => {
       manualBudget: 1n,
       roundingMode: "nearest_half_up",
       roundingStep: 1n,
+      retroactivityStartMonth: 1,
       promotionTrajectoryContractVersion: 99,
     });
     expect(configA).not.toBe(configB);

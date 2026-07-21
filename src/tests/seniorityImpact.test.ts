@@ -359,7 +359,7 @@ describe("Lot 2A-H2B — orchestrateur", () => {
   });
 
   it("fingerprint intègre le contrat d’ancienneté ; schema inchangé", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(2);
+    expect(CALCULATION_CONTRACT_VERSION).toBe(3);
     expect(RESULT_SCHEMA_VERSION).toBe(2);
     expect(SENIORITY_IMPACT_CONTRACT_VERSION).toBe(1);
     const fp1 = buildConfigurationFingerprint({
@@ -369,6 +369,7 @@ describe("Lot 2A-H2B — orchestrateur", () => {
       roundingMode: "nearest_half_up",
       roundingStep: 1n,
       campaignYear: 2023,
+      retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
       seniorityImpactContractVersion: 1,
     });
@@ -379,6 +380,7 @@ describe("Lot 2A-H2B — orchestrateur", () => {
       roundingMode: "nearest_half_up",
       roundingStep: 1n,
       campaignYear: 2023,
+      retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
       seniorityImpactContractVersion: 2,
     });

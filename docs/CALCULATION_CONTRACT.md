@@ -184,10 +184,44 @@ ventile uniquement le calendrier de versement.
 **Persistance H2A** : modèles moteur / UI en mémoire ; colonnes snapshot 0005
 et `result_schema_version` **inchangés** (pas de migration 0006 dans ce lot).
 
+## Lot 2A-H2D-1 — rétroactivité configurable (contrat v3)
+
+`CALCULATION_CONTRACT_VERSION = 3`. Entrée optionnelle
+`retroactivityStartMonth` (1–12, défaut **1** = janvier) :
+
+| Concept | Formule / règle |
+| --- | --- |
+| Mois couverts | `campaignCoveredMonthCount = 13 − retroactivityStartMonth` |
+| Mois de rappel | `technicalApplicationMonth − retroactivityStartMonth` |
+| Mois directs | `13 − technicalApplicationMonth` |
+| Enveloppe cible | Finance la période `[rétro … décembre]` (plus « toujours 12 mois ») |
+| Mois avant rétro | `paymentTiming = outside_campaign` ; coût campagne nul |
+| Coût effectif de campagne | Σ mois couverts (alias transitionnels `annual*`) |
+| Coût à plein effet | décembre × 12 (`fullYearRunRate*`) — **informatif**, hors calibrage |
+
+Contraintes : `1 ≤ rétro ≤ application ≤ 12`. Empreintes : token
+`retroStart:`. `RESULT_SCHEMA_VERSION` reste **2** : un résultat contrat 3
+ne peut pas être sauvegardé tant que le schema snapshot v3 n’est pas
+consolidé (`SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION`).
+
+### Non-régression Population Test 1 (sans promotion)
+
+Fixture : 14 éligibles + 1 sous-performant, `evaluationMode = none`,
+positions / facteurs par défaut, budget manuel **5 000 023**, pas **5**,
+rétroactivité janvier. Résultat mesuré (H1 e985548 = H2C 21dbbb6 = H2D-1) :
+
+- coût réel compensatoire = **5 000 040** FCFA ;
+- delta d’arrondi = **+17** FCFA ;
+- EMP-2002 mensuel arrondi = **30 205** FCFA.
+
+La valeur de brief **4 999 860 / −163** n’est **pas** produite par cette
+fixture (confusion avec le montant illustratif 31 110 des tests H2A/H2B).
+
 ## Lot 2A-H2B — incidence supplémentaire d’ancienneté
 
 Contrat `SENIORITY_IMPACT_CONTRACT_VERSION = 1` (empreintes).
-`CALCULATION_CONTRACT_VERSION` reste **2**.
+`CALCULATION_CONTRACT_VERSION` était **2** à la livraison H2B (passé à **3**
+en H2D-1).
 
 | Concept | Règle |
 | --- | --- |
@@ -395,11 +429,13 @@ Le moteur d’allocation Lot 2A n’est pas modifié dans son principe (poids
 consommation budgétaire des promotions incluses et bascule le calibrage vers
 une résolution **mensuelle** (12 expositions/salarié) au lieu d’une résolution
 annuelle unique, pour absorber les variations de facteur/salaire induites par
-une promotion en cours d’année. `CALCULATION_CONTRACT_VERSION` reste **2**
+une promotion en cours d’année. À la livraison H2C-2,
+`CALCULATION_CONTRACT_VERSION` restait **2**
 (aucun changement de forme des entrées/validations de base) ;
 `PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION` et
 `PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION` (= 1) versionnent les nouveaux
-contrats de calibrage / trajectoire mensuelle.
+contrats de calibrage / trajectoire mensuelle. Le Lot **2A-H2D-1** passe le
+contrat à **3** (période d’effet configurable).
 
 ### 8. Traitement des corrections et mesures distinctes
 
