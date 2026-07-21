@@ -13,6 +13,7 @@ import type {
   SalaryPositionResult,
 } from "./models";
 import type { NineBoxMode, PerformanceLevel, PotentialLevel } from "../compensationReference/models";
+import type { PromotionEvent } from "./promotionTrajectory";
 import type { RoundingPolicy } from "./populationAllocationModels";
 
 /**
@@ -50,6 +51,8 @@ export interface PreparedEmployeeCalculationInput {
   performanceLevel?: PerformanceLevel;
   potentialLevel?: PotentialLevel;
   confirmedUnderperformer: boolean;
+  /** Promotion structurée importée (Lot 2A-H2C-1) — null si absent. */
+  promotion?: PromotionEvent | null;
 }
 
 export interface PopulationCalculationReferences {

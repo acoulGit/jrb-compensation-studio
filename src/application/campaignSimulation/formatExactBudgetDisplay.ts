@@ -172,6 +172,8 @@ export function buildConfigurationFingerprint(parts: {
   technicalApplicationMonth?: number;
   /** Version du contrat d’incidence d’ancienneté (Lot 2A-H2B). */
   seniorityImpactContractVersion?: number;
+  /** Version du contrat trajectoire promotion (Lot 2A-H2C-1). */
+  promotionTrajectoryContractVersion?: number;
 }): string {
   return [
     `contract:v${parts.calculationContractVersion ?? 2}`,
@@ -187,5 +189,6 @@ export function buildConfigurationFingerprint(parts: {
     `year:${parts.campaignYear ?? ""}`,
     `appMonth:${parts.technicalApplicationMonth ?? ""}`,
     `seniority:v${parts.seniorityImpactContractVersion ?? 1}`,
+    `promotion:v${parts.promotionTrajectoryContractVersion ?? 1}`,
   ].join("|");
 }

@@ -27,6 +27,13 @@ export interface InsertableEmployeeRow {
   promotionAmount: number;
   correctionAmount: number;
   socialMeasureAmount: number;
+  promotionDate: string | null;
+  salaryBeforePromotion: number | null;
+  salaryAfterPromotion: number | null;
+  previousGradeId: number | null;
+  promotedGradeId: number | null;
+  previousJobFamilyId: number | null;
+  promotedJobFamilyId: number | null;
 }
 
 export interface ReplacePopulationInput {

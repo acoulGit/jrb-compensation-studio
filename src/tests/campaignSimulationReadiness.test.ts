@@ -144,6 +144,13 @@ function snapshot(
     promotionAmount: 0,
     correctionAmount: 0,
     socialMeasureAmount: 0,
+    promotionDate: null,
+    salaryBeforePromotion: null,
+    salaryAfterPromotion: null,
+    previousGradeId: null,
+    promotedGradeId: null,
+    previousJobFamilyId: null,
+    promotedJobFamilyId: null,
     sourceRowNumber: 2,
     createdAt: TODAY,
     ...overrides,
@@ -195,6 +202,7 @@ function mappingContext(
 ): EmployeeMappingContext {
   return {
     evaluationMode: "full_nine_box",
+    campaignYear: 2026,
     familiesById: new Map([[1, family()]]),
     gradesById: new Map([[1, grade()]]),
     nineBoxFactorsByCode: new Map([
@@ -251,6 +259,7 @@ describe("Lot 2B-1 — mapping salarié", () => {
         performanceLevel: "medium",
         potentialLevel: "medium",
         confirmedUnderperformer: false,
+        promotion: null,
       });
     }
     expect(employee).toEqual(clone);

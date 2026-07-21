@@ -18,6 +18,11 @@
 
 import { compareEmployeeIdAsc } from "../../domain/compensationCalculation";
 import type { PreparedEmployeeCalculationInput } from "../../domain/compensationCalculation";
+import {
+  PromotionValidationError,
+  buildPromotionEvent,
+  validatePromotionAgainstDecemberSnapshot,
+} from "../../domain/compensationCalculation";
 import type {
   Grade,
   JobFamily,
@@ -30,6 +35,7 @@ import { normalizePerformanceLevel, normalizePotentialLevel } from "./normalizeF
 
 export interface EmployeeMappingContext {
   evaluationMode: NineBoxMode;
+  campaignYear: number;
   familiesById: ReadonlyMap<number, JobFamily>;
   gradesById: ReadonlyMap<number, Grade>;
   nineBoxFactorsByCode: ReadonlyMap<number, NineBoxFactor>;
@@ -265,6 +271,77 @@ export function mapImportedEmployeeToPreparedInput(
     return { ok: false, issues };
   }
 
+  let promotion: PreparedEmployeeCalculationInput["promotion"] = null;
+  if (employee.promotionDate) {
+    const previousGrade = context.gradesById.get(
+      Number(employee.previousGradeId),
+    );
+    const promotedGrade = context.gradesById.get(
+      Number(employee.promotedGradeId),
+    );
+    const previousFamily = context.familiesById.get(
+      Number(employee.previousJobFamilyId),
+    );
+    const promotedFamily = context.familiesById.get(
+      Number(employee.promotedJobFamilyId),
+    );
+    if (
+      !previousGrade ||
+      !promotedGrade ||
+      !previousFamily ||
+      !promotedFamily ||
+      employee.salaryBeforePromotion === null ||
+      employee.salaryAfterPromotion === null
+    ) {
+      issues.push({
+        scope: "employee",
+        employeeId: employeeId || undefined,
+        code: "INCOMPLETE_PROMOTION_SNAPSHOT",
+        field: "promotion",
+        severity: "blocking",
+        message: "Données de promotion incomplètes sur le snapshot importé.",
+      });
+      return { ok: false, issues };
+    }
+    try {
+      const event = buildPromotionEvent({
+        promotionDate: employee.promotionDate,
+        salaryBeforePromotionFcfa: BigInt(employee.salaryBeforePromotion),
+        salaryAfterPromotionFcfa: BigInt(employee.salaryAfterPromotion),
+        previousGradeCode: previousGrade.code,
+        promotedGradeCode: promotedGrade.code,
+        previousJobFamilyCode: previousFamily.code,
+        promotedJobFamilyCode: promotedFamily.code,
+      });
+      validatePromotionAgainstDecemberSnapshot({
+        event,
+        campaignYear: context.campaignYear,
+        decemberBaseSalaryFcfa: BigInt(salary),
+        currentGradeCode: grade!.code,
+        currentJobFamilyCode: family!.code,
+      });
+      promotion = event;
+    } catch (error) {
+      const message =
+        error instanceof PromotionValidationError
+          ? error.message
+          : "Validation promotion impossible.";
+      const code =
+        error instanceof PromotionValidationError
+          ? error.code
+          : "PROMOTION_MAPPING_FAILED";
+      issues.push({
+        scope: "employee",
+        employeeId: employeeId || undefined,
+        code,
+        field: "promotion",
+        severity: "blocking",
+        message,
+      });
+      return { ok: false, issues };
+    }
+  }
+
   const prepared: PreparedEmployeeCalculationInput = {
     employeeId,
     familyCode: family!.code,
@@ -272,6 +349,7 @@ export function mapImportedEmployeeToPreparedInput(
     salaryFcfa: salary,
     hireDate: hireDateRaw,
     confirmedUnderperformer: employee.confirmedUnderperformer,
+    promotion,
     ...(performanceLevel !== undefined ? { performanceLevel } : {}),
     ...(potentialLevel !== undefined ? { potentialLevel } : {}),
   };

@@ -220,8 +220,19 @@ campagne.
 | `promotion_amount` | INTEGER | NOT NULL DEFAULT 0, ≥ 0 |
 | `correction_amount` | INTEGER | NOT NULL DEFAULT 0, ≥ 0 |
 | `social_measure_amount` | INTEGER | NOT NULL DEFAULT 0, ≥ 0 |
+| `promotion_date` | TEXT | NULL, ISO `YYYY-MM-DD` (Lot 2A-H2C-1) |
+| `salary_before_promotion` | INTEGER | NULL, FCFA > 0 si promo |
+| `salary_after_promotion` | INTEGER | NULL, FCFA > salaire avant |
+| `previous_grade_id` | INTEGER | NULL, FK → `campaign_grades(id)` |
+| `promoted_grade_id` | INTEGER | NULL, FK → `campaign_grades(id)` |
+| `previous_job_family_id` | INTEGER | NULL, FK → `campaign_job_families(id)` |
+| `promoted_job_family_id` | INTEGER | NULL, FK → `campaign_job_families(id)` |
 | `source_row_number` | INTEGER | NOT NULL, > 0 |
 | `created_at` | TEXT | NOT NULL (UTC ISO-8601) |
+
+Colonnes promotion ajoutées par migration `0006_employee_promotions.sql`
+(toutes NULL = pas de promotion). Un événement pertinent N-1/N par salarié
+pour la fenêtre courante ; extension multi-événements possible ultérieurement.
 
 Index : unicité `(import_batch_id, employee_number COLLATE NOCASE)` ; index
 sur `campaign_id`, `import_batch_id`, `employee_number`, `job_family_id`,

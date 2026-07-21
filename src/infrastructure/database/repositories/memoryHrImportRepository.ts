@@ -96,6 +96,13 @@ export class MemoryHrImportRepository implements HrImportRepository {
       promotionAmount: employee.promotionAmount,
       correctionAmount: employee.correctionAmount,
       socialMeasureAmount: employee.socialMeasureAmount,
+      promotionDate: employee.promotionDate,
+      salaryBeforePromotion: employee.salaryBeforePromotion,
+      salaryAfterPromotion: employee.salaryAfterPromotion,
+      previousGradeId: employee.previousGradeId,
+      promotedGradeId: employee.promotedGradeId,
+      previousJobFamilyId: employee.previousJobFamilyId,
+      promotedJobFamilyId: employee.promotedJobFamilyId,
       sourceRowNumber: employee.sourceRowNumber,
       createdAt: now,
     }));

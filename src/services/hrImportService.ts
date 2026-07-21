@@ -152,6 +152,7 @@ export class HrImportService {
       jobFamilies: referenceSet.jobFamilies,
       grades: referenceSet.grades,
       todayIsoDate,
+      campaignReferenceYear: campaign.referenceYear,
       referenceIncomplete: !completeness.ready,
     });
 
@@ -193,14 +194,15 @@ export class HrImportService {
 
     const { normalized, validCount, errorCount, warningCount } =
       normalizeImportRows({
-        rows: input.rows,
-        headerRowIndex: input.headerRowIndex,
-        mapping: input.mapping,
-        jobFamilies: referenceSet.jobFamilies,
-        grades: referenceSet.grades,
-        todayIsoDate,
-        referenceIncomplete: !completeness.ready,
-      });
+      rows: input.rows,
+      headerRowIndex: input.headerRowIndex,
+      mapping: input.mapping,
+      jobFamilies: referenceSet.jobFamilies,
+      grades: referenceSet.grades,
+      todayIsoDate,
+      campaignReferenceYear: campaign.referenceYear,
+      referenceIncomplete: !completeness.ready,
+    });
 
     if (errorCount > 0) {
       throw new AppError(
@@ -339,6 +341,13 @@ function toInsertableRows(
       promotionAmount: row.promotionAmount,
       correctionAmount: row.correctionAmount,
       socialMeasureAmount: row.socialMeasureAmount,
+      promotionDate: row.promotionDate,
+      salaryBeforePromotion: row.salaryBeforePromotion,
+      salaryAfterPromotion: row.salaryAfterPromotion,
+      previousGradeId: row.previousGradeId,
+      promotedGradeId: row.promotedGradeId,
+      previousJobFamilyId: row.previousJobFamilyId,
+      promotedJobFamilyId: row.promotedJobFamilyId,
     });
   }
   return result;

@@ -55,6 +55,20 @@ export {
   type SeniorityImpactBreakdown,
   type SeniorityPaymentTiming,
 } from "./seniorityImpact";
+export {
+  PROMOTION_TRAJECTORY_CONTRACT_VERSION,
+  PromotionValidationError,
+  buildPromotionAwareMonthlySalaryTrajectory,
+  buildPromotionEvent,
+  parsePromotionDateIso,
+  promotionRateFromAmounts,
+  validatePromotionAgainstDecemberSnapshot,
+  type MonthlySalaryTrajectoryEntry,
+  type PromotionAwareTrajectoryResult,
+  type PromotionCampaignCostPreview,
+  type PromotionEvent,
+  type PromotionInclusionStatus,
+} from "./promotionTrajectory";
 export { calculatePopulationBudgetAllocation } from "./calculatePopulationBudgetAllocation";
 export {
   CompensationCalculationError,

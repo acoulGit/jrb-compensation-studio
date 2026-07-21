@@ -175,6 +175,14 @@ moteur.
   futur périmètre budgétaire.
 - **Champs optionnels** : code 9-Box (1–9), sous-performant confirmé, montants
   de promotion, correction et mesure RH/sociale (≥ 0 FCFA).
+- **Promotion structurée (Lot 2A-H2C-1)** : groupe optionnel cohérent
+  (`promotionDate`, salaires avant/après, grades, familles). Absent = pas de
+  `PromotionEvent` ; le `promotionAmount` historique seul est conservé sans
+  trajectoire ni coût H2C. Partiel = erreur. Avec groupe complet, le montant
+  canonique est le delta dérivé (BigInt) ; `promotionAmount` historique n’est
+  accepté que s’il est vide/0/égal au delta, sinon `PROMOTION_AMOUNT_MISMATCH`.
+  Fenêtre N-1 ou N ; cohérence avec le snapshot décembre N-1. Trajectoire
+  mensuelle et coût campagne préparés pour H2C-2, sans modifier l’allocation.
 - **Intégrité** : aucun import partiel ; remplacement atomique de la population
   courante ; historique des lots conservé (`current` / `superseded`).
 - **Campagne archivée** : import bloqué (lecture seule).
@@ -284,7 +292,14 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
 - Un sous-performant confirmé reçoit 0 % matriciel.
 - Une mesure RH ou sociale distincte et motivée reste possible.
 - En cas de promotion, un complément est accordé seulement si la cible
-  matricielle dépasse l’augmentation de promotion déjà reçue.
+  matricielle dépasse l’augmentation de promotion déjà reçue
+  (moteur de complément : H2C-2 ; ce lot H2C-1 capture la trajectoire et le
+  coût de promotion sans modifier l’allocation).
+- Une promotion en N postérieure au mois d’application technique est exclue
+  du calcul courant (`EXCLUDED_AFTER_TECHNICAL_APPLICATION_MONTH`) tout en
+  conservant les données importées. Pas de rappel propre à la promotion
+  (payée dès le mois d’effet) ; le rappel du complément compensatoire reste
+  H2C-2.
 - La correction Sout- est distincte et peut être étalée sur deux ans.
 - L’arrondi final individuel est effectué au multiple d’un pas paramétrable
   (politique `nearest_half_up`) ; le pas n’est pas figé à 5 FCFA.

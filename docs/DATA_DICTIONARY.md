@@ -204,9 +204,16 @@ périmètre fonctionnel et les règles de validation.
 | `decemberBaseSalary` | `december_base_salary` | Donnée importée (FCFA entier > 0) |
 | `nineBoxCode` | `nine_box_code` | Donnée importée (1–9 ou `null`) |
 | `confirmedUnderperformer` | `confirmed_underperformer` | Donnée importée (booléen 0/1) |
-| `promotionAmount` | `promotion_amount` | Donnée importée (FCFA ≥ 0) |
+| `promotionAmount` | `promotion_amount` | Historique de compatibilité (FCFA ≥ 0). Avec promo structurée : canonique = delta salaires |
 | `correctionAmount` | `correction_amount` | Donnée importée (FCFA ≥ 0) |
 | `socialMeasureAmount` | `social_measure_amount` | Donnée importée (FCFA ≥ 0) |
+| `promotionDate` | `promotion_date` | Optionnel ISO ; null = pas de promotion (H2C-1) |
+| `salaryBeforePromotion` | `salary_before_promotion` | Optionnel FCFA ; groupe promo |
+| `salaryAfterPromotion` | `salary_after_promotion` | Optionnel FCFA ; groupe promo |
+| `previousGradeId` | `previous_grade_id` | FK grade avant promo |
+| `promotedGradeId` | `promoted_grade_id` | FK grade après promo |
+| `previousJobFamilyId` | `previous_job_family_id` | FK famille avant promo |
+| `promotedJobFamilyId` | `promoted_job_family_id` | FK famille après promo |
 | `sourceRowNumber` | `source_row_number` | Traçabilité ligne fichier |
 | `createdAt` | `created_at` | Technique |
 
@@ -236,9 +243,12 @@ de calcul ; ils sont désormais persistés par le Lot 1C :
 | `decemberBaseSalary` | `december_base_salary` | FCFA entier strictement positif |
 | `nineBoxCode` | `nine_box_code` | Optionnel |
 | `confirmedUnderperformer` | `confirmed_underperformer` | Optionnel, défaut false |
-| `promotionAmount` | `promotion_amount` | Optionnel, défaut 0 |
+| `promotionAmount` | `promotion_amount` | Optionnel, défaut 0 ; si promo structurée → delta canonique (mismatch rejeté) |
 | `correctionAmount` | `correction_amount` | Optionnel, défaut 0 |
 | `socialMeasureAmount` | `social_measure_amount` | Optionnel, défaut 0 |
+| `promotionDate` | `promotion_date` | Optionnel ; groupe H2C-1 |
+| `salaryBeforePromotion` / `salaryAfterPromotion` | colonnes homonymes | Obligatoires si date présente |
+| Grades / familles avant–après | `previous_*` / `promoted_*` | Grades obligatoires si date ; familles = courante si absentes |
 
 ## Paramètres métier futurs
 

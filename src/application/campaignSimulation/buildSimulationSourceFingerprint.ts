@@ -7,6 +7,7 @@ import type { BudgetTargetInput, RoundingPolicy } from "../../domain/compensatio
 import type { PreparedEmployeeCalculationInput } from "../../domain/compensationCalculation";
 import type { PopulationCalculationReferences } from "../../domain/compensationCalculation";
 import { SENIORITY_IMPACT_CONTRACT_VERSION } from "../../domain/compensationCalculation";
+import { PROMOTION_TRAJECTORY_CONTRACT_VERSION } from "../../domain/compensationCalculation";
 import type { CampaignStatus } from "../../domain/campaign/models";
 import type { NineBoxMode } from "../../domain/compensationReference/models";
 import { buildConfigurationFingerprint } from "./formatExactBudgetDisplay";
@@ -22,6 +23,24 @@ function fnv1aHex(input: string): string {
 
 function salaryToken(value: number | bigint): string {
   return typeof value === "bigint" ? value.toString() : String(value);
+}
+
+function promotionToken(
+  promotion: PreparedEmployeeCalculationInput["promotion"],
+): string {
+  if (!promotion) {
+    return "";
+  }
+  return [
+    promotion.promotionDate,
+    promotion.salaryBeforePromotionFcfa.toString(),
+    promotion.salaryAfterPromotionFcfa.toString(),
+    promotion.previousGradeCode,
+    promotion.promotedGradeCode,
+    promotion.previousJobFamilyCode,
+    promotion.promotedJobFamilyCode,
+    `${promotion.promotionRate.numerator}/${promotion.promotionRate.denominator}`,
+  ].join("|");
 }
 
 export interface SimulationSourceFingerprintInput {
@@ -54,6 +73,7 @@ export function buildSimulationSourceFingerprint(
       perf: employee.performanceLevel ?? "",
       pot: employee.potentialLevel ?? "",
       under: employee.confirmedUnderperformer ? "1" : "0",
+      promo: promotionToken(employee.promotion),
     }))
     .sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
 
@@ -111,6 +131,7 @@ export function buildSimulationSourceFingerprint(
     campaignYear: input.campaignYear,
     technicalApplicationMonth: input.technicalApplicationMonth,
     seniorityImpactContractVersion: SENIORITY_IMPACT_CONTRACT_VERSION,
+    promotionTrajectoryContractVersion: PROMOTION_TRAJECTORY_CONTRACT_VERSION,
   });
 
   const canonical = [

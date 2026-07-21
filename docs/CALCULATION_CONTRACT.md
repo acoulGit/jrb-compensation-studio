@@ -297,10 +297,24 @@ arrondi individuel paramétrable. Pas de forçage du total au budget cible.
 
 ### 7. Traitement de la promotion
 
-Calculer uniquement le complément éventuel lorsque la cible matricielle dépasse
-l’augmentation de promotion déjà reçue.
+**Lot 2A-H2C-1 (préparation)** : import structuré d’un événement de promotion
+(`PromotionEvent`), validations N-1/N vs décembre N-1, trajectoire mensuelle
+déterministe (`buildPromotionAwareMonthlySalaryTrajectory`) et coût campagne
+préparé (`promotionCampaignCostFcfa`). Une seule date `promotionDate` = effet
+et première paie (pas de prorata journalier, pas de rappel de promotion).
+Exclusion si promotion en N après `technicalApplicationMonth`.
+Le champ historique `promotionAmount` reste une compatibilité d’import : sans
+groupe structuré il est conservé sans créer d’événement ; avec groupe structuré
+le montant canonique est `salaryAfter − salaryBefore` (rejet si saisie
+explicite différente).
 
-**À implémenter dans un lot ultérieur.**
+**H2C-2 (ultérieur)** : intégrer le coût / complément compensatoire au budget ;
+calculer uniquement le complément lorsque la cible matricielle dépasse
+l’augmentation de promotion déjà reçue ; rappel du complément sur salaire promu
+si `promotionMonth < technicalApplicationMonth`.
+
+Le moteur d’allocation Lot 2A n’est **pas** modifié par H2C-1.
+`CALCULATION_CONTRACT_VERSION` reste **2**.
 
 ### 8. Traitement des corrections et mesures distinctes
 

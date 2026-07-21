@@ -461,6 +461,8 @@ export function ImportPage() {
                       <th>Statut</th>
                       <th>Embauche</th>
                       <th>Salaire</th>
+                      <th>Promo</th>
+                      <th>Δ promo</th>
                       <th>9-Box</th>
                       <th>Validation</th>
                     </tr>
@@ -735,6 +737,12 @@ function PreviewRow({ row }: { row: NormalizedImportRow }) {
         {row.decemberBaseSalary === null
           ? "—"
           : row.decemberBaseSalary.toLocaleString("fr-FR")}
+      </td>
+      <td>{row.promotionDate ?? "—"}</td>
+      <td>
+        {row.promotionDate
+          ? row.promotionAmount.toLocaleString("fr-FR")
+          : "—"}
       </td>
       <td>{row.nineBoxCode ?? "—"}</td>
       <td>{row.isValid ? "Valide" : "Erreur"}</td>

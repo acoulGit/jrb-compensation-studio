@@ -283,6 +283,7 @@ export async function buildCampaignSimulationReadiness(
 
   const mappingContext: EmployeeMappingContext = {
     evaluationMode: referenceSet.config.nineBoxMode,
+    campaignYear: campaign.referenceYear,
     familiesById,
     gradesById,
     nineBoxFactorsByCode,

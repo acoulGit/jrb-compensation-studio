@@ -334,6 +334,7 @@ describe("import RH — normalisation", () => {
       jobFamilies: reference.jobFamilies,
       grades: reference.grades,
       todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
     });
     expect(ok.validCount).toBe(2);
     expect(ok.normalized[0].hireDate).toBe("2020-01-15");
@@ -351,6 +352,7 @@ describe("import RH — normalisation", () => {
       jobFamilies: reference.jobFamilies,
       grades: reference.grades,
       todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
     });
     expect(
       leading.issues.some((issue) => issue.code.includes("leading") || issue.message.includes("zéros")),
@@ -380,6 +382,7 @@ describe("import RH — normalisation", () => {
       jobFamilies: reference.jobFamilies,
       grades: reference.grades,
       todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
     });
     expect(blocked.errorCount).toBeGreaterThan(0);
     expect(blocked.validCount).toBeLessThan(blocked.normalized.length);
@@ -408,6 +411,7 @@ describe("import RH — normalisation", () => {
       jobFamilies: reference.jobFamilies,
       grades: reference.grades,
       todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
     });
     expect(result.normalized[0].contractType).toBe("cdd");
     expect(result.normalized[0].nineBoxCode).toBe(1);
@@ -647,6 +651,7 @@ describe("import RH — formules, reset et couverture", () => {
       jobFamilies: reference.jobFamilies,
       grades: reference.grades,
       todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
     });
     expect(
       result.issues.some((issue) => issue.code === "formula_not_allowed"),
@@ -695,6 +700,349 @@ describe("import RH — formules, reset et couverture", () => {
       null;
     expect(preferred?.id).toBe(active.id);
     expect(draft.id).not.toBe(active.id);
+  });
+});
+
+describe("import RH — promotion structurée (Lot 2A-H2C-1)", () => {
+  const PROMO_HEADERS = [
+    ...FR_HEADERS,
+    "Date promotion",
+    "Salaire avant promotion",
+    "Salaire après promotion",
+    "Ancien grade",
+    "Nouveau grade",
+  ];
+
+  function promoRow(
+    overrides: Partial<Record<string, string | number>> = {},
+  ): (string | number)[] {
+    return [
+      ...validRow(overrides),
+      overrides.promoDate ?? "",
+      overrides.salaryBefore ?? "",
+      overrides.salaryAfter ?? "",
+      overrides.prevGrade ?? "",
+      overrides.newGrade ?? "",
+    ];
+  }
+
+  it("accepte une ligne sans promotion et conserve null après import", async () => {
+    const { services, campaign, reference } = await preparedCampaign();
+    const mapping = buildAutoMapping(FR_HEADERS);
+    const normalized = normalizeImportRows({
+      rows: [FR_HEADERS, validRow()],
+      headerRowIndex: 0,
+      mapping,
+      jobFamilies: reference.jobFamilies,
+      grades: reference.grades,
+      todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
+    });
+    expect(normalized.validCount).toBe(1);
+    expect(normalized.normalized[0]!.promotionDate).toBeNull();
+
+    await services.hrImport.confirmImport({
+      campaignId: campaign.id,
+      fileName: "no-promo.xlsx",
+      format: "xlsx",
+      sheetName: "Population",
+      fileSizeBytes: 1024,
+      rows: [FR_HEADERS, validRow({ matricule: "EMP-NP" })],
+      headerRowIndex: 0,
+      mapping,
+    });
+    const page = await services.hrImport.listCurrentPopulation(campaign.id, {
+      limit: 10,
+      offset: 0,
+    });
+    const employee = page.items.find((item) => item.employeeNumber === "EMP-NP");
+    expect(employee?.promotionDate).toBeNull();
+    expect(employee?.previousGradeId).toBeNull();
+  });
+
+  it("valide un groupe promotion complet en N et persiste les colonnes", async () => {
+    const { services, campaign, reference } = await preparedCampaign();
+    const mapping = buildAutoMapping(PROMO_HEADERS);
+    const row = promoRow({
+      matricule: "EMP-PR",
+      grade: "G1",
+      salaire: 500_000,
+      promoDate: "2026-04-15",
+      salaryBefore: 500_000,
+      salaryAfter: 550_000,
+      prevGrade: "G1",
+      newGrade: "G2",
+    });
+    const normalized = normalizeImportRows({
+      rows: [PROMO_HEADERS, row],
+      headerRowIndex: 0,
+      mapping,
+      jobFamilies: reference.jobFamilies,
+      grades: reference.grades,
+      todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
+    });
+    expect(normalized.validCount).toBe(1);
+    expect(normalized.normalized[0]!.promotionDate).toBe("2026-04-15");
+    expect(normalized.normalized[0]!.salaryAfterPromotion).toBe(550_000);
+
+    await services.hrImport.confirmImport({
+      campaignId: campaign.id,
+      fileName: "promo.xlsx",
+      format: "xlsx",
+      sheetName: "Population",
+      fileSizeBytes: 2048,
+      rows: [PROMO_HEADERS, row],
+      headerRowIndex: 0,
+      mapping,
+    });
+    const page = await services.hrImport.listCurrentPopulation(campaign.id, {
+      limit: 10,
+      offset: 0,
+    });
+    const employee = page.items.find((item) => item.employeeNumber === "EMP-PR");
+    expect(employee?.promotionDate).toBe("2026-04-15");
+    expect(employee?.salaryBeforePromotion).toBe(500_000);
+    expect(employee?.salaryAfterPromotion).toBe(550_000);
+    expect(employee?.previousGradeId).toBeTruthy();
+    expect(employee?.promotedGradeId).toBeTruthy();
+  });
+
+  it("rejette un groupe promotion partiel sans date", async () => {
+    const { reference } = await preparedCampaign();
+    const mapping = buildAutoMapping(PROMO_HEADERS);
+    const result = normalizeImportRows({
+      rows: [
+        PROMO_HEADERS,
+        promoRow({
+          matricule: "EMP-BAD",
+          salaryBefore: 500_000,
+        }),
+      ],
+      headerRowIndex: 0,
+      mapping,
+      jobFamilies: reference.jobFamilies,
+      grades: reference.grades,
+      todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
+    });
+    expect(result.validCount).toBe(0);
+    expect(
+      result.issues.some((issue) => issue.code === "promotion_partial_without_date"),
+    ).toBe(true);
+  });
+
+  it("rejette un groupe promotion partiel avec date incomplète", async () => {
+    const { reference } = await preparedCampaign();
+    const mapping = buildAutoMapping(PROMO_HEADERS);
+    const result = normalizeImportRows({
+      rows: [
+        PROMO_HEADERS,
+        promoRow({
+          matricule: "EMP-PARTIAL",
+          grade: "G1",
+          salaire: 500_000,
+          promoDate: "2026-04-15",
+          salaryBefore: 500_000,
+          // salaryAfter / grades manquants
+        }),
+      ],
+      headerRowIndex: 0,
+      mapping,
+      jobFamilies: reference.jobFamilies,
+      grades: reference.grades,
+      todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
+    });
+    expect(result.validCount).toBe(0);
+    expect(
+      result.issues.some((issue) => issue.code === "promotion_incomplete_group"),
+    ).toBe(true);
+  });
+
+  const PROMO_HEADERS_WITH_AMOUNT = [
+    ...FR_HEADERS,
+    "Date promotion",
+    "Salaire avant promotion",
+    "Salaire après promotion",
+    "Ancien grade",
+    "Nouveau grade",
+  ];
+
+  const FR_HEADERS_WITHOUT_PROMO_AMOUNT = FR_HEADERS.filter(
+    (header) => header !== "Montant promotion",
+  );
+
+  function structuredPromoRowWithoutAmountColumn(
+    overrides: Partial<Record<string, string | number>> = {},
+  ): (string | number)[] {
+    return [
+      overrides.matricule ?? "EMP-0001",
+      overrides.nom ?? "Salarié Démo 1",
+      overrides.famille ?? "F1",
+      overrides.grade ?? "G1",
+      overrides.contrat ?? "CDI",
+      overrides.statut ?? "Actif",
+      overrides.date ?? "2020-01-15",
+      overrides.salaire ?? 500_000,
+      overrides.nineBox ?? 5,
+      overrides.under ?? "non",
+      overrides.corr ?? 0,
+      overrides.social ?? 0,
+      overrides.promoDate ?? "2026-04-15",
+      overrides.salaryBefore ?? 500_000,
+      overrides.salaryAfter ?? 550_000,
+      overrides.prevGrade ?? "G1",
+      overrides.newGrade ?? "G2",
+    ];
+  }
+
+  function structuredPromoRowWithAmount(
+    overrides: Partial<Record<string, string | number>> = {},
+  ): (string | number)[] {
+    return [
+      ...validRow({
+        matricule: overrides.matricule ?? "EMP-AMT",
+        grade: overrides.grade ?? "G1",
+        salaire: overrides.salaire ?? 500_000,
+        promo: overrides.promo ?? "",
+      }),
+      overrides.promoDate ?? "2026-04-15",
+      overrides.salaryBefore ?? 500_000,
+      overrides.salaryAfter ?? 550_000,
+      overrides.prevGrade ?? "G1",
+      overrides.newGrade ?? "G2",
+    ];
+  }
+
+  it("promotion structurée sans colonne Montant de promotion → delta canonique", async () => {
+    const { reference } = await preparedCampaign();
+    const headers = [
+      ...FR_HEADERS_WITHOUT_PROMO_AMOUNT,
+      "Date promotion",
+      "Salaire avant promotion",
+      "Salaire après promotion",
+      "Ancien grade",
+      "Nouveau grade",
+    ];
+    const mapping = buildAutoMapping(headers);
+    const result = normalizeImportRows({
+      rows: [headers, structuredPromoRowWithoutAmountColumn()],
+      headerRowIndex: 0,
+      mapping,
+      jobFamilies: reference.jobFamilies,
+      grades: reference.grades,
+      todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
+    });
+    expect(result.validCount).toBe(1);
+    expect(result.normalized[0]!.promotionDate).toBe("2026-04-15");
+    expect(result.normalized[0]!.promotionAmount).toBe(50_000);
+  });
+
+  it("promotion structurée avec cellule Montant vide → delta canonique", async () => {
+    const { reference } = await preparedCampaign();
+    const mapping = buildAutoMapping(PROMO_HEADERS_WITH_AMOUNT);
+    const result = normalizeImportRows({
+      rows: [
+        PROMO_HEADERS_WITH_AMOUNT,
+        structuredPromoRowWithAmount({ promo: "" }),
+      ],
+      headerRowIndex: 0,
+      mapping,
+      jobFamilies: reference.jobFamilies,
+      grades: reference.grades,
+      todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
+    });
+    expect(result.validCount).toBe(1);
+    expect(result.normalized[0]!.promotionAmount).toBe(50_000);
+  });
+
+  it("promotion structurée avec montant égal au delta → acceptée", async () => {
+    const { reference } = await preparedCampaign();
+    const mapping = buildAutoMapping(PROMO_HEADERS_WITH_AMOUNT);
+    const result = normalizeImportRows({
+      rows: [
+        PROMO_HEADERS_WITH_AMOUNT,
+        structuredPromoRowWithAmount({ promo: 50_000 }),
+      ],
+      headerRowIndex: 0,
+      mapping,
+      jobFamilies: reference.jobFamilies,
+      grades: reference.grades,
+      todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
+    });
+    expect(result.validCount).toBe(1);
+    expect(result.normalized[0]!.promotionAmount).toBe(50_000);
+  });
+
+  it("promotion structurée avec montant différent → PROMOTION_AMOUNT_MISMATCH", async () => {
+    const { reference } = await preparedCampaign();
+    const mapping = buildAutoMapping(PROMO_HEADERS_WITH_AMOUNT);
+    const result = normalizeImportRows({
+      rows: [
+        PROMO_HEADERS_WITH_AMOUNT,
+        structuredPromoRowWithAmount({ promo: 40_000 }),
+      ],
+      headerRowIndex: 0,
+      mapping,
+      jobFamilies: reference.jobFamilies,
+      grades: reference.grades,
+      todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
+    });
+    expect(result.validCount).toBe(0);
+    const mismatch = result.issues.find(
+      (issue) => issue.code === "PROMOTION_AMOUNT_MISMATCH",
+    );
+    expect(mismatch).toBeTruthy();
+    expect(mismatch?.message).toMatch(/40[\s\u202f]?000/);
+    expect(mismatch?.message).toMatch(/50[\s\u202f]?000/);
+  });
+
+  it("promotionAmount historique seul est conservé sans PromotionEvent", async () => {
+    const { reference } = await preparedCampaign();
+    const mapping = buildAutoMapping(FR_HEADERS);
+    const result = normalizeImportRows({
+      rows: [FR_HEADERS, validRow({ matricule: "EMP-HIST", promo: 75_000 })],
+      headerRowIndex: 0,
+      mapping,
+      jobFamilies: reference.jobFamilies,
+      grades: reference.grades,
+      todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
+    });
+    expect(result.validCount).toBe(1);
+    expect(result.normalized[0]!.promotionAmount).toBe(75_000);
+    expect(result.normalized[0]!.promotionDate).toBeNull();
+    expect(result.normalized[0]!.salaryBeforePromotion).toBeNull();
+    expect(result.normalized[0]!.salaryAfterPromotion).toBeNull();
+  });
+
+  it("absence de double comptage : montant canonique = delta unique", async () => {
+    const { reference } = await preparedCampaign();
+    const mapping = buildAutoMapping(PROMO_HEADERS_WITH_AMOUNT);
+    const result = normalizeImportRows({
+      rows: [
+        PROMO_HEADERS_WITH_AMOUNT,
+        structuredPromoRowWithAmount({ promo: 50_000 }),
+      ],
+      headerRowIndex: 0,
+      mapping,
+      jobFamilies: reference.jobFamilies,
+      grades: reference.grades,
+      todayIsoDate: TODAY,
+      campaignReferenceYear: 2026,
+    });
+    const row = result.normalized[0]!;
+    const derived =
+      (row.salaryAfterPromotion ?? 0) - (row.salaryBeforePromotion ?? 0);
+    expect(row.promotionAmount).toBe(derived);
+    expect(row.promotionAmount).toBe(50_000);
+    // Pas de cumul montant historique + delta.
+    expect(row.promotionAmount).not.toBe(50_000 + 50_000);
   });
 });
 

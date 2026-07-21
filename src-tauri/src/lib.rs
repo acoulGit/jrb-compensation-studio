@@ -39,6 +39,12 @@ pub fn run() {
             sql: persistence::MIGRATION_0005_SQL,
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: persistence::MIGRATION_0006_VERSION,
+            description: persistence::MIGRATION_0006_DESCRIPTION,
+            sql: persistence::MIGRATION_0006_SQL,
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

@@ -659,3 +659,50 @@ finale, hors budget, avec rappel/direct et date d’embauche importée.
 - `pnpm test` / `pnpm build` / cargo / `git diff --check`
 - migrations 0001–0005 et `simulation_persistence.rs` inchangés
 - stash intact ; aucun commit
+
+## 2026-07-21 — Lot 2A-H2C-1 correction : coexistence promotionAmount
+
+### Objectif
+
+Sécuriser la coexistence entre `promotionAmount` historique et la promotion
+structurée H2C (pas de correction silencieuse en cas d’écart).
+
+### Comportement
+
+- Sans promo structurée : conserver `promotionAmount` ; pas de `PromotionEvent`
+- Avec promo structurée : montant canonique = delta salaires
+- Absente / vide / 0 → dérivé ; égale → OK ; différente → `PROMOTION_AMOUNT_MISMATCH`
+
+### Vérifications
+
+- `pnpm test` / `pnpm build` / cargo / `git diff --check`
+- stash intact ; aucun commit
+
+## 2026-07-20 — Lot 2A-H2C-1 : import promotions + trajectoire mensuelle
+
+### Objectif
+
+Capturer une promotion structurée (N-1 ou N), valider la cohérence avec le
+snapshot décembre N-1, construire une trajectoire salariale mensuelle
+déterministe et préparer le coût campagne pour H2C-2 — sans modifier
+l’allocation budgétaire ni `result_schema_version` / contrat v2.
+
+### Livrables
+
+- Domaine `promotionTrajectory.ts` (`PromotionEvent`, trajectoire, validations)
+- Migration `0006_employee_promotions.sql` (colonnes optionnelles sur
+  `hr_import_employees`)
+- Import : colonnes optionnelles, aliases, normalisation, persistance TS/Rust
+- Mapping → `PreparedEmployeeCalculationInput.promotion` + fingerprint
+- Prévisualisation ImportPage (date / delta)
+- Tests `promotionTrajectory.test.ts` + scénarios import
+- Docs BUSINESS_RULES, CALCULATION_CONTRACT, DATA_DICTIONARY, HR_IMPORT
+- Stash 2B-4B **non appliqué** ; aucun commit
+
+### Vérifications
+
+- `pnpm test` : 305 passed
+- `pnpm build` : OK
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked` : OK
+- migrations 0001–0005 inchangées ; 0006 créée
+- stash 2B-4B intact ; aucun commit
