@@ -229,11 +229,17 @@ export interface FinalizeEmployeePromotionAwareCompensationResult {
   baseSalaryReminderFcfa: bigint;
   remainingYearDirectIncreaseCostFcfa: bigint;
   annualPromotionBudgetCostFcfa: bigint;
+  /** Coût promo imputable déjà payé avant le mois technique. */
+  promotionCostAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  /** Coût promo imputable du mois technique à décembre. */
+  promotionCostFromTechnicalMonthToDecemberFcfa: bigint;
   seniorityReminderFcfa: bigint;
   remainingYearDirectSeniorityImpactFcfa: bigint;
   annualSeniorityImpactFcfa: bigint;
   annualPromotionSeniorityImpactFcfa: bigint;
   combinedAnnualSeniorityImpactFcfa: bigint;
+  promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  promotionSeniorityFromTechnicalMonthToDecemberFcfa: bigint;
   technicalApplicationMonthSeniorityRatePercent: number;
 }
 
@@ -343,6 +349,10 @@ export function finalizeEmployeePromotionAwareCompensation(
   let seniorityReminderFcfa = 0n;
   let remainingYearDirectSeniorityImpactFcfa = 0n;
   let annualPromotionSeniorityImpactFcfa = 0n;
+  let promotionCostAlreadyPaidBeforeTechnicalMonthFcfa = 0n;
+  let promotionCostFromTechnicalMonthToDecemberFcfa = 0n;
+  let promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa = 0n;
+  let promotionSeniorityFromTechnicalMonthToDecemberFcfa = 0n;
 
   for (const entry of trajectory) {
     annualTheoreticalCompensatoryAllocation = addFractions(
@@ -351,6 +361,16 @@ export function finalizeEmployeePromotionAwareCompensation(
     );
     annualActualCompensatoryCostFcfa += entry.roundedCompensatoryComplementFcfa;
     annualPromotionSeniorityImpactFcfa += entry.promotionSeniorityImpactFcfa;
+
+    if (entry.month < input.technicalApplicationMonth) {
+      promotionCostAlreadyPaidBeforeTechnicalMonthFcfa += entry.promotionBudgetCostFcfa;
+      promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa +=
+        entry.promotionSeniorityImpactFcfa;
+    } else {
+      promotionCostFromTechnicalMonthToDecemberFcfa += entry.promotionBudgetCostFcfa;
+      promotionSeniorityFromTechnicalMonthToDecemberFcfa +=
+        entry.promotionSeniorityImpactFcfa;
+    }
 
     if (entry.paymentTiming === "reminder") {
       baseSalaryReminderFcfa += entry.roundedCompensatoryComplementFcfa;
@@ -382,6 +402,17 @@ export function finalizeEmployeePromotionAwareCompensation(
     );
   }
 
+  if (
+    promotionCostAlreadyPaidBeforeTechnicalMonthFcfa +
+      promotionCostFromTechnicalMonthToDecemberFcfa !==
+    annualPromotionBudgetCostFcfa
+  ) {
+    throw new CompensationCalculationError(
+      "PROMOTION_BUDGET_INVARIANT_FAILED",
+      `Incohérence calendrier promo pour ${input.employeeId}.`,
+    );
+  }
+
   const technicalApplicationMonthSeniorityRatePercent = seniorityRatePercentAt(
     hire,
     input.campaignYear,
@@ -396,11 +427,15 @@ export function finalizeEmployeePromotionAwareCompensation(
     baseSalaryReminderFcfa,
     remainingYearDirectIncreaseCostFcfa,
     annualPromotionBudgetCostFcfa,
+    promotionCostAlreadyPaidBeforeTechnicalMonthFcfa,
+    promotionCostFromTechnicalMonthToDecemberFcfa,
     seniorityReminderFcfa,
     remainingYearDirectSeniorityImpactFcfa,
     annualSeniorityImpactFcfa,
     annualPromotionSeniorityImpactFcfa,
     combinedAnnualSeniorityImpactFcfa,
+    promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa,
+    promotionSeniorityFromTechnicalMonthToDecemberFcfa,
     technicalApplicationMonthSeniorityRatePercent,
   };
 }

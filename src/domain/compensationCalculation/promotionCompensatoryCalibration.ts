@@ -68,7 +68,7 @@ export function solvePromotionAwareCompensatoryCalibrationRate(input: {
   if (active.length === 0) {
     throw new CompensationCalculationError(
       "NO_COMPENSATORY_ALLOCATION_CAPACITY",
-      "Aucune capacité d'allocation compensatoire disponible : tous les facteurs matriciels effectifs sont nuls alors qu'un budget compensatoire positif reste à répartir. Augmentez le budget, revoyez la population ou l'éligibilité aux mesures compensatoires.",
+      "Aucune capacité d'allocation compensatoire disponible : tous les facteurs matriciels effectifs sont nuls alors qu'un budget compensatoire positif reste à répartir. Réduisez l'enveloppe disponible ou revoyez la population et les règles d'éligibilité au complément compensatoire.",
     );
   }
 
@@ -125,7 +125,7 @@ export function solvePromotionAwareCompensatoryCalibrationRate(input: {
 
   throw new CompensationCalculationError(
     "NO_COMPENSATORY_ALLOCATION_CAPACITY",
-    "Aucun taux de calibrage compensatoire ne satisfait l'équation exacte de répartition du budget disponible sur les expositions fournies.",
+    "Aucun taux de calibrage compensatoire ne satisfait l'équation exacte de répartition du budget disponible sur les expositions fournies. Réduisez l'enveloppe disponible ou revoyez la population et les règles d'éligibilité au complément compensatoire.",
   );
 }
 

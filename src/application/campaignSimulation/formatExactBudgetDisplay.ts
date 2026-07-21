@@ -87,23 +87,66 @@ export function formatFcfaInteger(value: bigint): string {
 }
 
 /**
- * Affiche un taux exact (fraction) en pourcentage avec 2 décimales.
- * Ex. 5,8045… % → « 5,80 % ». La fraction source n’est pas mutée.
+ * Affiche un taux exact (fraction) en pourcentage.
+ * @param fractionDigits 2 (défaut, promotions) ou 4 (taux cible / complémentaire).
+ * Ex. 5,8045… % → « 5,80 % » ; 0,024375 → « 2,4375 % ».
+ * La fraction source n’est pas mutée.
  */
-export function formatExactRateAsPercent(rate: ExactAmount): string {
+export function formatExactRateAsPercent(
+  rate: ExactAmount,
+  fractionDigits: 2 | 4 = 2,
+): string {
   const reduced = reduceFraction(rate.numerator, rate.denominator);
-  // percentScaled = round((num/den) × 100 × 100) = round(num × 10000 / den)
+  // scale = 100 × 10^fractionDigits
+  const scale = fractionDigits === 2 ? 10_000n : 1_000_000n;
   const percentScaled = roundHalfUpScaled(
     reduced.numerator,
     reduced.denominator,
-    10_000n,
+    scale,
   );
   const negative = percentScaled < 0n;
   const abs = negative ? -percentScaled : percentScaled;
-  const whole = abs / 100n;
-  const frac = abs % 100n;
+  const divisor = fractionDigits === 2 ? 100n : 10_000n;
+  const whole = abs / divisor;
+  const frac = abs % divisor;
   const sign = negative ? "-" : "";
-  return `${sign}${whole.toString()},${frac.toString().padStart(2, "0")} %`;
+  return `${sign}${whole.toString()},${frac
+    .toString()
+    .padStart(fractionDigits, "0")} %`;
+}
+
+/** Taux d’ancienneté entier suivi de % (jamais de fraction interne). */
+export function formatSeniorityRatePercent(ratePercent: number): string {
+  return `${Math.trunc(ratePercent)} %`;
+}
+
+/**
+ * Écart signé en FCFA entiers (signe Unicode − pour les négatifs).
+ * Ex. −163 FCFA ; +50 FCFA ; 0 FCFA.
+ */
+export function formatSignedFcfaInteger(value: bigint): string {
+  if (value === 0n) {
+    return formatFcfaInteger(0n);
+  }
+  if (value > 0n) {
+    return `+${formatFcfaInteger(value)}`;
+  }
+  return `\u2212${formatFcfaInteger(-value)}`;
+}
+
+/**
+ * Écart d’arrondi exact signé (max 2 décimales), signe Unicode − si négatif.
+ */
+export function formatSignedExactAmountAsFcfa(amount: ExactAmount): string {
+  const label = formatExactAmountAsFcfa(amount);
+  const reduced = reduceFraction(amount.numerator, amount.denominator);
+  if (reduced.numerator === 0n) {
+    return label;
+  }
+  if (reduced.numerator > 0n) {
+    return label.startsWith("+") ? label : `+${label}`;
+  }
+  return label.replace(/^-/, "\u2212");
 }
 
 /** Facteur en millièmes : 1000 → « 1,000 » ; 850 → « 0,850 ». */

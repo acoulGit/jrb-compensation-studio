@@ -1,32 +1,53 @@
 /**
  * Construction de la vue consultable à partir du résultat moteur
- * (Lot 2B-3 / correctif 2A-H1).
- * Ne recalcule aucun montant métier : lit les champs explicites du moteur.
+ * (Lot 2B-3 / correctif 2A-H1 / Lot 2A-H2C-2B).
+ * Ne recalcule aucun montant métier : lit / agrège / formate les champs explicites.
  */
 
 import {
   CALCULATION_CONTRACT_VERSION,
   formatExactAmount,
+  technicalApplicationMonthLabelFr,
   type CalculationExplanationStep,
   type EmployeeCompensationCalculationResult,
+  type MonthlyCompensationTrajectoryEntry,
   type PreparedPopulationCalculationResult,
 } from "../../domain/compensationCalculation";
 import type { CampaignStatus } from "../../domain/campaign/models";
 import type { NineBoxMode } from "../../domain/compensationReference/models";
 import {
-  formatBasisPointsAsPercent,
   formatExactAmountAsFcfa,
   formatExactRateAsPercent,
   formatExactWeight,
   formatFactorMilli,
   formatFcfaInteger,
+  formatSeniorityRatePercent,
+  formatSignedExactAmountAsFcfa,
+  formatSignedFcfaInteger,
+  formatBasisPointsAsPercent,
 } from "./formatExactBudgetDisplay";
 import type {
   CampaignSimulationExecutionResult,
   EmployeeSimulationResultView,
+  MonthlyCompensationTrajectoryView,
+  PaymentCalendarSummaryView,
+  PromotionAwareEnvelopeSummaryView,
+  SeniorityImpactSummaryView,
   SimulationBudgetSummaryView,
   SimulationPopulationSummaryView,
 } from "./campaignSimulationExecutionModels";
+import {
+  compensatoryEligibilityKind,
+  formatCompensatoryEligibilityLabel,
+  formatCompensatoryIneligibilityReasonLabel,
+  formatCompensatoryPaymentStatusLabel,
+  formatPromotionInclusionStatusLabel,
+  formatPromotionPaymentStatusLabel,
+  formatPromotionStatusLabel,
+  promotionStatusKind,
+  readTechnicalMonthTrajectoryEntry,
+  resolveCompensatoryIneligibilityReason,
+} from "./promotionAwareResultLabels";
 
 function mapExplanationSteps(
   steps: readonly CalculationExplanationStep[],
@@ -41,6 +62,71 @@ function mapExplanationSteps(
   }));
 }
 
+function mapTrajectoryEntry(
+  entry: MonthlyCompensationTrajectoryEntry,
+  technicalApplicationMonth: number,
+  salaryPositionLabel: string | null,
+): MonthlyCompensationTrajectoryView {
+  return {
+    month: entry.month,
+    monthLabel: technicalApplicationMonthLabelFr(entry.month),
+    baseSalaryFcfa: entry.baseSalaryFcfa,
+    baseSalaryLabel: formatFcfaInteger(entry.baseSalaryFcfa),
+    gradeCode: entry.gradeCode,
+    jobFamilyCode: entry.jobFamilyCode,
+    salaryPositionLabel,
+    targetCompensatoryRate: entry.targetCompensatoryRate,
+    targetCompensatoryRateLabel: formatExactRateAsPercent(
+      entry.targetCompensatoryRate,
+      4,
+    ),
+    promotionRateOffset: entry.promotionRateOffset,
+    promotionRateOffsetLabel: formatExactRateAsPercent(
+      entry.promotionRateOffset,
+      2,
+    ),
+    compensatoryComplementRate: entry.compensatoryComplementRate,
+    compensatoryComplementRateLabel: formatExactRateAsPercent(
+      entry.compensatoryComplementRate,
+      4,
+    ),
+    theoreticalCompensatoryComplement: entry.theoreticalCompensatoryComplement,
+    theoreticalCompensatoryComplementLabel: formatExactAmountAsFcfa(
+      entry.theoreticalCompensatoryComplement,
+    ),
+    roundedCompensatoryComplementFcfa: entry.roundedCompensatoryComplementFcfa,
+    roundedCompensatoryComplementLabel: formatFcfaInteger(
+      entry.roundedCompensatoryComplementFcfa,
+    ),
+    promotionBudgetCostFcfa: entry.promotionBudgetCostFcfa,
+    promotionBudgetCostLabel: formatFcfaInteger(entry.promotionBudgetCostFcfa),
+    finalSalaryFcfa: entry.finalSalaryFcfa,
+    finalSalaryLabel: formatFcfaInteger(entry.finalSalaryFcfa),
+    seniorityRatePercent: entry.seniorityRatePercent,
+    seniorityRateLabel: formatSeniorityRatePercent(entry.seniorityRatePercent),
+    promotionSeniorityImpactFcfa: entry.promotionSeniorityImpactFcfa,
+    promotionSeniorityImpactLabel: formatFcfaInteger(
+      entry.promotionSeniorityImpactFcfa,
+    ),
+    compensatorySeniorityImpactFcfa: entry.compensatorySeniorityImpactFcfa,
+    compensatorySeniorityImpactLabel: formatFcfaInteger(
+      entry.compensatorySeniorityImpactFcfa,
+    ),
+    totalSeniorityImpactFcfa: entry.totalSeniorityImpactFcfa,
+    totalSeniorityImpactLabel: formatFcfaInteger(entry.totalSeniorityImpactFcfa),
+    promotionPaymentStatusLabel: formatPromotionPaymentStatusLabel(
+      entry,
+      technicalApplicationMonth,
+    ),
+    compensatoryPaymentStatusLabel: formatCompensatoryPaymentStatusLabel(
+      entry.paymentTiming,
+    ),
+    paymentTiming: entry.paymentTiming,
+    promotionActive: entry.promotionActive,
+    promotionStatus: entry.promotionStatus,
+  };
+}
+
 function mapEmployee(
   employee: EmployeeCompensationCalculationResult,
   labels: ReadonlyMap<string, string>,
@@ -52,6 +138,35 @@ function mapEmployee(
     numerator: BigInt(employee.evaluationFactorNumerator),
     denominator: BigInt(employee.evaluationFactorScale),
   };
+  const technicalMonthEntry = readTechnicalMonthTrajectoryEntry(employee);
+  const promotion = employee.promotion;
+  const ineligibilityReason = resolveCompensatoryIneligibilityReason({
+    compensatoryMeasureEligible: employee.compensatoryMeasureEligible,
+    blockingReason: employee.blockingReason ?? null,
+    contractType: employee.contractType,
+    hireDate: employee.hireDate,
+    campaignYear: employee.campaignYear,
+    employmentStatus: employee.employmentStatus,
+  });
+
+  const promotionStatusLabel = formatPromotionStatusLabel({
+    promotion,
+    promotionYear: employee.promotionYear,
+    promotionMonth: employee.promotionMonth,
+    campaignYear: employee.campaignYear,
+    promotionInclusion: employee.promotionInclusion,
+    isPromotionBudgetPopulationEmployee:
+      employee.isPromotionBudgetPopulationEmployee,
+  });
+
+  const trajectory = employee.monthlyCompensationTrajectory.map((entry) =>
+    mapTrajectoryEntry(
+      entry,
+      employee.technicalApplicationMonth,
+      employee.salaryPositionLabel,
+    ),
+  );
+
   return {
     employeeId: employee.employeeId,
     employeeDisplayName: displayName,
@@ -90,6 +205,7 @@ function mapEmployee(
     monthlyTheoreticalIncreaseRate: employee.monthlyTheoreticalIncreaseRate,
     monthlyTheoreticalIncreaseRateLabel: formatExactRateAsPercent(
       employee.monthlyTheoreticalIncreaseRate,
+      4,
     ),
     monthlyFinalRoundedIncreaseFcfa: employee.monthlyFinalRoundedIncreaseFcfa,
     monthlyRoundingDelta: employee.monthlyRoundingDelta,
@@ -125,7 +241,225 @@ function mapEmployee(
     remainingYearDirectSeniorityImpactFcfa:
       employee.remainingYearDirectSeniorityImpactFcfa,
     annualSeniorityImpactFcfa: employee.annualSeniorityImpactFcfa,
+    compensatoryMeasureEligible: employee.compensatoryMeasureEligible,
+    isPromotionBudgetPopulationEmployee:
+      employee.isPromotionBudgetPopulationEmployee,
+    employmentStatus: employee.employmentStatus,
+    contractType: employee.contractType,
+    promotionStatusLabel,
+    promotionStatusKind: promotionStatusKind({
+      promotion,
+      promotionYear: employee.promotionYear,
+      promotionInclusion: employee.promotionInclusion,
+      isPromotionBudgetPopulationEmployee:
+        employee.isPromotionBudgetPopulationEmployee,
+      campaignYear: employee.campaignYear,
+    }),
+    compensatoryEligibilityLabel: formatCompensatoryEligibilityLabel({
+      compensatoryMeasureEligible: employee.compensatoryMeasureEligible,
+      blockingReason: employee.blockingReason ?? null,
+    }),
+    compensatoryEligibilityKind: compensatoryEligibilityKind({
+      compensatoryMeasureEligible: employee.compensatoryMeasureEligible,
+      blockingReason: employee.blockingReason ?? null,
+    }),
+    compensatoryIneligibilityReasonCode: ineligibilityReason,
+    compensatoryIneligibilityReasonLabel:
+      formatCompensatoryIneligibilityReasonLabel(ineligibilityReason),
+    hasStructuredPromotion: promotion !== null,
+    promotionDate: promotion?.promotionDate ?? null,
+    promotionYear: employee.promotionYear,
+    promotionMonth: employee.promotionMonth,
+    previousGradeCode: promotion?.previousGradeCode ?? null,
+    promotedGradeCode: promotion?.promotedGradeCode ?? null,
+    previousJobFamilyCode: promotion?.previousJobFamilyCode ?? null,
+    promotedJobFamilyCode: promotion?.promotedJobFamilyCode ?? null,
+    salaryBeforePromotionFcfa: promotion?.salaryBeforePromotionFcfa ?? null,
+    salaryAfterPromotionFcfa: promotion?.salaryAfterPromotionFcfa ?? null,
+    promotionAmountFcfa: promotion?.promotionAmountFcfa ?? null,
+    promotionRate: promotion?.promotionRate ?? null,
+    promotionRateLabel: promotion
+      ? formatExactRateAsPercent(promotion.promotionRate, 2)
+      : null,
+    promotionInclusionStatusLabel: promotion
+      ? formatPromotionInclusionStatusLabel(employee.promotionInclusion)
+      : null,
+    promotionCampaignCostInformativeFcfa:
+      employee.promotionInclusion.promotionCampaignCostFcfa,
+    promotionCampaignCostInformativeLabel: formatFcfaInteger(
+      employee.promotionInclusion.promotionCampaignCostFcfa,
+    ),
+    annualPromotionBudgetCostFcfa: employee.annualPromotionBudgetCostFcfa,
+    annualPromotionBudgetCostLabel: formatFcfaInteger(
+      employee.annualPromotionBudgetCostFcfa,
+    ),
+    promotionCostAlreadyPaidBeforeTechnicalMonthFcfa:
+      employee.promotionCostAlreadyPaidBeforeTechnicalMonthFcfa,
+    promotionCostAlreadyPaidBeforeTechnicalMonthLabel: formatFcfaInteger(
+      employee.promotionCostAlreadyPaidBeforeTechnicalMonthFcfa,
+    ),
+    promotionCostFromTechnicalMonthToDecemberFcfa:
+      employee.promotionCostFromTechnicalMonthToDecemberFcfa,
+    promotionCostFromTechnicalMonthToDecemberLabel: formatFcfaInteger(
+      employee.promotionCostFromTechnicalMonthToDecemberFcfa,
+    ),
+    annualPromotionSeniorityImpactFcfa: employee.annualPromotionSeniorityImpactFcfa,
+    annualPromotionSeniorityImpactLabel: formatFcfaInteger(
+      employee.annualPromotionSeniorityImpactFcfa,
+    ),
+    combinedAnnualSeniorityImpactFcfa: employee.combinedAnnualSeniorityImpactFcfa,
+    combinedAnnualSeniorityImpactLabel: formatFcfaInteger(
+      employee.combinedAnnualSeniorityImpactFcfa,
+    ),
+    combinedAnnualActualCostFcfa: employee.combinedAnnualActualCostFcfa,
+    combinedAnnualActualCostLabel: formatFcfaInteger(
+      employee.combinedAnnualActualCostFcfa,
+    ),
+    technicalMonthCompensatoryComplementFcfa:
+      technicalMonthEntry?.roundedCompensatoryComplementFcfa ??
+      employee.monthlyFinalRoundedIncreaseFcfa,
+    technicalMonthCompensatoryComplementLabel: formatFcfaInteger(
+      technicalMonthEntry?.roundedCompensatoryComplementFcfa ??
+        employee.monthlyFinalRoundedIncreaseFcfa,
+    ),
+    technicalMonthFinalSalaryFcfa:
+      technicalMonthEntry?.finalSalaryFcfa ?? employee.monthlyFinalSalaryFcfa,
+    technicalMonthFinalSalaryLabel: formatFcfaInteger(
+      technicalMonthEntry?.finalSalaryFcfa ?? employee.monthlyFinalSalaryFcfa,
+    ),
+    monthlyCompensationTrajectory: trajectory,
     explanationSteps: mapExplanationSteps(employee.explanationSteps),
+  };
+}
+
+function buildEnvelopeSummary(
+  engineResult: PreparedPopulationCalculationResult,
+): PromotionAwareEnvelopeSummaryView {
+  return {
+    annualBudgetTargetFcfa: engineResult.budgetTargetResult.exactAmount,
+    annualBudgetTargetLabel: formatExactAmountAsFcfa(
+      engineResult.budgetTargetResult.exactAmount,
+    ),
+    totalAnnualPromotionBudgetCostFcfa:
+      engineResult.totalAnnualPromotionBudgetCostFcfa,
+    totalAnnualPromotionBudgetCostLabel: formatFcfaInteger(
+      engineResult.totalAnnualPromotionBudgetCostFcfa,
+    ),
+    availableAnnualCompensatoryBudgetFcfa:
+      engineResult.availableAnnualCompensatoryBudget,
+    availableAnnualCompensatoryBudgetLabel: formatExactAmountAsFcfa(
+      engineResult.availableAnnualCompensatoryBudget,
+    ),
+    totalAnnualTheoreticalCompensatoryCostFcfa:
+      engineResult.annualTheoreticalAllocatedTotal,
+    totalAnnualTheoreticalCompensatoryCostLabel: formatExactAmountAsFcfa(
+      engineResult.annualTheoreticalAllocatedTotal,
+    ),
+    totalAnnualActualCompensatoryCostFcfa:
+      engineResult.annualActualOperationCostFcfa,
+    totalAnnualActualCompensatoryCostLabel: formatFcfaInteger(
+      engineResult.annualActualOperationCostFcfa,
+    ),
+    totalAnnualActualCombinedBaseMeasureCostFcfa:
+      engineResult.totalCombinedAnnualActualCostFcfa,
+    totalAnnualActualCombinedBaseMeasureCostLabel: formatFcfaInteger(
+      engineResult.totalCombinedAnnualActualCostFcfa,
+    ),
+    annualCombinedRoundingDeltaFcfa: engineResult.annualCombinedRoundingDeltaFcfa,
+    annualCombinedRoundingDeltaLabel: formatSignedExactAmountAsFcfa(
+      engineResult.annualCombinedRoundingDeltaFcfa,
+    ),
+    compensatoryCalibrationRate: engineResult.compensatoryCalibrationRate,
+    compensatoryCalibrationRateLabel: formatExactRateAsPercent(
+      engineResult.compensatoryCalibrationRate,
+      4,
+    ),
+  };
+}
+
+function buildPaymentCalendar(
+  engineResult: PreparedPopulationCalculationResult,
+): PaymentCalendarSummaryView {
+  const totalCompensatoryReminderFcfa = engineResult.totalBaseSalaryReminderFcfa;
+  const totalRemainingYearDirectCompensatoryCostFcfa =
+    engineResult.totalRemainingYearDirectIncreaseCostFcfa;
+  const totalAnnualActualCompensatoryCostFcfa =
+    engineResult.annualActualOperationCostFcfa;
+
+  return {
+    totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa:
+      engineResult.totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa,
+    totalPromotionCostAlreadyPaidBeforeTechnicalMonthLabel: formatFcfaInteger(
+      engineResult.totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa,
+    ),
+    totalPromotionCostFromTechnicalMonthToDecemberFcfa:
+      engineResult.totalPromotionCostFromTechnicalMonthToDecemberFcfa,
+    totalPromotionCostFromTechnicalMonthToDecemberLabel: formatFcfaInteger(
+      engineResult.totalPromotionCostFromTechnicalMonthToDecemberFcfa,
+    ),
+    totalAnnualPromotionBudgetCostFcfa:
+      engineResult.totalAnnualPromotionBudgetCostFcfa,
+    totalAnnualPromotionBudgetCostLabel: formatFcfaInteger(
+      engineResult.totalAnnualPromotionBudgetCostFcfa,
+    ),
+    totalCompensatoryReminderFcfa,
+    totalCompensatoryReminderLabel: formatFcfaInteger(totalCompensatoryReminderFcfa),
+    totalRemainingYearDirectCompensatoryCostFcfa,
+    totalRemainingYearDirectCompensatoryCostLabel: formatFcfaInteger(
+      totalRemainingYearDirectCompensatoryCostFcfa,
+    ),
+    totalAnnualActualCompensatoryCostFcfa,
+    totalAnnualActualCompensatoryCostLabel: formatFcfaInteger(
+      totalAnnualActualCompensatoryCostFcfa,
+    ),
+    // Invariant d’affichage : comparaison des montants moteur, sans recomposition.
+    compensatoryReminderPlusDirectEqualsAnnual:
+      totalCompensatoryReminderFcfa +
+        totalRemainingYearDirectCompensatoryCostFcfa ===
+      totalAnnualActualCompensatoryCostFcfa,
+  };
+}
+
+function buildSeniorityImpactSummary(
+  engineResult: PreparedPopulationCalculationResult,
+): SeniorityImpactSummaryView {
+  return {
+    totalAnnualPromotionSeniorityImpactFcfa:
+      engineResult.totalAnnualPromotionSeniorityImpactFcfa,
+    totalAnnualPromotionSeniorityImpactLabel: formatFcfaInteger(
+      engineResult.totalAnnualPromotionSeniorityImpactFcfa,
+    ),
+    totalAnnualCompensatorySeniorityImpactFcfa:
+      engineResult.totalAnnualSeniorityImpactFcfa,
+    totalAnnualCompensatorySeniorityImpactLabel: formatFcfaInteger(
+      engineResult.totalAnnualSeniorityImpactFcfa,
+    ),
+    totalAnnualSeniorityImpactFcfa:
+      engineResult.totalCombinedAnnualSeniorityImpactFcfa,
+    totalAnnualSeniorityImpactLabel: formatFcfaInteger(
+      engineResult.totalCombinedAnnualSeniorityImpactFcfa,
+    ),
+    totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa:
+      engineResult.totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa,
+    totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthLabel:
+      formatFcfaInteger(
+        engineResult.totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa,
+      ),
+    totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa:
+      engineResult.totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa,
+    totalPromotionSeniorityFromTechnicalMonthToDecemberLabel: formatFcfaInteger(
+      engineResult.totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa,
+    ),
+    totalCompensatorySeniorityReminderFcfa:
+      engineResult.totalSeniorityReminderFcfa,
+    totalCompensatorySeniorityReminderLabel: formatFcfaInteger(
+      engineResult.totalSeniorityReminderFcfa,
+    ),
+    totalRemainingYearDirectCompensatorySeniorityImpactFcfa:
+      engineResult.totalRemainingYearDirectSeniorityImpactFcfa,
+    totalRemainingYearDirectCompensatorySeniorityImpactLabel: formatFcfaInteger(
+      engineResult.totalRemainingYearDirectSeniorityImpactFcfa,
+    ),
   };
 }
 
@@ -148,6 +482,22 @@ export function buildSimulationResultView(input: {
   const summary = engineResult.populationSummary;
   const budgetTarget = engineResult.budgetTargetResult;
 
+  const familyLabels = input.familyLabelsByCode ?? new Map<string, string>();
+  const gradeLabels = input.gradeLabelsByCode ?? new Map<string, string>();
+
+  const employees = engineResult.employees.map((employee) =>
+    mapEmployee(
+      employee,
+      input.employeeLabelsById,
+      familyLabels,
+      gradeLabels,
+    ),
+  );
+
+  const hasStructuredPromotions = employees.some(
+    (employee) => employee.hasStructuredPromotion,
+  );
+
   const budgetSummary: SimulationBudgetSummaryView = {
     budgetTargetMode: budgetTarget.mode,
     exactBudgetTarget: budgetTarget.exactAmount,
@@ -169,7 +519,7 @@ export function buildSimulationResultView(input: {
       engineResult.annualActualOperationCostFcfa,
     ),
     annualTotalRoundingDelta: engineResult.annualTotalRoundingDelta,
-    annualTotalRoundingDeltaLabel: formatExactAmountAsFcfa(
+    annualTotalRoundingDeltaLabel: formatSignedExactAmountAsFcfa(
       engineResult.annualTotalRoundingDelta,
     ),
     annualTheoreticalAllocatedTotal: summary.annualTheoreticalAllocatedTotal,
@@ -182,6 +532,12 @@ export function buildSimulationResultView(input: {
     ),
     roundingMode: engineResult.roundingPolicy.mode,
     roundingStepFcfa: BigInt(engineResult.roundingPolicy.stepFcfa),
+    envelopeSummary: buildEnvelopeSummary(engineResult),
+    paymentCalendar: buildPaymentCalendar(engineResult),
+    seniorityImpactSummary: buildSeniorityImpactSummary(engineResult),
+    hasStructuredPromotions,
+    hasImputedPromotionBudgetCost:
+      engineResult.totalAnnualPromotionBudgetCostFcfa > 0n,
   };
 
   const populationSummary: SimulationPopulationSummaryView = {
@@ -205,19 +561,16 @@ export function buildSimulationResultView(input: {
     totalRemainingYearDirectSeniorityImpactFcfa:
       summary.totalRemainingYearDirectSeniorityImpactFcfa,
     totalAnnualSeniorityImpactFcfa: summary.totalAnnualSeniorityImpactFcfa,
+    promotedIncludedEmployeeCount: summary.promotedIncludedEmployeeCount,
+    totalAnnualPromotionBudgetCostFcfa: summary.totalAnnualPromotionBudgetCostFcfa,
+    availableAnnualCompensatoryBudget: summary.availableAnnualCompensatoryBudget,
+    totalCombinedAnnualActualCostFcfa: summary.totalCombinedAnnualActualCostFcfa,
+    totalAnnualPromotionSeniorityImpactFcfa:
+      summary.totalAnnualPromotionSeniorityImpactFcfa,
+    totalCombinedAnnualSeniorityImpactFcfa:
+      summary.totalCombinedAnnualSeniorityImpactFcfa,
+    compensatoryCalibrationRate: summary.compensatoryCalibrationRate,
   };
-
-  const familyLabels = input.familyLabelsByCode ?? new Map<string, string>();
-  const gradeLabels = input.gradeLabelsByCode ?? new Map<string, string>();
-
-  const employees = engineResult.employees.map((employee) =>
-    mapEmployee(
-      employee,
-      input.employeeLabelsById,
-      familyLabels,
-      gradeLabels,
-    ),
-  );
 
   return {
     campaignId: input.campaignId,
@@ -246,4 +599,7 @@ export {
   formatFactorMilli,
   formatFcfaInteger,
   formatExactAmount,
+  formatSeniorityRatePercent,
+  formatSignedExactAmountAsFcfa,
+  formatSignedFcfaInteger,
 };

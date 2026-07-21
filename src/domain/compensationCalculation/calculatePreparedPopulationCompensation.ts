@@ -332,7 +332,34 @@ export function calculatePreparedPopulationCompensation(
     });
   } catch (error) {
     if (error instanceof CompensationCalculationError) {
-      // Conserver le code métier d’origine (ex. NO_COMPENSATORY_ALLOCATION_CAPACITY).
+      if (error.code === "NO_COMPENSATORY_ALLOCATION_CAPACITY") {
+        const eligibleExposureCount = calibrationExposures.filter(
+          (exposure) => !isZeroFraction(exposure.factor),
+        ).length;
+        const message =
+          "Un budget reste disponible après prise en compte des promotions, mais aucun salarié éligible ne présente une capacité d'allocation positive. Réduisez l'enveloppe disponible ou revoyez la population et les règles d'éligibilité au complément compensatoire.";
+        throw new CompensationCalculationError(
+          "NO_COMPENSATORY_ALLOCATION_CAPACITY",
+          message,
+          toIssueLikes([
+            {
+              code: "NO_COMPENSATORY_ALLOCATION_CAPACITY",
+              message,
+              step: "compensatory_calibration",
+              details: {
+                annualBudgetTargetFcfa: formatExactAmount(annualBudgetTarget),
+                totalAnnualPromotionBudgetCostFcfa:
+                  totalAnnualPromotionBudgetCostFcfa.toString(),
+                availableAnnualCompensatoryBudgetFcfa: formatExactAmount(
+                  availableAnnualCompensatoryBudget,
+                ),
+                eligibleExposureCount,
+              },
+            },
+          ]),
+        );
+      }
+      // Conserver le code métier d’origine.
       throw error;
     }
     throw new CompensationCalculationError(
@@ -571,6 +598,7 @@ export function calculatePreparedPopulationCompensation(
       remainingYearDirectSeniorityImpactFcfa: finalized.remainingYearDirectSeniorityImpactFcfa,
       annualSeniorityImpactFcfa: finalized.annualSeniorityImpactFcfa,
       employmentStatus: raw.employmentStatus ?? null,
+      contractType: raw.contractType ?? null,
       compensatoryMeasureEligible: exposures.compensatoryMeasureEligible,
       isPromotionBudgetPopulationEmployee: exposures.isPromotionBudgetPopulationEmployee,
       promotion: raw.promotion ?? null,
@@ -578,10 +606,18 @@ export function calculatePreparedPopulationCompensation(
       promotionMonth: exposures.promotionMonth,
       promotionInclusion: exposures.costPreview,
       annualPromotionBudgetCostFcfa: finalized.annualPromotionBudgetCostFcfa,
+      promotionCostAlreadyPaidBeforeTechnicalMonthFcfa:
+        finalized.promotionCostAlreadyPaidBeforeTechnicalMonthFcfa,
+      promotionCostFromTechnicalMonthToDecemberFcfa:
+        finalized.promotionCostFromTechnicalMonthToDecemberFcfa,
       monthlyCompensationTrajectory: finalized.monthlyCompensationTrajectory,
       combinedAnnualActualCostFcfa,
       annualPromotionSeniorityImpactFcfa: finalized.annualPromotionSeniorityImpactFcfa,
       combinedAnnualSeniorityImpactFcfa: finalized.combinedAnnualSeniorityImpactFcfa,
+      promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa:
+        finalized.promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa,
+      promotionSeniorityFromTechnicalMonthToDecemberFcfa:
+        finalized.promotionSeniorityFromTechnicalMonthToDecemberFcfa,
       blockingReason: prepared.blockingReason,
       explanationSteps: employeeSteps,
     });
@@ -637,6 +673,10 @@ export function calculatePreparedPopulationCompensation(
   let totalCombinedAnnualActualCostFcfa = 0n;
   let totalAnnualPromotionSeniorityImpactFcfa = 0n;
   let totalCombinedAnnualSeniorityImpactFcfa = 0n;
+  let totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa = 0n;
+  let totalPromotionCostFromTechnicalMonthToDecemberFcfa = 0n;
+  let totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa = 0n;
+  let totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa = 0n;
 
   for (const employee of employees) {
     populationSalarySumFcfa += employee.salaryFcfa;
@@ -655,6 +695,14 @@ export function calculatePreparedPopulationCompensation(
     totalCombinedAnnualActualCostFcfa += employee.combinedAnnualActualCostFcfa;
     totalAnnualPromotionSeniorityImpactFcfa += employee.annualPromotionSeniorityImpactFcfa;
     totalCombinedAnnualSeniorityImpactFcfa += employee.combinedAnnualSeniorityImpactFcfa;
+    totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa +=
+      employee.promotionCostAlreadyPaidBeforeTechnicalMonthFcfa;
+    totalPromotionCostFromTechnicalMonthToDecemberFcfa +=
+      employee.promotionCostFromTechnicalMonthToDecemberFcfa;
+    totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa +=
+      employee.promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa;
+    totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa +=
+      employee.promotionSeniorityFromTechnicalMonthToDecemberFcfa;
     if (employee.promotionInclusion.includedInSimulation) {
       promotedIncludedEmployeeCount += 1;
     }
@@ -703,10 +751,35 @@ export function calculatePreparedPopulationCompensation(
     exactAmountFromInteger(annualActualOperationCostFcfa),
     annualTheoreticalAllocatedTotal,
   );
+  const annualCombinedRoundingDeltaFcfa = subtractFractions(
+    exactAmountFromInteger(totalCombinedAnnualActualCostFcfa),
+    annualBudgetTarget,
+  );
   const monthlyTheoreticalIncreaseTotal = divideFractions(
     annualTheoreticalAllocatedTotal,
     TWELVE,
   );
+
+  if (
+    totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa +
+      totalPromotionCostFromTechnicalMonthToDecemberFcfa !==
+    totalAnnualPromotionBudgetCostFcfa
+  ) {
+    throw new CompensationCalculationError(
+      "PROMOTION_BUDGET_INVARIANT_FAILED",
+      "Incohérence population : promo déjà payée + reste ≠ coût annuel promotion imputable.",
+    );
+  }
+  if (
+    totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa +
+      totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa !==
+    totalAnnualPromotionSeniorityImpactFcfa
+  ) {
+    throw new CompensationCalculationError(
+      "SENIORITY_IMPACT_INVARIANT_FAILED",
+      "Incohérence population : ancienneté promo déjà payée + reste ≠ annuel promo.",
+    );
+  }
 
   const populationSummary: PopulationCalculationSummary = {
     employeeCount: employees.length,
@@ -741,8 +814,13 @@ export function calculatePreparedPopulationCompensation(
     totalAnnualPromotionBudgetCostFcfa,
     availableAnnualCompensatoryBudget,
     totalCombinedAnnualActualCostFcfa,
+    annualCombinedRoundingDeltaFcfa,
+    totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa,
+    totalPromotionCostFromTechnicalMonthToDecemberFcfa,
     totalAnnualPromotionSeniorityImpactFcfa,
     totalCombinedAnnualSeniorityImpactFcfa,
+    totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa,
+    totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa,
   };
 
   const explanationSteps: CalculationExplanationStep[] = [
@@ -859,8 +937,13 @@ export function calculatePreparedPopulationCompensation(
     totalAnnualPromotionBudgetCostFcfa,
     availableAnnualCompensatoryBudget,
     totalCombinedAnnualActualCostFcfa,
+    annualCombinedRoundingDeltaFcfa,
+    totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa,
+    totalPromotionCostFromTechnicalMonthToDecemberFcfa,
     totalAnnualPromotionSeniorityImpactFcfa,
     totalCombinedAnnualSeniorityImpactFcfa,
+    totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa,
+    totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa,
     populationSummary,
     explanationSteps,
   };

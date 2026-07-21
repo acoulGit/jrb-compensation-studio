@@ -813,3 +813,48 @@ moteur existant en l’absence de promotion structurée.
 - Couverture de tests du nouveau moteur volontairement ciblée (scénarios clés
   du brief) plutôt qu’exhaustive sur toutes les combinaisons possibles de
   statuts / éligibilité / mois de promotion.
+
+## 2026-07-21 — Lot 2A-H2C-2B restitution UI résultats
+
+### Objectif
+
+Rendre les résultats H2C-2A auditables : enveloppe, calendrier de paiement,
+ancienneté hors budget, tableau / détail salarié, trajectoire mensuelle,
+erreurs métier dédiées — sans recalcul dans React ni migration.
+
+### Livrables
+
+- `buildSimulationResultView` enrichi + `promotionAwareResultLabels`
+- `findDedicatedSimulationBusinessError`
+- `SimulationResultsPanel` (synthèse enveloppe, calendrier, ancienneté, détail)
+- Tests `promotionAwareResultView.test.ts`
+- Docs CAMPAIGN_SIMULATION / DATA_DICTIONARY / CALCULATION_CONTRACT
+- `result_schema_version = 2` inchangé ; stash 2B-4B intact ; aucun commit
+
+## 2026-07-21 — Lot 2A-H2C-2B audit agrégats de vue
+
+### Objectif
+
+Supprimer les recompositions métier dans `buildSimulationResultView` :
+delta combiné, ventilations promo et ancienneté viennent exclusivement du
+moteur (`annualCombinedRoundingDeltaFcfa`,
+`totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa`, etc.).
+
+### Vérifications
+
+- Tests de preuve (valeurs forgées ≠ recomposition locale)
+- Erreurs métier détectées par `issue.code` uniquement
+- Migrations / `result_schema_version` / stash inchangés ; aucun commit
+
+## 2026-07-21 — Lot 2A-H2C-2B fix NO_COMPENSATORY_ALLOCATION_CAPACITY
+
+### Objectif
+
+Enrichir l’erreur avec le contexte budgétaire structuré et corriger le
+message : ne plus conseiller d’augmenter le budget.
+
+### Vérifications
+
+- Carte : budget disponible / coût promo / cible / expositions depuis le moteur
+- Message : réduire l’enveloppe ou revoir l’éligibilité
+- `PROMOTION_COST_EXCEEDS_BUDGET` inchangé ; migrations / stash / aucun commit

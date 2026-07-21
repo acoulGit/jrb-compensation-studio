@@ -731,6 +731,57 @@ describe("Lot 2A-H2C-2 — orchestrateur population avec promotions structurées
     );
   });
 
+  it("NO_COMPENSATORY_ALLOCATION_CAPACITY transporte le contexte budgétaire structuré", () => {
+    const promotion = buildPromotionEvent({
+      promotionDate: "2025-01-10",
+      salaryBeforePromotionFcfa: 400_000n,
+      salaryAfterPromotionFcfa: 437_500n,
+      previousGradeCode: "G1",
+      promotedGradeCode: "G2",
+      previousJobFamilyCode: "F1",
+      promotedJobFamilyCode: "F1",
+    });
+    // 37_500 × 12 = 450_000 de coût promo ; budget 1_000_003 → disponible 550_003
+    const input = baseInput({
+      employees: [
+        {
+          employeeId: "PROMO-TEMP",
+          familyCode: "F1",
+          gradeCode: "G2",
+          salaryFcfa: 437_500,
+          hireDate: "2015-03-01",
+          confirmedUnderperformer: false,
+          contractType: "temporary",
+          employmentStatus: "active",
+          promotion,
+        },
+      ],
+      budgetTarget: { mode: "manual_amount", manualBudgetFcfa: 1_000_003 },
+    });
+    try {
+      calculatePreparedPopulationCompensation(input);
+      expect.fail("Attendu NO_COMPENSATORY_ALLOCATION_CAPACITY");
+    } catch (error) {
+      expect(error).toBeInstanceOf(CompensationCalculationError);
+      const typed = error as CompensationCalculationError;
+      expect(typed.code).toBe("NO_COMPENSATORY_ALLOCATION_CAPACITY");
+      expect(typed.message).not.toMatch(/Augmentez le budget/i);
+      expect(typed.message).toMatch(/Réduisez l'enveloppe|éligibilité/i);
+      const issue = typed.issues?.[0];
+      expect(issue?.code).toBe("NO_COMPENSATORY_ALLOCATION_CAPACITY");
+      expect(issue?.details?.annualBudgetTargetFcfa).toBeDefined();
+      expect(issue?.details?.totalAnnualPromotionBudgetCostFcfa).toBe("450000");
+      expect(issue?.details?.availableAnnualCompensatoryBudgetFcfa).toBeDefined();
+      expect(String(issue?.details?.eligibleExposureCount)).toBe("0");
+      expect(String(issue?.details?.availableAnnualCompensatoryBudgetFcfa)).toMatch(
+        /550003/,
+      );
+      expect(String(issue?.message ?? typed.message)).not.toMatch(
+        /Augmentez le budget/i,
+      );
+    }
+  });
+
   it("erreur technique inattendue du calibrage → POPULATION_CALCULATION_FAILED", () => {
     const spy = vi
       .spyOn(

@@ -43,6 +43,108 @@ export interface SimulationBudgetSummaryView {
   monthlyTheoreticalIncreaseTotalLabel: string;
   roundingMode: RoundingPolicy["mode"];
   roundingStepFcfa: bigint;
+  /** Lot 2A-H2C-2B — synthèse d’enveloppe promotion-aware. */
+  envelopeSummary: PromotionAwareEnvelopeSummaryView;
+  paymentCalendar: PaymentCalendarSummaryView;
+  seniorityImpactSummary: SeniorityImpactSummaryView;
+  /** True si au moins un salarié a une promotion structurée (affichage conditionnel). */
+  hasStructuredPromotions: boolean;
+  /** True si au moins un coût promotion imputable > 0. */
+  hasImputedPromotionBudgetCost: boolean;
+}
+
+/** Synthèse budgétaire population (Lot 2A-H2C-2B). */
+export interface PromotionAwareEnvelopeSummaryView {
+  annualBudgetTargetFcfa: ExactAmount;
+  annualBudgetTargetLabel: string;
+  totalAnnualPromotionBudgetCostFcfa: bigint;
+  totalAnnualPromotionBudgetCostLabel: string;
+  availableAnnualCompensatoryBudgetFcfa: ExactAmount;
+  availableAnnualCompensatoryBudgetLabel: string;
+  totalAnnualTheoreticalCompensatoryCostFcfa: ExactAmount;
+  totalAnnualTheoreticalCompensatoryCostLabel: string;
+  totalAnnualActualCompensatoryCostFcfa: bigint;
+  totalAnnualActualCompensatoryCostLabel: string;
+  totalAnnualActualCombinedBaseMeasureCostFcfa: bigint;
+  totalAnnualActualCombinedBaseMeasureCostLabel: string;
+  annualCombinedRoundingDeltaFcfa: ExactAmount;
+  annualCombinedRoundingDeltaLabel: string;
+  compensatoryCalibrationRate: ExactAmount;
+  compensatoryCalibrationRateLabel: string;
+}
+
+/** Calendrier de paiement population (Lot 2A-H2C-2B). */
+export interface PaymentCalendarSummaryView {
+  totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  totalPromotionCostAlreadyPaidBeforeTechnicalMonthLabel: string;
+  totalPromotionCostFromTechnicalMonthToDecemberFcfa: bigint;
+  totalPromotionCostFromTechnicalMonthToDecemberLabel: string;
+  totalAnnualPromotionBudgetCostFcfa: bigint;
+  totalAnnualPromotionBudgetCostLabel: string;
+  totalCompensatoryReminderFcfa: bigint;
+  totalCompensatoryReminderLabel: string;
+  totalRemainingYearDirectCompensatoryCostFcfa: bigint;
+  totalRemainingYearDirectCompensatoryCostLabel: string;
+  totalAnnualActualCompensatoryCostFcfa: bigint;
+  totalAnnualActualCompensatoryCostLabel: string;
+  /** Invariant visuel : rappel + direct = annuel réel. */
+  compensatoryReminderPlusDirectEqualsAnnual: boolean;
+}
+
+/** Incidences d’ancienneté hors budget (Lot 2A-H2C-2B). */
+export interface SeniorityImpactSummaryView {
+  totalAnnualPromotionSeniorityImpactFcfa: bigint;
+  totalAnnualPromotionSeniorityImpactLabel: string;
+  totalAnnualCompensatorySeniorityImpactFcfa: bigint;
+  totalAnnualCompensatorySeniorityImpactLabel: string;
+  totalAnnualSeniorityImpactFcfa: bigint;
+  totalAnnualSeniorityImpactLabel: string;
+  totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthLabel: string;
+  totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa: bigint;
+  totalPromotionSeniorityFromTechnicalMonthToDecemberLabel: string;
+  totalCompensatorySeniorityReminderFcfa: bigint;
+  totalCompensatorySeniorityReminderLabel: string;
+  totalRemainingYearDirectCompensatorySeniorityImpactFcfa: bigint;
+  totalRemainingYearDirectCompensatorySeniorityImpactLabel: string;
+}
+
+/** Trajectoire mensuelle formatée (Lot 2A-H2C-2B). */
+export interface MonthlyCompensationTrajectoryView {
+  month: number;
+  monthLabel: string;
+  baseSalaryFcfa: bigint;
+  baseSalaryLabel: string;
+  gradeCode: string;
+  jobFamilyCode: string;
+  salaryPositionLabel: string | null;
+  targetCompensatoryRate: ExactAmount;
+  targetCompensatoryRateLabel: string;
+  promotionRateOffset: ExactAmount;
+  promotionRateOffsetLabel: string;
+  compensatoryComplementRate: ExactAmount;
+  compensatoryComplementRateLabel: string;
+  theoreticalCompensatoryComplement: ExactAmount;
+  theoreticalCompensatoryComplementLabel: string;
+  roundedCompensatoryComplementFcfa: bigint;
+  roundedCompensatoryComplementLabel: string;
+  promotionBudgetCostFcfa: bigint;
+  promotionBudgetCostLabel: string;
+  finalSalaryFcfa: bigint;
+  finalSalaryLabel: string;
+  seniorityRatePercent: number;
+  seniorityRateLabel: string;
+  promotionSeniorityImpactFcfa: bigint;
+  promotionSeniorityImpactLabel: string;
+  compensatorySeniorityImpactFcfa: bigint;
+  compensatorySeniorityImpactLabel: string;
+  totalSeniorityImpactFcfa: bigint;
+  totalSeniorityImpactLabel: string;
+  promotionPaymentStatusLabel: string;
+  compensatoryPaymentStatusLabel: string;
+  paymentTiming: "reminder" | "direct";
+  promotionActive: boolean;
+  promotionStatus: string;
 }
 
 export interface SimulationPopulationSummaryView {
@@ -62,6 +164,13 @@ export interface SimulationPopulationSummaryView {
   totalSeniorityReminderFcfa: bigint;
   totalRemainingYearDirectSeniorityImpactFcfa: bigint;
   totalAnnualSeniorityImpactFcfa: bigint;
+  promotedIncludedEmployeeCount: number;
+  totalAnnualPromotionBudgetCostFcfa: bigint;
+  availableAnnualCompensatoryBudget: ExactAmount;
+  totalCombinedAnnualActualCostFcfa: bigint;
+  totalAnnualPromotionSeniorityImpactFcfa: bigint;
+  totalCombinedAnnualSeniorityImpactFcfa: bigint;
+  compensatoryCalibrationRate: ExactAmount;
 }
 
 export interface EmployeeSimulationResultView {
@@ -130,6 +239,53 @@ export interface EmployeeSimulationResultView {
   seniorityReminderFcfa: bigint;
   remainingYearDirectSeniorityImpactFcfa: bigint;
   annualSeniorityImpactFcfa: bigint;
+  /** Lot 2A-H2C-2B — champs promotion / complément / trajectoire. */
+  compensatoryMeasureEligible: boolean;
+  isPromotionBudgetPopulationEmployee: boolean;
+  employmentStatus: string | null;
+  contractType: string | null;
+  promotionStatusLabel: string;
+  promotionStatusKind: string;
+  compensatoryEligibilityLabel: string;
+  compensatoryEligibilityKind: string;
+  compensatoryIneligibilityReasonCode: string | null;
+  compensatoryIneligibilityReasonLabel: string | null;
+  hasStructuredPromotion: boolean;
+  promotionDate: string | null;
+  promotionYear: number | null;
+  promotionMonth: number | null;
+  previousGradeCode: string | null;
+  promotedGradeCode: string | null;
+  previousJobFamilyCode: string | null;
+  promotedJobFamilyCode: string | null;
+  salaryBeforePromotionFcfa: bigint | null;
+  salaryAfterPromotionFcfa: bigint | null;
+  promotionAmountFcfa: bigint | null;
+  promotionRate: ExactAmount | null;
+  promotionRateLabel: string | null;
+  promotionInclusionStatusLabel: string | null;
+  /** Coût brut informatif H2C-1. */
+  promotionCampaignCostInformativeFcfa: bigint;
+  promotionCampaignCostInformativeLabel: string;
+  /** Coût imputé à l’enveloppe. */
+  annualPromotionBudgetCostFcfa: bigint;
+  annualPromotionBudgetCostLabel: string;
+  promotionCostAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  promotionCostAlreadyPaidBeforeTechnicalMonthLabel: string;
+  promotionCostFromTechnicalMonthToDecemberFcfa: bigint;
+  promotionCostFromTechnicalMonthToDecemberLabel: string;
+  annualPromotionSeniorityImpactFcfa: bigint;
+  annualPromotionSeniorityImpactLabel: string;
+  combinedAnnualSeniorityImpactFcfa: bigint;
+  combinedAnnualSeniorityImpactLabel: string;
+  combinedAnnualActualCostFcfa: bigint;
+  combinedAnnualActualCostLabel: string;
+  /** Complément au mois d’application technique. */
+  technicalMonthCompensatoryComplementFcfa: bigint;
+  technicalMonthCompensatoryComplementLabel: string;
+  technicalMonthFinalSalaryFcfa: bigint;
+  technicalMonthFinalSalaryLabel: string;
+  monthlyCompensationTrajectory: readonly MonthlyCompensationTrajectoryView[];
   explanationSteps: readonly {
     step: string;
     formula?: string;

@@ -153,6 +153,51 @@ Voir `docs/SIMULATION_PERSISTENCE.md`.
 - Repositories lecture/écriture prêts pour le Lot 2B-4B.
 - **Pas d’UI** Historique ni bouton Enregistrer dans 2B-4A.
 
+## Restitution H2C-2B (résultats promotion-aware)
+
+L’écran de résultats (`SimulationResultsPanel`) consomme uniquement des
+**modèles de vue** produits par `buildSimulationResultView` — aucun recalcul
+métier dans React.
+
+### Structure des écrans
+
+1. **Synthèse de l’enveloppe** — budget cible, coût promotions imputé,
+   budget disponible complément, théorique / réel complément, coût combiné,
+   écart d’arrondi signé.
+2. **Calendrier de paiement** — promotions déjà payées vs période restante ;
+   rappel + paiement direct du **complément** uniquement
+   (jamais « rappel de promotion »).
+3. **Incidences d’ancienneté — hors budget** — ventilation promotion /
+   complément / totale.
+4. **Tableau salariés** — colonnes promotion / éligibilité / coûts ;
+   colonnes promotion masquées s’il n’y a aucune promotion structurée.
+5. **Détail salarié** — blocs Promotion, Complément, Ancienneté,
+   Trajectoire mensuelle (12 mois, défilement horizontal).
+
+### Coût brut vs imputable
+
+| Champ | Sémantique |
+| --- | --- |
+| `promotionCampaignCostInformativeFcfa` | Coût brut informatif H2C-1 |
+| `annualPromotionBudgetCostFcfa` | Coût imputé à l’enveloppe |
+
+### Erreurs métier dédiées
+
+- `PROMOTION_COST_EXCEEDS_BUDGET` — titre + budget / coût / dépassement
+- `NO_COMPENSATORY_ALLOCATION_CAPACITY` — titre + budget cible / coût promo /
+  disponible / expositions ; message : réduire l’enveloppe ou revoir
+  l’éligibilité (**pas** « Augmentez le budget »).
+
+### Recette visuelle (manuel)
+
+A. Campagne sans promotion — parité historique, banner « Aucune promotion incluse ».
+B. Promotion N-1 (500 000 → 550 000) — coût × 12, active toute l’année.
+C. Promotion avril N / application juillet — déjà payée avril–juin ; rappel = complément.
+D. Promotion juillet N / application juillet — bascule en juillet.
+E. Promotion août N / application juillet — statut « Exclue après application ».
+F. Promu non éligible — coût promo imputé, complément nul, motif visible.
+G. Promotions > budget — erreur métier dédiée.
+
 ## Reporté au Lot 2B-4B
 
 - bouton « Enregistrer la simulation » ;

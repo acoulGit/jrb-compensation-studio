@@ -783,9 +783,22 @@ button:focus-visible {
   overflow-x: auto;
 }
 
+.data-table-wrap--scroll-x {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.data-table--compact th,
+.data-table--compact td {
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .data-table th,
@@ -981,6 +994,10 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.simulation-drawer--wide {
+  width: min(960px, 100%);
 }
 
 .simulation-drawer__header {

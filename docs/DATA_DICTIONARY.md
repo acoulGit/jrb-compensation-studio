@@ -349,7 +349,7 @@ Résultats de domaine purs (non stockés) :
 | `totalCombinedAnnualSeniorityImpactFcfa` | Σ population, part combinée |
 | `promotedIncludedEmployeeCount` | Nombre de salariés avec promotion incluse |
 | `PROMOTION_COST_EXCEEDS_BUDGET` | Coût promotion > budget annuel cible (bloquant) |
-| `NO_COMPENSATORY_ALLOCATION_CAPACITY` | Aucun salarié éligible pour absorber le reliquat (remonté en `POPULATION_CALCULATION_FAILED`) |
+| `NO_COMPENSATORY_ALLOCATION_CAPACITY` | Reliquat positif sans capacité d’allocation ; contexte `annualBudgetTargetFcfa`, `totalAnnualPromotionBudgetCostFcfa`, `availableAnnualCompensatoryBudgetFcfa`, `eligibleExposureCount` |
 | `PROMOTION_BUDGET_INVARIANT_FAILED` | Invariant interne coût promotion/budget rompu |
 
 ### Concepts transverses
@@ -393,7 +393,11 @@ mensuelle, calibrage compensatoire) est intégrée au moteur depuis les Lots
 | Concept | Nature |
 | --- | --- |
 | `CampaignSimulationExecutionResult` | Vue consultable post-calcul |
-| `EmployeeSimulationResultView` | Ligne salarié + `finalSalaryFcfa` affichage |
+| `EmployeeSimulationResultView` | Ligne salarié + champs H2C-2B (promotion, éligibilité, trajectoire formatée) |
+| `PromotionAwareEnvelopeSummaryView` | Synthèse enveloppe (budget, promo imputée, complément, delta signé) |
+| `PaymentCalendarSummaryView` | Calendrier promo déjà payée / reste + rappel complément |
+| `SeniorityImpactSummaryView` | Incidences ancienneté hors budget |
+| `MonthlyCompensationTrajectoryView` | Mois formaté (taux, montants, statuts de paiement) |
 | `SimulationBudgetSummaryView` | Budget cible / théorique / réel / écart |
 | `SimulationPopulationSummaryView` | Compteurs et totaux population |
 | `runSequence` | Compteur local de session par campagne |

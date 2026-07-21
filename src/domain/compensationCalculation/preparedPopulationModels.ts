@@ -219,6 +219,8 @@ export interface EmployeeCompensationCalculationResult {
   annualSeniorityImpactFcfa: bigint;
   /** Statut d'emploi propagé (Lot 2A-H2C-2). Null si absent à l'entrée. */
   employmentStatus: PromotionBudgetEmploymentStatus | null;
+  /** Type de contrat propagé (affichage motifs d’inéligibilité — Lot 2A-H2C-2B). */
+  contractType: string | null;
   /** Éligibilité effective à la mesure compensatoire (Lot 2A-H2C-2). */
   compensatoryMeasureEligible: boolean;
   /** Appartenance à la population de consommation du budget promotion. */
@@ -238,6 +240,10 @@ export interface EmployeeCompensationCalculationResult {
    * Le coût brut informatif reste dans `promotionInclusion.promotionCampaignCostFcfa`.
    */
   annualPromotionBudgetCostFcfa: bigint;
+  /** Coût promo imputable déjà payé avant le mois technique. */
+  promotionCostAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  /** Coût promo imputable du mois technique à décembre. */
+  promotionCostFromTechnicalMonthToDecemberFcfa: bigint;
   /** Trajectoire mensuelle complète janvier–décembre (Lot 2A-H2C-2). */
   monthlyCompensationTrajectory: readonly MonthlyCompensationTrajectoryEntry[];
   /** Coût annuel combiné = compensatoire réel + promotion imputable. */
@@ -246,6 +252,10 @@ export interface EmployeeCompensationCalculationResult {
   annualPromotionSeniorityImpactFcfa: bigint;
   /** Incidence annuelle d'ancienneté combinée (compensatoire + promotion). */
   combinedAnnualSeniorityImpactFcfa: bigint;
+  /** Incidence ancienneté promo déjà payée avant le mois technique. */
+  promotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  /** Incidence ancienneté promo du mois technique à décembre. */
+  promotionSeniorityFromTechnicalMonthToDecemberFcfa: bigint;
   blockingReason?: MatrixBlockingReason;
   explanationSteps: CalculationExplanationStep[];
 }
@@ -342,10 +352,23 @@ export interface PopulationCalculationSummary {
   availableAnnualCompensatoryBudget: ExactAmount;
   /** Σ (coût compensatoire réel + coût promotion imputable) par salarié. */
   totalCombinedAnnualActualCostFcfa: bigint;
+  /**
+   * Écart d’arrondi combiné vs budget cible :
+   * totalCombinedAnnualActualCostFcfa − annualBudgetTarget.
+   */
+  annualCombinedRoundingDeltaFcfa: ExactAmount;
+  /** Σ coûts promo imputables déjà payés avant le mois technique. */
+  totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  /** Σ coûts promo imputables du mois technique à décembre. */
+  totalPromotionCostFromTechnicalMonthToDecemberFcfa: bigint;
   /** Σ incidence annuelle d'ancienneté attribuable aux promotions. */
   totalAnnualPromotionSeniorityImpactFcfa: bigint;
   /** Σ incidence annuelle d'ancienneté combinée (compensatoire + promotion). */
   totalCombinedAnnualSeniorityImpactFcfa: bigint;
+  /** Σ incidence ancienneté promo déjà payée avant le mois technique. */
+  totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  /** Σ incidence ancienneté promo du mois technique à décembre. */
+  totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa: bigint;
 }
 
 export interface PreparedPopulationCalculationResult {
@@ -376,8 +399,13 @@ export interface PreparedPopulationCalculationResult {
   totalAnnualPromotionBudgetCostFcfa: bigint;
   availableAnnualCompensatoryBudget: ExactAmount;
   totalCombinedAnnualActualCostFcfa: bigint;
+  annualCombinedRoundingDeltaFcfa: ExactAmount;
+  totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  totalPromotionCostFromTechnicalMonthToDecemberFcfa: bigint;
   totalAnnualPromotionSeniorityImpactFcfa: bigint;
   totalCombinedAnnualSeniorityImpactFcfa: bigint;
+  totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthFcfa: bigint;
+  totalPromotionSeniorityFromTechnicalMonthToDecemberFcfa: bigint;
   populationSummary: PopulationCalculationSummary;
   explanationSteps: CalculationExplanationStep[];
 }

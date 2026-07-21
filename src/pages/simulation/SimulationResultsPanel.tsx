@@ -1,5 +1,7 @@
 /**
- * Synthèse, tableau et détail des résultats de simulation (Lot 2B-3).
+ * Synthèse, calendrier, ancienneté, tableau et détail des résultats
+ * (Lot 2B-3 / Lot 2A-H2C-2B).
+ * Aucune logique métier de calcul : affichage des vues formatées uniquement.
  */
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
@@ -11,7 +13,9 @@ import type {
 import {
   formatFcfaInteger,
   formatFactorMilli,
+  formatSeniorityRatePercent,
 } from "../../application/campaignSimulation/formatExactBudgetDisplay";
+import { findDedicatedSimulationBusinessError } from "../../application/campaignSimulation/findDedicatedSimulationBusinessError";
 import { technicalApplicationMonthLabelFr } from "../../domain/compensationCalculation";
 import { nineBoxModeLabel } from "../../domain/compensationReference/conversions";
 import { SectionCard } from "../../components/ui/SectionCard";
@@ -39,14 +43,6 @@ const EXEC_SCOPE_LABELS: Record<(typeof EXEC_SCOPE_ORDER)[number], string> = {
   rounding: "Arrondi",
   engine: "Moteur",
 };
-
-function levelOrNotRequired(
-  level: string | null,
-  required: boolean,
-): string {
-  if (!required) return "Non requis";
-  return level ?? "—";
-}
 
 function compareEmployeeId(left: string, right: string): number {
   if (left < right) return -1;
@@ -135,11 +131,44 @@ export function SimulationResultsPanel({
   }, [selectedEmployee]);
 
   if (execution.status === "error" && execution.issues.length > 0) {
+    const dedicated = findDedicatedSimulationBusinessError(execution.issues);
     return (
-      <SectionCard title="La simulation n’a pas pu être calculée">
-        <p className="form-feedback form-feedback--error" role="alert" data-testid="simulation-execution-error">
-          {execution.errorMessage ?? "La simulation n’a pas pu être calculée."}
-        </p>
+      <SectionCard
+        title={
+          dedicated?.title ?? "La simulation n’a pas pu être calculée"
+        }
+      >
+        {dedicated ? (
+          <div
+            className="form-feedback form-feedback--error"
+            role="alert"
+            data-testid="simulation-business-error"
+            data-error-code={dedicated.code}
+          >
+            <p data-testid="simulation-business-error-message">
+              {dedicated.message}
+            </p>
+            <dl
+              className="detail-list"
+              data-testid="simulation-business-error-details"
+            >
+              {dedicated.details.map((detail) => (
+                <div key={detail.label}>
+                  <dt>{detail.label}</dt>
+                  <dd>{detail.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ) : (
+          <p
+            className="form-feedback form-feedback--error"
+            role="alert"
+            data-testid="simulation-execution-error"
+          >
+            {execution.errorMessage ?? "La simulation n’a pas pu être calculée."}
+          </p>
+        )}
         <ExecutionIssuesList issues={execution.issues} />
       </SectionCard>
     );
@@ -170,6 +199,8 @@ export function SimulationResultsPanel({
     return null;
   }
 
+  const showPromotionColumns = result.budgetSummary.hasStructuredPromotions;
+
   return (
     <>
       {showStaleBanner ? (
@@ -182,13 +213,21 @@ export function SimulationResultsPanel({
         </p>
       ) : null}
 
-      <SectionCard title="Synthèse de la simulation">
+      <SectionCard title="Synthèse de l’enveloppe">
         {isArchived ? (
           <StatusBadge tone="neutral" data-testid="simulation-result-readonly">
             Lecture seule
           </StatusBadge>
         ) : null}
-        <SimulationSummary result={result} />
+        <EnvelopeSummary result={result} />
+      </SectionCard>
+
+      <SectionCard title="Calendrier de paiement">
+        <PaymentCalendarSection result={result} />
+      </SectionCard>
+
+      <SectionCard title="Incidences d’ancienneté — hors budget">
+        <SeniorityImpactSection result={result} />
       </SectionCard>
 
       <SectionCard title="Résultats individuels">
@@ -227,31 +266,31 @@ export function SimulationResultsPanel({
           </label>
         </div>
 
-        <div className="data-table-wrap" data-testid="simulation-results-table-wrap">
+        <div
+          className="data-table-wrap"
+          data-testid="simulation-results-table-wrap"
+        >
           <table className="data-table" data-testid="simulation-results-table">
             <thead>
               <tr>
                 <th scope="col">Matricule</th>
                 <th scope="col">Salarié</th>
-                <th scope="col">Famille / Grade</th>
-                <th scope="col">Salaire mensuel</th>
-                <th scope="col">S0 mensuel</th>
-                <th scope="col">Position</th>
-                <th scope="col">Performance</th>
-                <th scope="col">Potentiel</th>
-                <th scope="col">Taux d’augmentation</th>
-                <th scope="col">Allocation théorique annuelle</th>
-                <th scope="col">Augmentation mensuelle théorique</th>
-                <th scope="col">Augmentation mensuelle finale</th>
-                <th scope="col">Mois de rappel</th>
-                <th scope="col">Rappel salaire de base</th>
-                <th scope="col">Mois restants</th>
-                <th scope="col">Coût direct reste d’année</th>
-                <th scope="col">Taux ancienneté (mois appl.)</th>
-                <th scope="col">Rappel ancienneté</th>
-                <th scope="col">Incidence annuelle ancienneté</th>
-                <th scope="col">Nouveau salaire mensuel</th>
-                <th scope="col">Coût annuel réel</th>
+                {showPromotionColumns ? (
+                  <th scope="col">Promotion</th>
+                ) : null}
+                <th scope="col">Éligibilité complément</th>
+                <th scope="col">Salaire décembre N-1</th>
+                {showPromotionColumns ? (
+                  <th scope="col">Salaire promu</th>
+                ) : null}
+                {showPromotionColumns ? (
+                  <th scope="col">Coût promotion imputable</th>
+                ) : null}
+                <th scope="col">Complément mensuel au mois d’application</th>
+                <th scope="col">Rappel complément</th>
+                <th scope="col">Coût annuel complément</th>
+                <th scope="col">Incidence annuelle d’ancienneté</th>
+                <th scope="col">Salaire final au mois d’application</th>
                 <th scope="col">Statut</th>
               </tr>
             </thead>
@@ -263,6 +302,8 @@ export function SimulationResultsPanel({
                       type="button"
                       className="link-button"
                       data-testid={`simulation-employee-open-${employee.employeeId}`}
+                      aria-expanded={selectedEmployeeId === employee.employeeId}
+                      aria-controls="simulation-employee-drawer"
                       onClick={() => {
                         setSelectedEmployeeId(employee.employeeId);
                       }}
@@ -271,65 +312,79 @@ export function SimulationResultsPanel({
                     </button>
                   </td>
                   <td>{employee.employeeDisplayName ?? "—"}</td>
-                  <td>
-                    {employee.familyCode} / {employee.gradeCode}
+                  {showPromotionColumns ? (
+                    <td
+                      title={
+                        employee.hasStructuredPromotion
+                          ? [
+                              employee.promotionDate,
+                              employee.previousGradeCode &&
+                              employee.promotedGradeCode
+                                ? `${employee.previousGradeCode} → ${employee.promotedGradeCode}`
+                                : null,
+                              employee.promotionRateLabel,
+                              `brut ${employee.promotionCampaignCostInformativeLabel}`,
+                              `imputé ${employee.annualPromotionBudgetCostLabel}`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")
+                          : undefined
+                      }
+                      data-testid={`simulation-promo-status-${employee.employeeId}`}
+                    >
+                      {employee.promotionStatusLabel}
+                    </td>
+                  ) : null}
+                  <td
+                    data-testid={`simulation-eligibility-${employee.employeeId}`}
+                  >
+                    {employee.compensatoryEligibilityLabel}
+                    {employee.compensatoryIneligibilityReasonLabel ? (
+                      <span className="muted">
+                        {" "}
+                        ({employee.compensatoryIneligibilityReasonLabel})
+                      </span>
+                    ) : null}
                   </td>
                   <td>{formatFcfaInteger(employee.salaryFcfa)}</td>
-                  <td>{formatFcfaInteger(employee.s0Fcfa)}</td>
-                  <td>{employee.salaryPositionLabel}</td>
-                  <td>
-                    {levelOrNotRequired(
-                      employee.performanceLevel,
-                      employee.evaluationMode !== "none",
-                    )}
+                  {showPromotionColumns ? (
+                    <td>
+                      {employee.salaryAfterPromotionFcfa !== null
+                        ? formatFcfaInteger(employee.salaryAfterPromotionFcfa)
+                        : "—"}
+                    </td>
+                  ) : null}
+                  {showPromotionColumns ? (
+                    <td
+                      data-testid={`simulation-promo-budget-${employee.employeeId}`}
+                    >
+                      {employee.annualPromotionBudgetCostLabel}
+                    </td>
+                  ) : null}
+                  <td
+                    data-testid={`simulation-final-increase-${employee.employeeId}`}
+                  >
+                    {employee.technicalMonthCompensatoryComplementLabel}
                   </td>
-                  <td>
-                    {levelOrNotRequired(
-                      employee.potentialLevel,
-                      employee.evaluationMode === "performance_potential" ||
-                        employee.evaluationMode === "full_nine_box",
-                    )}
-                  </td>
-                  <td>{employee.monthlyTheoreticalIncreaseRateLabel}</td>
-                  <td>{employee.annualTheoreticalAllocationLabel}</td>
-                  <td>{employee.monthlyTheoreticalIncreaseLabel}</td>
-                  <td>
-                    {formatFcfaInteger(employee.monthlyFinalRoundedIncreaseFcfa)}
-                  </td>
-                  <td data-testid={`simulation-retro-months-${employee.employeeId}`}>
-                    {employee.retroactiveMonths}
-                  </td>
-                  <td data-testid={`simulation-base-reminder-${employee.employeeId}`}>
+                  <td
+                    data-testid={`simulation-base-reminder-${employee.employeeId}`}
+                  >
                     {formatFcfaInteger(employee.baseSalaryReminderFcfa)}
                   </td>
-                  <td data-testid={`simulation-remaining-months-${employee.employeeId}`}>
-                    {employee.remainingDirectPaymentMonths}
-                  </td>
-                  <td data-testid={`simulation-remaining-direct-${employee.employeeId}`}>
-                    {formatFcfaInteger(
-                      employee.remainingYearDirectIncreaseCostFcfa,
-                    )}
-                  </td>
                   <td
-                    data-testid={`simulation-seniority-rate-${employee.employeeId}`}
+                    data-testid={`simulation-annual-cost-${employee.employeeId}`}
                   >
-                    {employee.technicalApplicationMonthSeniorityRatePercent} %
-                  </td>
-                  <td
-                    data-testid={`simulation-seniority-reminder-${employee.employeeId}`}
-                  >
-                    {formatFcfaInteger(employee.seniorityReminderFcfa)}
+                    {formatFcfaInteger(employee.annualActualBaseIncreaseCostFcfa)}
                   </td>
                   <td
                     data-testid={`simulation-seniority-annual-${employee.employeeId}`}
                   >
-                    {formatFcfaInteger(employee.annualSeniorityImpactFcfa)}
+                    {employee.combinedAnnualSeniorityImpactLabel}
                   </td>
-                  <td data-testid={`simulation-final-salary-${employee.employeeId}`}>
-                    {formatFcfaInteger(employee.monthlyFinalSalaryFcfa)}
-                  </td>
-                  <td data-testid={`simulation-annual-cost-${employee.employeeId}`}>
-                    {formatFcfaInteger(employee.annualActualBaseIncreaseCostFcfa)}
+                  <td
+                    data-testid={`simulation-final-salary-${employee.employeeId}`}
+                  >
+                    {employee.technicalMonthFinalSalaryLabel}
                   </td>
                   <td>
                     {employee.blockingReason === "CONFIRMED_UNDERPERFORMER" ? (
@@ -351,7 +406,10 @@ export function SimulationResultsPanel({
           </table>
         </div>
 
-        <div className="form-actions" data-testid="simulation-results-pagination">
+        <div
+          className="form-actions"
+          data-testid="simulation-results-pagination"
+        >
           <button
             type="button"
             disabled={safePageIndex <= 0}
@@ -394,12 +452,12 @@ export function SimulationResultsPanel({
   );
 }
 
-function SimulationSummary({
+function EnvelopeSummary({
   result,
 }: {
   result: CampaignSimulationExecutionResult;
 }) {
-  const budget = result.budgetSummary;
+  const envelope = result.budgetSummary.envelopeSummary;
   const population = result.populationSummary;
   return (
     <dl className="detail-list" data-testid="simulation-summary">
@@ -421,24 +479,6 @@ function SimulationSummary({
         </dd>
       </div>
       <div>
-        <dt>Budget annuel cible</dt>
-        <dd data-testid="simulation-summary-budget-target">
-          {budget.exactBudgetTargetLabel}
-        </dd>
-      </div>
-      <div>
-        <dt>Allocation théorique annuelle totale</dt>
-        <dd data-testid="simulation-summary-theoretical">
-          {budget.annualTheoreticalAllocatedTotalLabel}
-        </dd>
-      </div>
-      <div>
-        <dt>Augmentation mensuelle théorique totale</dt>
-        <dd data-testid="simulation-summary-monthly-theoretical">
-          {budget.monthlyTheoreticalIncreaseTotalLabel}
-        </dd>
-      </div>
-      <div>
         <dt>Mois d’application technique</dt>
         <dd data-testid="simulation-summary-application-month">
           {population.technicalApplicationMonth
@@ -449,97 +489,256 @@ function SimulationSummary({
         </dd>
       </div>
       <div>
-        <dt>Coût annuel réel de l’augmentation de base</dt>
-        <dd data-testid="simulation-summary-annual-base-increase">
-          {formatFcfaInteger(population.totalAnnualActualBaseIncreaseCostFcfa)}
+        <dt>Budget annuel cible</dt>
+        <dd data-testid="simulation-summary-budget-target">
+          {envelope.annualBudgetTargetLabel}
         </dd>
       </div>
       <div>
-        <dt>Rappel total de salaire de base</dt>
-        <dd data-testid="simulation-summary-base-reminder">
-          {formatFcfaInteger(population.totalBaseSalaryReminderFcfa)}
+        <dt>Coût annuel des promotions imputé au budget</dt>
+        <dd data-testid="simulation-summary-promotion-budget-cost">
+          {result.budgetSummary.hasImputedPromotionBudgetCost
+            ? envelope.totalAnnualPromotionBudgetCostLabel
+            : "Aucune promotion incluse"}
         </dd>
       </div>
       <div>
-        <dt>Augmentations payées directement (reste de l’année)</dt>
-        <dd data-testid="simulation-summary-remaining-direct">
-          {formatFcfaInteger(
-            population.totalRemainingYearDirectIncreaseCostFcfa,
-          )}
+        <dt>Budget disponible pour le complément compensatoire</dt>
+        <dd data-testid="simulation-summary-available-compensatory">
+          {envelope.availableAnnualCompensatoryBudgetLabel}
         </dd>
       </div>
       <div>
-        <dt>Coût annuel réel après arrondi</dt>
+        <dt>Complément compensatoire théorique annuel</dt>
+        <dd data-testid="simulation-summary-theoretical">
+          {envelope.totalAnnualTheoreticalCompensatoryCostLabel}
+        </dd>
+      </div>
+      <div>
+        <dt>Complément compensatoire réel après arrondi</dt>
         <dd data-testid="simulation-summary-actual">
-          {budget.annualActualOperationCostLabel}
-        </dd>
-      </div>
-      <div data-testid="simulation-summary-off-budget">
-        <dt>Impacts hors budget</dt>
-        <dd>
-          <p className="form-help">
-            Incidence calculée uniquement sur l’augmentation du salaire de base.
-            Elle n’est pas incluse dans le budget de la mesure.
-          </p>
-          <dl className="detail-list">
-            <div>
-              <dt>Rappel total d’ancienneté</dt>
-              <dd data-testid="simulation-summary-seniority-reminder">
-                {formatFcfaInteger(population.totalSeniorityReminderFcfa)}
-              </dd>
-            </div>
-            <div>
-              <dt>Incidence d’ancienneté payée directement (reste de l’année)</dt>
-              <dd data-testid="simulation-summary-seniority-direct">
-                {formatFcfaInteger(
-                  population.totalRemainingYearDirectSeniorityImpactFcfa,
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Incidence annuelle totale d’ancienneté</dt>
-              <dd data-testid="simulation-summary-seniority-annual">
-                {formatFcfaInteger(population.totalAnnualSeniorityImpactFcfa)}
-              </dd>
-            </div>
-          </dl>
+          {envelope.totalAnnualActualCompensatoryCostLabel}
         </dd>
       </div>
       <div>
-        <dt>Écart annuel d’arrondi</dt>
+        <dt>Coût réel combiné promotions + complément</dt>
+        <dd data-testid="simulation-summary-combined-actual">
+          {envelope.totalAnnualActualCombinedBaseMeasureCostLabel}
+        </dd>
+      </div>
+      <div>
+        <dt>Écart d’arrondi par rapport au budget cible</dt>
         <dd data-testid="simulation-summary-rounding-delta">
-          {budget.annualTotalRoundingDeltaLabel}
+          {envelope.annualCombinedRoundingDeltaLabel}
+        </dd>
+      </div>
+      <div>
+        <dt>Taux de calibrage compensatoire</dt>
+        <dd data-testid="simulation-summary-calibration-rate">
+          {envelope.compensatoryCalibrationRateLabel}
         </dd>
       </div>
       <div>
         <dt>Pas d’arrondi mensuel</dt>
         <dd data-testid="simulation-summary-rounding-step">
-          {formatFcfaInteger(budget.roundingStepFcfa)}
-        </dd>
-      </div>
-      <div>
-        <dt>Salariés à poids positif</dt>
-        <dd data-testid="simulation-summary-positive-weight">
-          {population.positiveWeightEmployeeCount}
-        </dd>
-      </div>
-      <div>
-        <dt>Salariés à poids nul</dt>
-        <dd data-testid="simulation-summary-zero-weight">
-          {population.zeroWeightEmployeeCount}
-        </dd>
-      </div>
-      <div>
-        <dt>Sous-performants confirmés</dt>
-        <dd data-testid="simulation-summary-underperformers">
-          {population.confirmedUnderperformerCount}
+          {formatFcfaInteger(result.budgetSummary.roundingStepFcfa)}
         </dd>
       </div>
       <div>
         <dt>Séquence d’exécution</dt>
-        <dd data-testid="simulation-summary-run-sequence">{result.runSequence}</dd>
+        <dd data-testid="simulation-summary-run-sequence">
+          {result.runSequence}
+        </dd>
       </div>
     </dl>
+  );
+}
+
+function PaymentCalendarSection({
+  result,
+}: {
+  result: CampaignSimulationExecutionResult;
+}) {
+  const calendar = result.budgetSummary.paymentCalendar;
+  const showPromo = result.budgetSummary.hasImputedPromotionBudgetCost;
+  return (
+    <div data-testid="simulation-payment-calendar">
+      {showPromo ? (
+        <div data-testid="simulation-payment-calendar-promotions">
+          <h3>Promotions</h3>
+          <dl className="detail-list">
+            <div>
+              <dt>Promotions déjà payées avant le mois d’application</dt>
+              <dd data-testid="simulation-promo-already-paid">
+                {calendar.totalPromotionCostAlreadyPaidBeforeTechnicalMonthLabel}
+              </dd>
+            </div>
+            <div>
+              <dt>Coût des promotions du mois d’application à décembre</dt>
+              <dd data-testid="simulation-promo-remaining">
+                {calendar.totalPromotionCostFromTechnicalMonthToDecemberLabel}
+              </dd>
+            </div>
+            <div>
+              <dt>Coût annuel total des promotions</dt>
+              <dd data-testid="simulation-promo-annual-total">
+                {calendar.totalAnnualPromotionBudgetCostLabel}
+              </dd>
+            </div>
+          </dl>
+          <p className="form-help">
+            Les montants de promotions déjà payées ne sont pas à verser de
+            nouveau.
+          </p>
+        </div>
+      ) : (
+        <p className="muted" data-testid="simulation-no-promotion-banner">
+          Aucune promotion incluse
+        </p>
+      )}
+
+      <div data-testid="simulation-payment-calendar-compensatory">
+        <h3>Complément compensatoire</h3>
+        <dl className="detail-list">
+          <div>
+            <dt>Rappel du complément compensatoire</dt>
+            <dd data-testid="simulation-summary-base-reminder">
+              {calendar.totalCompensatoryReminderLabel}
+            </dd>
+          </div>
+          <div>
+            <dt>Paiement direct du mois d’application à décembre</dt>
+            <dd data-testid="simulation-summary-remaining-direct">
+              {calendar.totalRemainingYearDirectCompensatoryCostLabel}
+            </dd>
+          </div>
+          <div>
+            <dt>Coût annuel réel du complément</dt>
+            <dd data-testid="simulation-summary-annual-base-increase">
+              {calendar.totalAnnualActualCompensatoryCostLabel}
+            </dd>
+          </div>
+        </dl>
+        <p
+          className="form-help"
+          data-testid="simulation-compensatory-invariant"
+          data-holds={
+            calendar.compensatoryReminderPlusDirectEqualsAnnual
+              ? "true"
+              : "false"
+          }
+        >
+          Rappel du complément + paiement direct = coût annuel réel du
+          complément
+          {calendar.compensatoryReminderPlusDirectEqualsAnnual
+            ? " (vérifié)"
+            : ""}
+          .
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SeniorityImpactSection({
+  result,
+}: {
+  result: CampaignSimulationExecutionResult;
+}) {
+  const seniority = result.budgetSummary.seniorityImpactSummary;
+  const showPromo = result.budgetSummary.hasImputedPromotionBudgetCost;
+  return (
+    <div data-testid="simulation-seniority-summary">
+      <p className="form-help">
+        Ces incidences sont présentées hors enveloppe de la mesure de base.
+      </p>
+      <dl className="detail-list">
+        {showPromo ? (
+          <div>
+            <dt>Incidence annuelle liée aux promotions</dt>
+            <dd data-testid="simulation-summary-seniority-promotion">
+              {seniority.totalAnnualPromotionSeniorityImpactLabel}
+            </dd>
+          </div>
+        ) : null}
+        <div>
+          <dt>Incidence annuelle liée au complément compensatoire</dt>
+          <dd data-testid="simulation-summary-seniority-compensatory">
+            {seniority.totalAnnualCompensatorySeniorityImpactLabel}
+          </dd>
+        </div>
+        <div>
+          <dt>Incidence annuelle totale d’ancienneté</dt>
+          <dd data-testid="simulation-summary-seniority-annual">
+            {seniority.totalAnnualSeniorityImpactLabel}
+          </dd>
+        </div>
+      </dl>
+      {showPromo ? (
+        <details data-testid="simulation-seniority-breakdown">
+          <summary>Ventilation temporelle</summary>
+          <dl className="detail-list">
+            <div>
+              <dt>
+                Incidence d’ancienneté liée aux promotions déjà payée (avant
+                mois technique)
+              </dt>
+              <dd>
+                {
+                  seniority.totalPromotionSeniorityAlreadyPaidBeforeTechnicalMonthLabel
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>
+                Incidence d’ancienneté promotions du mois technique à décembre
+              </dt>
+              <dd>
+                {
+                  seniority.totalPromotionSeniorityFromTechnicalMonthToDecemberLabel
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Rappel d’ancienneté (complément)</dt>
+              <dd data-testid="simulation-summary-seniority-reminder">
+                {seniority.totalCompensatorySeniorityReminderLabel}
+              </dd>
+            </div>
+            <div>
+              <dt>
+                Incidence directe d’ancienneté (complément, mois technique →
+                décembre)
+              </dt>
+              <dd data-testid="simulation-summary-seniority-direct">
+                {
+                  seniority.totalRemainingYearDirectCompensatorySeniorityImpactLabel
+                }
+              </dd>
+            </div>
+          </dl>
+        </details>
+      ) : (
+        <dl className="detail-list">
+          <div>
+            <dt>Rappel total d’ancienneté</dt>
+            <dd data-testid="simulation-summary-seniority-reminder">
+              {seniority.totalCompensatorySeniorityReminderLabel}
+            </dd>
+          </div>
+          <div>
+            <dt>
+              Incidence d’ancienneté payée directement (reste de l’année)
+            </dt>
+            <dd data-testid="simulation-summary-seniority-direct">
+              {
+                seniority.totalRemainingYearDirectCompensatorySeniorityImpactLabel
+              }
+            </dd>
+          </div>
+        </dl>
+      )}
+    </div>
   );
 }
 
@@ -574,7 +773,9 @@ function ExecutionIssuesList({
             <ul>
               {items.map((issue, index) => (
                 <li key={`${issue.code}-${issue.employeeId ?? ""}-${index}`}>
-                  {issue.employeeId ? <strong>{issue.employeeId} — </strong> : null}
+                  {issue.employeeId ? (
+                    <strong>{issue.employeeId} — </strong>
+                  ) : null}
                   {issue.message}
                   <details>
                     <summary>Code technique</summary>
@@ -610,7 +811,8 @@ function EmployeeDetailDrawer({
       onClick={onClose}
     >
       <aside
-        className="simulation-drawer"
+        id="simulation-employee-drawer"
+        className="simulation-drawer simulation-drawer--wide"
         role="dialog"
         aria-modal="true"
         aria-labelledby="simulation-employee-drawer-title"
@@ -636,231 +838,311 @@ function EmployeeDetailDrawer({
           </button>
         </div>
         <div className="simulation-drawer__body">
-          <dl className="detail-list">
-            <div>
-              <dt>Identification</dt>
-              <dd>
-                {employee.employeeId}
-                {employee.employeeDisplayName
-                  ? ` — ${employee.employeeDisplayName}`
-                  : ""}
-              </dd>
-            </div>
-            <div>
-              <dt>Famille / Grade</dt>
-              <dd>
-                {employee.familyLabel ?? employee.familyCode} /{" "}
-                {employee.gradeLabel ?? employee.gradeCode}
-              </dd>
-            </div>
-            <div>
-              <dt>Salaire mensuel actuel</dt>
-              <dd>{formatFcfaInteger(employee.salaryFcfa)}</dd>
-            </div>
-            <div>
-              <dt>S0 mensuel</dt>
-              <dd data-testid="simulation-detail-s0">
-                {formatFcfaInteger(employee.s0Fcfa)}
-              </dd>
-            </div>
-            <div>
-              <dt>Ratio et position</dt>
-              <dd data-testid="simulation-detail-position">
-                {employee.salaryRatioBasisPoints} bps —{" "}
-                {employee.salaryPositionLabel} ({employee.salaryPositionCode})
-              </dd>
-            </div>
-            <div>
-              <dt>Facteur de position</dt>
-              <dd data-testid="simulation-detail-position-factor">
-                {formatFactorMilli(employee.positionFactorMilli)}
-              </dd>
-            </div>
-            <div>
-              <dt>Mode d’évaluation</dt>
-              <dd>{nineBoxModeLabel(employee.evaluationMode)}</dd>
-            </div>
-            <div>
-              <dt>Performance</dt>
-              <dd>
-                {levelOrNotRequired(
-                  employee.performanceLevel,
-                  employee.evaluationMode !== "none",
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Potentiel</dt>
-              <dd>
-                {levelOrNotRequired(
-                  employee.potentialLevel,
-                  employee.evaluationMode === "performance_potential" ||
-                    employee.evaluationMode === "full_nine_box",
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Facteur d’évaluation</dt>
-              <dd data-testid="simulation-detail-eval-factor">
-                {employee.evaluationFactorLabel}
-              </dd>
-            </div>
-            <div>
-              <dt>Poids théorique</dt>
-              <dd data-testid="simulation-detail-theo-weight">
-                {employee.theoreticalMatrixWeightLabel}
-              </dd>
-            </div>
-            <div>
-              <dt>Poids effectif</dt>
-              <dd data-testid="simulation-detail-eff-weight">
-                {employee.effectiveMatrixWeightLabel}
-              </dd>
-            </div>
-            <div>
-              <dt>Poids d’allocation</dt>
-              <dd data-testid="simulation-detail-alloc-weight">
-                {employee.allocationWeightLabel}
-              </dd>
-            </div>
-            <div>
-              <dt>Allocation théorique annuelle</dt>
-              <dd data-testid="simulation-detail-annual-allocation">
-                {employee.annualTheoreticalAllocationLabel}
-              </dd>
-            </div>
-            <div>
-              <dt>Augmentation mensuelle théorique</dt>
-              <dd data-testid="simulation-detail-theo-amount">
-                {employee.monthlyTheoreticalIncreaseLabel}
-              </dd>
-            </div>
-            <div>
-              <dt>Taux d’augmentation mensuel</dt>
-              <dd data-testid="simulation-detail-theo-rate">
-                {employee.monthlyTheoreticalIncreaseRateLabel}
-              </dd>
-            </div>
-            <div>
-              <dt>Politique d’arrondi mensuel</dt>
-              <dd data-testid="simulation-detail-rounding">
-                {result.budgetSummary.roundingMode} / pas{" "}
-                {formatFcfaInteger(result.budgetSummary.roundingStepFcfa)}
-              </dd>
-            </div>
-            <div>
-              <dt>Augmentation mensuelle finale</dt>
-              <dd data-testid="simulation-detail-final-increase">
-                {formatFcfaInteger(employee.monthlyFinalRoundedIncreaseFcfa)}
-              </dd>
-            </div>
-            <div>
-              <dt>Mois de rappel</dt>
-              <dd data-testid="simulation-detail-retro-months">
-                {employee.retroactiveMonths}
-              </dd>
-            </div>
-            <div>
-              <dt>Rappel de salaire de base</dt>
-              <dd data-testid="simulation-detail-base-reminder">
-                {formatFcfaInteger(employee.baseSalaryReminderFcfa)}
-              </dd>
-            </div>
-            <div>
-              <dt>Mois restants (paiement direct)</dt>
-              <dd data-testid="simulation-detail-remaining-months">
-                {employee.remainingDirectPaymentMonths}
-              </dd>
-            </div>
-            <div>
-              <dt>Coût payé directement (reste de l’année)</dt>
-              <dd data-testid="simulation-detail-remaining-direct">
-                {formatFcfaInteger(
-                  employee.remainingYearDirectIncreaseCostFcfa,
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Écart mensuel d’arrondi</dt>
-              <dd>{employee.monthlyRoundingDeltaLabel}</dd>
-            </div>
-            <div>
-              <dt>Nouveau salaire mensuel</dt>
-              <dd data-testid="simulation-detail-final-salary">
-                {formatFcfaInteger(employee.monthlyFinalSalaryFcfa)}
-              </dd>
-            </div>
-            <div>
-              <dt>Coût annuel total de l’augmentation de base</dt>
-              <dd data-testid="simulation-detail-annual-cost">
-                {formatFcfaInteger(employee.annualActualBaseIncreaseCostFcfa)}
-              </dd>
-            </div>
-            <div>
-              <dt>Date d’embauche</dt>
-              <dd data-testid="simulation-detail-hire-date">
-                {employee.hireDate}
-              </dd>
-            </div>
-            <div>
-              <dt>Taux d’ancienneté au mois d’application</dt>
-              <dd data-testid="simulation-detail-seniority-rate">
-                {employee.technicalApplicationMonthSeniorityRatePercent} %
-              </dd>
-            </div>
-            <div>
-              <dt>Calendrier mensuel des taux d’ancienneté</dt>
-              <dd data-testid="simulation-detail-seniority-schedule">
-                <ul>
-                  {employee.monthlySeniorityImpactSchedule.map((entry) => (
-                    <li key={entry.month}>
-                      {technicalApplicationMonthLabelFr(entry.month)} :{" "}
-                      {entry.ratePercent} % —{" "}
-                      {formatFcfaInteger(entry.monthlySeniorityImpactFcfa)} (
-                      {entry.paymentTiming === "reminder"
-                        ? "rappel"
-                        : "direct"}
-                      )
-                    </li>
+          <section data-testid="simulation-detail-promotion">
+            <h3>Promotion</h3>
+            {employee.hasStructuredPromotion ? (
+              <dl className="detail-list">
+                <div>
+                  <dt>Date de promotion</dt>
+                  <dd>{employee.promotionDate ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt>Statut d’inclusion</dt>
+                  <dd>{employee.promotionInclusionStatusLabel}</dd>
+                </div>
+                <div>
+                  <dt>Ancien → nouveau grade</dt>
+                  <dd>
+                    {employee.previousGradeCode} → {employee.promotedGradeCode}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Ancienne → nouvelle famille</dt>
+                  <dd>
+                    {employee.previousJobFamilyCode ===
+                    employee.promotedJobFamilyCode
+                      ? employee.previousJobFamilyCode
+                      : `${employee.previousJobFamilyCode} → ${employee.promotedJobFamilyCode}`}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Salaire avant → après</dt>
+                  <dd>
+                    {employee.salaryBeforePromotionFcfa !== null
+                      ? formatFcfaInteger(employee.salaryBeforePromotionFcfa)
+                      : "—"}{" "}
+                    →{" "}
+                    {employee.salaryAfterPromotionFcfa !== null
+                      ? formatFcfaInteger(employee.salaryAfterPromotionFcfa)
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Montant / taux</dt>
+                  <dd>
+                    {employee.promotionAmountFcfa !== null
+                      ? formatFcfaInteger(employee.promotionAmountFcfa)
+                      : "—"}{" "}
+                    · {employee.promotionRateLabel ?? "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Coût brut annuel / campagne (informatif)</dt>
+                  <dd data-testid="simulation-detail-promo-brut">
+                    {employee.promotionCampaignCostInformativeLabel}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Coût imputé à l’enveloppe</dt>
+                  <dd data-testid="simulation-detail-promo-imputed">
+                    {employee.annualPromotionBudgetCostLabel}
+                  </dd>
+                </div>
+                <div>
+                  <dt>
+                    Montant déjà payé avant le mois technique
+                  </dt>
+                  <dd>
+                    {employee.promotionCostAlreadyPaidBeforeTechnicalMonthLabel}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Montant restant de l’année</dt>
+                  <dd>
+                    {employee.promotionCostFromTechnicalMonthToDecemberLabel}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="muted">Aucune promotion structurée</p>
+            )}
+          </section>
+
+          <section data-testid="simulation-detail-compensatory">
+            <h3>Complément compensatoire</h3>
+            <dl className="detail-list">
+              <div>
+                <dt>Éligibilité</dt>
+                <dd>{employee.compensatoryEligibilityLabel}</dd>
+              </div>
+              <div>
+                <dt>Motif d’inéligibilité</dt>
+                <dd data-testid="simulation-detail-ineligibility">
+                  {employee.compensatoryIneligibilityReasonLabel ?? "Aucun"}
+                </dd>
+              </div>
+              <div>
+                <dt>Taux de calibrage</dt>
+                <dd>
+                  {
+                    result.budgetSummary.envelopeSummary
+                      .compensatoryCalibrationRateLabel
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt>Complément au mois d’application</dt>
+                <dd data-testid="simulation-detail-final-increase">
+                  {employee.technicalMonthCompensatoryComplementLabel}
+                </dd>
+              </div>
+              <div>
+                <dt>Coût théorique annuel</dt>
+                <dd data-testid="simulation-detail-annual-allocation">
+                  {employee.annualTheoreticalAllocationLabel}
+                </dd>
+              </div>
+              <div>
+                <dt>Coût réel annuel</dt>
+                <dd data-testid="simulation-detail-annual-cost">
+                  {formatFcfaInteger(employee.annualActualBaseIncreaseCostFcfa)}
+                </dd>
+              </div>
+              <div>
+                <dt>Rappel du complément</dt>
+                <dd data-testid="simulation-detail-base-reminder">
+                  {formatFcfaInteger(employee.baseSalaryReminderFcfa)}
+                </dd>
+              </div>
+              <div>
+                <dt>Paiement direct restant</dt>
+                <dd data-testid="simulation-detail-remaining-direct">
+                  {formatFcfaInteger(
+                    employee.remainingYearDirectIncreaseCostFcfa,
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section data-testid="simulation-detail-seniority">
+            <h3>Ancienneté (hors budget)</h3>
+            <dl className="detail-list">
+              <div>
+                <dt>Incidence promotion</dt>
+                <dd>{employee.annualPromotionSeniorityImpactLabel}</dd>
+              </div>
+              <div>
+                <dt>Incidence complément</dt>
+                <dd data-testid="simulation-detail-seniority-annual">
+                  {formatFcfaInteger(employee.annualSeniorityImpactFcfa)}
+                </dd>
+              </div>
+              <div>
+                <dt>Incidence totale</dt>
+                <dd>{employee.combinedAnnualSeniorityImpactLabel}</dd>
+              </div>
+              <div>
+                <dt>Rappel d’ancienneté (complément)</dt>
+                <dd data-testid="simulation-detail-seniority-reminder">
+                  {formatFcfaInteger(employee.seniorityReminderFcfa)}
+                </dd>
+              </div>
+              <div>
+                <dt>Incidence directe restante (complément)</dt>
+                <dd data-testid="simulation-detail-seniority-direct">
+                  {formatFcfaInteger(
+                    employee.remainingYearDirectSeniorityImpactFcfa,
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Taux d’ancienneté au mois d’application</dt>
+                <dd data-testid="simulation-detail-seniority-rate">
+                  {formatSeniorityRatePercent(
+                    employee.technicalApplicationMonthSeniorityRatePercent,
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section data-testid="simulation-detail-trajectory">
+            <h3>Trajectoire mensuelle</h3>
+            <div className="data-table-wrap data-table-wrap--scroll-x">
+              <table
+                className="data-table data-table--compact"
+                data-testid="simulation-trajectory-table"
+              >
+                <thead>
+                  <tr>
+                    <th scope="col">Mois</th>
+                    <th scope="col">Salaire de base</th>
+                    <th scope="col">Grade</th>
+                    <th scope="col">Famille</th>
+                    <th scope="col">Taux cible</th>
+                    <th scope="col">Taux promotion déduit</th>
+                    <th scope="col">Taux complémentaire</th>
+                    <th scope="col">Complément théorique</th>
+                    <th scope="col">Complément arrondi</th>
+                    <th scope="col">Coût promotion du mois</th>
+                    <th scope="col">Salaire final</th>
+                    <th scope="col">Taux ancienneté</th>
+                    <th scope="col">Ancienneté promo</th>
+                    <th scope="col">Ancienneté complément</th>
+                    <th scope="col">Ancienneté totale</th>
+                    <th scope="col">Paiement promotion</th>
+                    <th scope="col">Paiement complément</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employee.monthlyCompensationTrajectory.map((entry) => (
+                    <tr key={entry.month}>
+                      <td>{entry.monthLabel}</td>
+                      <td>{entry.baseSalaryLabel}</td>
+                      <td>{entry.gradeCode}</td>
+                      <td>{entry.jobFamilyCode}</td>
+                      <td>{entry.targetCompensatoryRateLabel}</td>
+                      <td>{entry.promotionRateOffsetLabel}</td>
+                      <td>{entry.compensatoryComplementRateLabel}</td>
+                      <td>{entry.theoreticalCompensatoryComplementLabel}</td>
+                      <td>{entry.roundedCompensatoryComplementLabel}</td>
+                      <td>{entry.promotionBudgetCostLabel}</td>
+                      <td>{entry.finalSalaryLabel}</td>
+                      <td>{entry.seniorityRateLabel}</td>
+                      <td>{entry.promotionSeniorityImpactLabel}</td>
+                      <td>{entry.compensatorySeniorityImpactLabel}</td>
+                      <td>{entry.totalSeniorityImpactLabel}</td>
+                      <td>{entry.promotionPaymentStatusLabel}</td>
+                      <td>{entry.compensatoryPaymentStatusLabel}</td>
+                    </tr>
                   ))}
-                </ul>
-              </dd>
+                </tbody>
+              </table>
             </div>
-            <div>
-              <dt>Rappel d’ancienneté (hors budget)</dt>
-              <dd data-testid="simulation-detail-seniority-reminder">
-                {formatFcfaInteger(employee.seniorityReminderFcfa)}
-              </dd>
-            </div>
-            <div>
-              <dt>Incidence directe restante (hors budget)</dt>
-              <dd data-testid="simulation-detail-seniority-direct">
-                {formatFcfaInteger(
-                  employee.remainingYearDirectSeniorityImpactFcfa,
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Incidence annuelle totale d’ancienneté (hors budget)</dt>
-              <dd data-testid="simulation-detail-seniority-annual">
-                {formatFcfaInteger(employee.annualSeniorityImpactFcfa)}
-              </dd>
-            </div>
-            <div>
-              <dt>Écart annuel d’arrondi</dt>
-              <dd data-testid="simulation-detail-annual-delta">
-                {employee.annualRoundingDeltaLabel}
-              </dd>
-            </div>
-            <div>
-              <dt>Raison de blocage</dt>
-              <dd>
-                {employee.blockingReason === "CONFIRMED_UNDERPERFORMER"
-                  ? "Sous-performant confirmé (augmentation mensuelle = 0)"
-                  : (employee.blockingReason ?? "Aucune")}
-              </dd>
-            </div>
-          </dl>
+          </section>
+
+          <details data-testid="simulation-detail-identity">
+            <summary>Identification et facteurs</summary>
+            <dl className="detail-list">
+              <div>
+                <dt>Famille / Grade (décembre)</dt>
+                <dd>
+                  {employee.familyLabel ?? employee.familyCode} /{" "}
+                  {employee.gradeLabel ?? employee.gradeCode}
+                </dd>
+              </div>
+              <div>
+                <dt>S0 mensuel</dt>
+                <dd data-testid="simulation-detail-s0">
+                  {formatFcfaInteger(employee.s0Fcfa)}
+                </dd>
+              </div>
+              <div>
+                <dt>Position</dt>
+                <dd data-testid="simulation-detail-position">
+                  {employee.salaryRatioBasisPoints} bps —{" "}
+                  {employee.salaryPositionLabel} ({employee.salaryPositionCode})
+                </dd>
+              </div>
+              <div>
+                <dt>Facteur de position</dt>
+                <dd data-testid="simulation-detail-position-factor">
+                  {formatFactorMilli(employee.positionFactorMilli)}
+                </dd>
+              </div>
+              <div>
+                <dt>Facteur d’évaluation</dt>
+                <dd data-testid="simulation-detail-eval-factor">
+                  {employee.evaluationFactorLabel}
+                </dd>
+              </div>
+              <div>
+                <dt>Poids théorique / effectif / allocation</dt>
+                <dd>
+                  <span data-testid="simulation-detail-theo-weight">
+                    {employee.theoreticalMatrixWeightLabel}
+                  </span>
+                  {" / "}
+                  <span data-testid="simulation-detail-eff-weight">
+                    {employee.effectiveMatrixWeightLabel}
+                  </span>
+                  {" / "}
+                  <span data-testid="simulation-detail-alloc-weight">
+                    {employee.allocationWeightLabel}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt>Date d’embauche</dt>
+                <dd data-testid="simulation-detail-hire-date">
+                  {employee.hireDate}
+                </dd>
+              </div>
+              <div>
+                <dt>Nouveau salaire mensuel (réf. décembre)</dt>
+                <dd data-testid="simulation-detail-final-salary">
+                  {employee.technicalMonthFinalSalaryLabel}
+                </dd>
+              </div>
+              <div>
+                <dt>Écart annuel d’arrondi (complément)</dt>
+                <dd data-testid="simulation-detail-annual-delta">
+                  {employee.annualRoundingDeltaLabel}
+                </dd>
+              </div>
+            </dl>
+          </details>
 
           <details data-testid="simulation-detail-trace">
             <summary>Étapes d’explication</summary>

@@ -315,6 +315,10 @@ explicite différente).
 le coût des promotions incluses au budget annuel et calibre le complément
 compensatoire matriciel sur le reliquat.
 
+**Lot 2A-H2C-2B (restitution UI)** : formatage et modèles de vue uniquement
+(`buildSimulationResultView`) — ne modifie ni les formules, ni
+`result_schema_version` / `CALCULATION_CONTRACT_VERSION`.
+
 Pipeline (`calculatePreparedPopulationCompensation`) :
 
 1. Validation d’entrée + résolution du budget + validation du calendrier

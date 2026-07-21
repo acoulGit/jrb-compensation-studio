@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { mapExecutionResultToSaveDto } from "../application/campaignSimulation/mapExecutionResultToSaveDto";
 import type { CampaignSimulationExecutionResult } from "../application/campaignSimulation/campaignSimulationExecutionModels";
+import {
+  withPromotionAwareBudgetSummary,
+  withPromotionAwareEmployeeDefaults,
+} from "./simulationResultViewFixtures";
 
 function sampleResult(
   overrides: Partial<CampaignSimulationExecutionResult> = {},
@@ -17,7 +21,7 @@ function sampleResult(
     sourceFingerprint: "fp-source",
     configurationFingerprint: "fp-config",
     calculationContractVersion: 2,
-    budgetSummary: {
+    budgetSummary: withPromotionAwareBudgetSummary({
       budgetTargetMode: "manual_amount",
       exactBudgetTarget: { numerator: 25000003n, denominator: 1n },
       exactBudgetTargetLabel: "x",
@@ -35,7 +39,7 @@ function sampleResult(
       monthlyTheoreticalIncreaseTotalLabel: "x",
       roundingMode: "nearest_half_up",
       roundingStepFcfa: 100n,
-    },
+    }),
     populationSummary: {
       employeeCount: 1,
       positiveWeightEmployeeCount: 1,
@@ -53,9 +57,16 @@ function sampleResult(
       totalSeniorityReminderFcfa: 0n,
       totalRemainingYearDirectSeniorityImpactFcfa: 0n,
       totalAnnualSeniorityImpactFcfa: 0n,
+      promotedIncludedEmployeeCount: 0,
+      totalAnnualPromotionBudgetCostFcfa: 0n,
+      availableAnnualCompensatoryBudget: { numerator: 25000003n, denominator: 1n },
+      totalCombinedAnnualActualCostFcfa: 25000000n,
+      totalAnnualPromotionSeniorityImpactFcfa: 0n,
+      totalCombinedAnnualSeniorityImpactFcfa: 0n,
+      compensatoryCalibrationRate: { numerator: 0n, denominator: 1n },
     },
     employees: [
-      {
+      withPromotionAwareEmployeeDefaults({
         employeeId: "E1",
         employeeDisplayName: "Alice",
         familyCode: "F1",
@@ -117,7 +128,7 @@ function sampleResult(
         explanationSteps: [
           { step: "alloc", formula: "a/b", outputValue: "1" },
         ],
-      },
+      }),
     ],
     explanationSteps: [],
     ...overrides,
