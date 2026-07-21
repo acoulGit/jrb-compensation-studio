@@ -32,10 +32,19 @@ export const EMPLOYER_CHARGES_INCLUDED = false;
 /**
  * Version du schéma sémantique des snapshots persistés.
  * v1 = sémantique obsolète — ne pas recalculer.
- * v2 = sémantique annuelle/mensuelle (contrats 2–3, rétro configurable).
- * Un résultat contrat ≥ 3 ne peut pas être sauvegardé en schema v2
- * (consolidation schema v3 requise — Lot ultérieur / migration 0007).
+ * v2 = sémantique annuelle/mensuelle (contrats 2–3, rétro configurable),
+ *      SANS trajectoire mensuelle persistée ni champs ancienneté/minimum.
+ * v3 = consolidation du contrat v4 (migration 0007) : rétroactivité,
+ *      incidence d'ancienneté, minimum garanti et trajectoire mensuelle
+ *      (12 mois) persistés fidèlement, sans recalcul.
+ *
+ * Règle de compatibilité d'écriture : un résultat contrat ≥ 3 exige schema ≥ 3
+ * (voir `assertSimulationResultPersistable`). Les snapshots v1/v2 restent
+ * lisibles mais ne doivent pas être réinterprétés avec le modèle v3.
  */
-export const RESULT_SCHEMA_VERSION = 2 as const;
+export const RESULT_SCHEMA_VERSION = 3 as const;
+
+/** Version de schéma précédente (annuelle/mensuelle, sans mois persistés). */
+export const RESULT_SCHEMA_VERSION_V2 = 2 as const;
 
 export const RESULT_SCHEMA_VERSION_LEGACY = 1 as const;

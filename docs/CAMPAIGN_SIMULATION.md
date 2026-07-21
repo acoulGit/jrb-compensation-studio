@@ -12,6 +12,7 @@ d’augmentation.
 | **2B-2** | Page Simulation + configuration budgétaire / arrondi en mémoire |
 | **2B-3** | Exécution en mémoire + consultation des résultats |
 | **2B-4A** | Persistance transactionnelle immuable (sans UI Historique) |
+| **2B-P1** | Consolidation snapshot schema v3 (contrat v4 + trajectoire mensuelle, migration `0007`) |
 | **2B-4B** (prévu) | Interface Historique / bouton Enregistrer |
 
 ## Séparation import / préparation / configuration / calcul
@@ -142,16 +143,23 @@ Un `staleResult` peut rester en mémoire pour diagnostic uniquement.
 Consultation lecture seule d’un résultat déjà en mémoire possible ; pas de
 nouvelle validation ni nouveau lancement.
 
-## Persistance (Lot 2B-4A)
+## Persistance (Lots 2B-4A + 2B-P1)
 
 Voir `docs/SIMULATION_PERSISTENCE.md`.
 
 - Snapshot immuable append-only ; sauvegarde **explicite** uniquement.
 - Tables `compensation_simulation_runs` /
-  `compensation_simulation_employee_results`.
-- Commande Rust `save_simulation_run` (connexion dédiée, WAL, rollback).
-- Repositories lecture/écriture prêts pour le Lot 2B-4B.
-- **Pas d’UI** Historique ni bouton Enregistrer dans 2B-4A.
+  `compensation_simulation_employee_results` /
+  `compensation_simulation_employee_month_results` (mensuel, migration `0007`).
+- Commande Rust `save_simulation_run` (connexion dédiée, WAL, rollback) :
+  run `result_schema_version = 3` + salariés + **12 mois** dans une seule
+  transaction, sans recalcul.
+- **Lot 2B-P1** : contrat v4 persistable en schema v3 (configuration période,
+  ancienneté, minimum garanti, trajectoire mensuelle). Colonnes NULL pour les
+  anciens snapshots v1/v2.
+- Repositories lecture/écriture prêts pour le Lot 2B-4B (ports mensuels
+  inclus : `listSimulationEmployeeMonthResults`).
+- **Pas d’UI** Historique ni bouton Enregistrer dans ce périmètre.
 
 ## Restitution H2C-2B (résultats promotion-aware)
 
@@ -178,7 +186,8 @@ métier dans React.
 
 Champ UI `retroactivityStartMonthInput` (défaut `"1"`). Empreintes
 configuration / sources : token `retroStart:`. Contrat de calcul **v3**.
-Sauvegarde snapshot bloquée tant que `result_schema_version` reste à 2.
+Depuis le Lot 2B-P1, la sauvegarde snapshot est possible en
+`result_schema_version = 3` (migration `0007`).
 
 ### Configuration — minimum garanti (H2D-2)
 
@@ -187,7 +196,8 @@ forfait / pourcentage. Empreintes : `minMode` / `minAmt` / `minRate` /
 `minInc:v1`. Contrat de calcul **v4**. Enveloppe : promotions, minimum
 réservé, disponible après, parts minimum / au-dessus. Erreur dédiée
 `MINIMUM_GUARANTEE_EXCEEDS_BUDGET` (ne pas recommander d’augmenter le
-minimum). Persistance schema v2 toujours refusée pour contrat ≥ 3.
+minimum). Depuis le Lot 2B-P1, ce contrat v4 est persistable en schema v3 ;
+un contrat ≥ 3 reste refusé si le schema snapshot est < 3.
 
 ### Coût brut vs imputable
 

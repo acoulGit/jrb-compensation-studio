@@ -359,7 +359,8 @@ Résultats de domaine purs (non stockés) :
 | `PopulationCalculationSummary` | Synthèse annuelle/mensuelle + calendrier |
 | `CALCULATION_CONTRACT_VERSION` | `4` (H2D-2 — minimum garanti optionnel) |
 | `MINIMUM_INCREASE_CONTRACT_VERSION` | `1` |
-| `RESULT_SCHEMA_VERSION` | `2` (snapshots ; contrat 3 non enregistrable tant que schema v3 absent) |
+| `RESULT_SCHEMA_VERSION` | `3` (Lot 2B-P1 ; contrat v4 persistable — run + salariés + trajectoire mensuelle, migration `0007`) |
+| `RESULT_SCHEMA_VERSION_V2` | `2` (lecture legacy : snapshot incomplet, présenté avec message, sans recalcul) |
 | `retroactivityStartMonth` | Début de rétroactivité 1–12 (défaut 1) |
 | `campaignCoveredMonthCount` | `13 − retroactivityStartMonth` |
 | `fullYearRunRate*` | Indicateurs plein effet décembre × 12 (hors calibrage) |
@@ -416,6 +417,18 @@ mensuelle, calibrage compensatoire) est intégrée au moteur depuis les Lots
 | `SaveSimulationRunDto` | DTO sans BigInt JS (chaînes) |
 | `PersistedSimulationRunSummary` / `Detail` | Modèles de lecture |
 | `run_number` | Séquence durable par campagne |
+
+### Lot 2B-P1 (schema v3 — contrat v4, migration `0007`)
+
+| Concept | Nature |
+| --- | --- |
+| `compensation_simulation_employee_month_results` | Trajectoire mensuelle persistée (12 lignes/salarié) |
+| `SaveSimulationEmployeeMonthDto` | DTO mensuel (montants/fractions en chaînes) |
+| `PersistedSimulationEmployeeMonthResult` | Modèle de lecture mensuel |
+| `paymentTiming` | `outside_campaign` / `reminder` / `direct` |
+| `promotionPaymentTiming` | `outside_campaign` / `reminder` / `direct` / `not_applicable` (dérivé, sans recalcul) |
+| Colonnes contrat v4 (runs / employee_results) | Config période, enveloppe promotion-aware, ancienneté, minimum garanti, plein effet — NULL sur snapshots v1/v2 |
+| `listSimulationEmployeeMonthResults` | Port de lecture mensuelle (tri `month` 1→12) |
 
 Voir `docs/SIMULATION_PERSISTENCE.md` et `docs/CAMPAIGN_SIMULATION.md`.
 

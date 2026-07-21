@@ -303,7 +303,7 @@ describe("Lot 2A-H2A — orchestrateur population", () => {
   });
 
   it("ne change pas result_schema_version", () => {
-    expect(RESULT_SCHEMA_VERSION).toBe(2);
+    expect(RESULT_SCHEMA_VERSION).toBe(3);
   });
 });
 

@@ -1,4 +1,4 @@
-# Schéma de base de données — Lots 1A à 2B-4A
+# Schéma de base de données — Lots 1A à 2B-P1
 
 ## Emplacement logique
 
@@ -264,6 +264,83 @@ Lignes salariés du snapshot. FK `simulation_run_id` →
 `UNIQUE(simulation_run_id, employee_id)`. Fractions et montants en TEXT.
 `explanation_steps_json` TEXT DEFAULT `'[]'`.
 
+### Consolidation schema v3 (migration `0007`)
+
+`result_schema_version` passe à **3** en écriture (contrat de calcul v4). Les
+colonnes ci-dessous sont **ajoutées NULL** pour les anciens snapshots (v1/v2) —
+aucun faux zéro. Aucun `REAL` : montants et fractions restent en TEXT canonique.
+
+`compensation_simulation_runs` — colonnes ajoutées (résumé) :
+
+- Configuration : `retroactivity_start_month`, `technical_application_month`,
+  `campaign_covered_month_count`, `reminder_month_count`,
+  `direct_payment_month_count`, `calculation_contract_version`,
+  `seniority_impact_contract_version`, `minimum_increase_contract_version`,
+  `minimum_increase_mode` (CHECK `none` / `fixed_monthly_amount` /
+  `percentage_of_base_salary`), `minimum_monthly_amount_text`,
+  `minimum_rate_num_text`, `minimum_rate_den_text`.
+- Enveloppe promotion-aware (distincte de `budget_target_*`) :
+  `promotion_campaign_period_budget_cost_text`,
+  `total_minimum_complement_floor_cost_text`,
+  `available_budget_after_promotions_num/den_text`,
+  `available_budget_after_promotions_and_minimum_num/den_text`,
+  `theoretical_compensatory_campaign_period_cost_num/den_text`,
+  `actual_compensatory_campaign_period_cost_text`,
+  `actual_minimum_complement_paid_cost_text`,
+  `actual_compensation_above_minimum_cost_text`,
+  `actual_combined_campaign_period_cost_text`,
+  `compensatory_calibration_rate_num/den_text`,
+  `minimum_increase_population_employee_count`,
+  `promoted_included_employee_count`.
+- Rappels / directs, ancienneté, plein effet (population) : totaux `*_text`
+  (`total_base_salary_reminder_text`, `total_annual_seniority_impact_text`,
+  `full_year_run_rate_*`, etc.).
+
+Les colonnes 0005 (`budget_target_*`, `theoretical_total_*`,
+`actual_operation_amount_fcfa_text`, `total_rounding_delta_*`, `campaign_year`)
+sont **réutilisées** avec leur sémantique « période » (voir
+`SIMULATION_PERSISTENCE.md`).
+
+`compensation_simulation_employee_results` — colonnes ajoutées : allocation /
+coût annuel (`annual_theoretical_allocation_num/den_text`,
+`annual_actual_cost_text`, `annual_rounding_delta_num/den_text`), calendrier
+(`retroactivity_start_month`, `technical_application_month`,
+`campaign_covered_month_count`, `retroactive_months`,
+`remaining_direct_payment_months`, `base_salary_reminder_text`, …), ancienneté
+(`hire_date`, `technical_application_month_seniority_rate_percent`,
+`seniority_reminder_text`, `annual_seniority_impact_text`, …), plein effet
+(`full_year_run_rate_*_text`), promotion structurée (`promotion_status_kind`,
+`has_structured_promotion`, `promotion_date`, `previous/promoted_grade_code`,
+`salary_before/after_promotion_text`, `promotion_rate_num/den_text`, …), et
+minimum garanti (`is_minimum_increase_population_employee`,
+`campaign_period_minimum_complement_floor_cost_text`, …). Contraintes CHECK
+usuelles : mois 1–12, booléens 0/1, dénominateurs `length(trim()) > 0`.
+
+### `compensation_simulation_employee_month_results` (migration `0007`)
+
+Trajectoire mensuelle du snapshot : **une ligne par (résultat salarié, mois
+1..12)**. Append-only, aucun `REAL`.
+
+| Colonne | Type | Contraintes |
+| --- | --- | --- |
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| `employee_result_id` | INTEGER | NOT NULL, FK → `compensation_simulation_employee_results(id)` **ON DELETE CASCADE** |
+| `month` | INTEGER | NOT NULL, CHECK (1–12) |
+| `base_salary_fcfa_text` / `grade_code` / `job_family_code` | TEXT | NOT NULL, `length(trim()) > 0` |
+| `salary_position_label` | TEXT | NULL |
+| taux / compléments / plein salaire (`*_num_text` / `*_den_text` / `*_fcfa_text`) | TEXT | NOT NULL (dénominateurs `length(trim()) > 0`) |
+| `seniority_rate_percent` | INTEGER | NOT NULL |
+| impacts d’ancienneté (`*_seniority_impact_fcfa_text`) | TEXT | NOT NULL |
+| `payment_timing` | TEXT | NOT NULL, CHECK (`outside_campaign` / `reminder` / `direct`) |
+| `promotion_payment_timing` | TEXT | NOT NULL, CHECK (`outside_campaign` / `reminder` / `direct` / `not_applicable`) |
+| `covered_by_campaign_period` / `included_in_campaign_envelope` / `promotion_active` / `is_minimum_increase_population_employee` | INTEGER | NOT NULL, CHECK (0 / 1) |
+| `promotion_status` | TEXT | NOT NULL, `length(trim()) > 0` |
+| minimum garanti (`guaranteed_total_increase_*`, `required_minimum_complement_*`, `weighted_complement_*`, `theoretical_complement_*`, `*_fcfa_text`) | TEXT | NOT NULL (dénominateurs `length(trim()) > 0`) |
+
+Contrainte : `UNIQUE(employee_result_id, month)`. Index de lecture :
+`ix_compensation_simulation_employee_month_results_employee` et
+`…_employee_month`.
+
 ## Index
 
 - `ux_campaigns_one_active` : index unique partiel sur `status` lorsque
@@ -300,6 +377,8 @@ Le préchargement est déclaré dans `tauri.conf.json` (`plugins.sql.preload`).
 | 3 | `0003_hr_import.sql` | tables `hr_import_batches`, `hr_import_employees` |
 | 4 | `0004_compensation_calculation.sql` | `nine_box_orientation` + index sémantique 9-Box |
 | 5 | `0005_campaign_simulations.sql` | snapshots de simulations immuables |
+| 6 | `0006_employee_promotions.sql` | colonnes promotion optionnelles sur `hr_import_employees` |
+| 7 | `0007_simulation_contract_v4_results.sql` | consolidation snapshot schema v3 (contrat v4 + trajectoire mensuelle) |
 
-Évolution : ajouter un fichier `0006_....sql`, une constante associée et une
+Évolution : ajouter un fichier `0008_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.

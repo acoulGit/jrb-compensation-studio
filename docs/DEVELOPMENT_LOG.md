@@ -921,3 +921,52 @@ allocation du reliquat, et exposer config / resultats / erreurs.
 - Docs : BUSINESS_RULES / CALCULATION_CONTRACT / CAMPAIGN_SIMULATION /
   DATA_DICTIONARY / SIMULATION_PERSISTENCE
 - Migrations 0001-0006 et stash inchanges ; aucun commit
+
+## 2026-07-21 — Lot 2B-P1 consolidation snapshot schema v3
+
+### Objectif
+
+Persister fidèlement le résultat du contrat de calcul **v4** (rétroactivité
+configurable, incidence d'ancienneté, minimum garanti, trajectoire mensuelle)
+en **append-only**, **sans recalcul**, et débloquer l'enregistrement des
+simulations contrat ≥ 3 refusées jusqu'ici.
+
+### Livrables
+
+- Migration `0007_simulation_contract_v4_results.sql` (uniquement) :
+  - `ALTER compensation_simulation_runs` : configuration contrat v4, enveloppe
+    promotion-aware, agrégats rappel/direct, ancienneté, plein effet
+    (colonnes NULL pour les anciens snapshots)
+  - `ALTER compensation_simulation_employee_results` : identité promotion,
+    minimum garanti, ancienneté, calendrier, plein effet
+  - Nouvelle table `compensation_simulation_employee_month_results`
+    (trajectoire mensuelle 1–12, FK `ON DELETE CASCADE`,
+    `UNIQUE(employee_result_id, month)`, index de lecture, aucun `REAL`)
+- Audit legacy : réutilisation documentée des colonnes 0005
+  (`budget_target_*`, `theoretical_total_*`, `actual_operation_amount_fcfa_text`,
+  `total_rounding_delta_*`, `campaign_year`) sans réinterprétation ; alias
+  `annual*` côté TS restent transitionnels et mappés vers ces colonnes
+- TS : `RESULT_SCHEMA_VERSION = 3` (+ `RESULT_SCHEMA_VERSION_V2 = 2`) ;
+  DTO run/employee/**month** étendus ; `mapExecutionResultToSaveDto` mappe les
+  12 mois sans recalcul ; `assertSimulationResultPersistable` autorise
+  contrat 4 + schema 3 et refuse contrat ≥ 3 && schema < 3 ;
+  `resultSchemaCompatibility` : v3 courant / v2 incomplet / v1 incompatible /
+  inconnu refusé ; memory + sqlite repos + mappers lisent les mois (copie
+  défensive, ordre jan→déc)
+- Rust : `MIGRATION_0007` enregistrée (`persistence.rs` + `lib.rs`) ;
+  `simulation_persistence.rs` étendu (DTO miroir, validations run/employee/mois,
+  INSERT run `result_schema_version = 3` + salariés + 12 mois, vérification
+  `month_count = employee_count × 12`, transaction unique + rollback + faute
+  `AfterMonth`)
+- Tests : `simulationPersistenceSchemaV3.test.ts` + extensions
+  (mapExecutionResultToSaveDto, memory repo, resultSchemaCompatibility) ;
+  nouveaux tests Rust (v3 + 12 mois, all-or-nothing, plage mois, rollback mois)
+- Docs : ARCHITECTURE / DATABASE_SCHEMA / CALCULATION_CONTRACT /
+  CAMPAIGN_SIMULATION / DATA_DICTIONARY / SIMULATION_PERSISTENCE / DEVELOPMENT_LOG
+
+### Validations
+
+- `pnpm test` (414) / `pnpm build` : OK
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked` (47) : OK
+- `git diff --check` propre ; `git diff -- migrations 0001..0006` vide
+- stash `wip/lot-2b-4b-before-annual-budget-fix` intact ; aucun commit

@@ -24,6 +24,7 @@ export {
   EMPLOYER_CHARGES_INCLUDED,
   FULL_YEAR_MONTH_COUNT,
   RESULT_SCHEMA_VERSION,
+  RESULT_SCHEMA_VERSION_V2,
   RESULT_SCHEMA_VERSION_LEGACY,
 } from "./calculationContract";
 export { calculatePreparedPopulationCompensation } from "./calculatePreparedPopulationCompensation";

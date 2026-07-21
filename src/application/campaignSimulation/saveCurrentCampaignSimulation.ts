@@ -159,6 +159,7 @@ export async function saveCurrentCampaignSimulation(
       result,
       expectedCampaignStatus: campaign.status,
       sourceImportFileName: currentBatch?.sourceFileName ?? null,
+      minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
     });
   } catch (error) {
     if (

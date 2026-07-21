@@ -200,9 +200,10 @@ et `result_schema_version` **inchangés** (pas de migration 0006 dans ce lot).
 | Coût à plein effet | décembre × 12 (`fullYearRunRate*`) — **informatif**, hors calibrage |
 
 Contraintes : `1 ≤ rétro ≤ application ≤ 12`. Empreintes : token
-`retroStart:`. `RESULT_SCHEMA_VERSION` reste **2** : un résultat contrat 3
-ne peut pas être sauvegardé tant que le schema snapshot v3 n’est pas
-consolidé (`SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION`).
+`retroStart:`. Depuis le **Lot 2B-P1**, `RESULT_SCHEMA_VERSION = 3` :
+un résultat contrat v4 est persistable en schema v3 (migration `0007`). Un
+contrat ≥ 3 avec un schema < 3 reste refusé
+(`SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION`).
 
 ### Non-régression Population Test 1 (sans promotion)
 
@@ -237,8 +238,9 @@ Modes exclusifs : `none` | `fixed_monthly_amount` | `percentage_of_base_salary`.
 Population minimum ≠ éligibilité compensatoire classique (pas de seuil
 12 mois, sous-performants inclus). Mode `none` : bit-identique à H2D-1.
 
-`RESULT_SCHEMA_VERSION` reste **2** : contrat ≥ 3 (donc v4) non persistable
-jusqu’au schema snapshot v3 / migration 0007.
+**Lot 2B-P1** : `RESULT_SCHEMA_VERSION = 3` (migration `0007`) — le contrat v4
+est désormais persistable (run + salariés + trajectoire mensuelle) en
+append-only, sans recalcul.
 
 ## Lot 2A-H2B — incidence supplémentaire d’ancienneté
 

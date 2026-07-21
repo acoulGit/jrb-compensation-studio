@@ -139,13 +139,18 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
 - Formatage exact : `formatFcfaInteger`, `formatExactAmountAsFcfa`,
   `formatExactRateAsPercent`, `formatFactorMilli`, `formatExactWeight`.
 
-## Couche persistance de simulation (Lot 2B-4A)
+## Couche persistance de simulation (Lots 2B-4A + 2B-P1)
 
-- Migration `0005_campaign_simulations.sql`.
-- Commande Rust `save_simulation_run` (transaction SQLx dédiée).
-- Service `saveCurrentCampaignSimulation` + DTO chaînes canoniques.
-- `SimulationHistoryRepository` (memory / sqlite) — lecture paginée prête
-  pour 2B-4B ; **aucune UI Historique** dans 2B-4A.
+- Migrations `0005_campaign_simulations.sql` puis
+  `0007_simulation_contract_v4_results.sql` (consolidation schema v3 : colonnes
+  contrat v4 + table `compensation_simulation_employee_month_results`).
+- Commande Rust `save_simulation_run` (transaction SQLx dédiée) : écrit le run
+  (`result_schema_version = 3`), les salariés et **12 mois** par salarié en une
+  seule transaction, sans recalcul.
+- Service `saveCurrentCampaignSimulation` + DTO chaînes canoniques (run /
+  salarié / mensuel).
+- `SimulationHistoryRepository` (memory / sqlite) — lecture paginée et
+  mensuelle prête pour 2B-4B ; **aucune UI Historique** dans ce périmètre.
 - Voir `docs/SIMULATION_PERSISTENCE.md`.
 
 Voir `docs/CAMPAIGN_SIMULATION.md`.

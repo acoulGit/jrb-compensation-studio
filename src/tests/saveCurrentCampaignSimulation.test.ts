@@ -288,6 +288,7 @@ function makeRepository(
     })),
     getSimulationRun: vi.fn(async () => null),
     listSimulationEmployeeResults: vi.fn(async () => []),
+    listSimulationEmployeeMonthResults: vi.fn(async () => []),
     getSimulationRunSummary: vi.fn(async () => null),
     ...overrides,
   };

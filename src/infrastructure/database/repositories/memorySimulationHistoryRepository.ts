@@ -7,9 +7,11 @@ import {
   DEFAULT_SIMULATION_HISTORY_PAGE_SIZE,
   MAX_SIMULATION_HISTORY_PAGE_SIZE,
   type PaginatedSimulationRuns,
+  type PersistedSimulationEmployeeMonthResult,
   type PersistedSimulationEmployeeResult,
   type PersistedSimulationRunDetail,
   type PersistedSimulationRunSummary,
+  type SaveSimulationEmployeeMonthDto,
   type SaveSimulationRunCommandResult,
   type SaveSimulationRunDto,
   type SimulationHistoryListOptions,
@@ -18,6 +20,7 @@ import {
   parseCanonicalExactAmount,
   parseCanonicalIntegerText,
 } from "../../../application/campaignSimulation/canonicalDecimalText";
+import { RESULT_SCHEMA_VERSION } from "../../../domain/compensationCalculation";
 import type { NineBoxMode } from "../../../domain/compensationReference/models";
 import type { SimulationHistoryRepository } from "./simulationHistoryRepository";
 
@@ -60,11 +63,121 @@ function compareEmployeeId(left: string, right: string): number {
   return 0;
 }
 
+function mapMonthDto(
+  month: SaveSimulationEmployeeMonthDto,
+  id: number,
+  employeeResultId: number,
+): PersistedSimulationEmployeeMonthResult {
+  return {
+    id,
+    employeeResultId,
+    month: month.month,
+    baseSalaryFcfa: parseCanonicalIntegerText(month.baseSalaryFcfaText, {
+      allowNegative: false,
+    }),
+    gradeCode: month.gradeCode,
+    jobFamilyCode: month.jobFamilyCode,
+    salaryPositionLabel: month.salaryPositionLabel,
+    targetCompensatoryRate: parseCanonicalExactAmount({
+      numeratorText: month.targetCompensatoryRateNumeratorText,
+      denominatorText: month.targetCompensatoryRateDenominatorText,
+    }),
+    promotionRateOffset: parseCanonicalExactAmount({
+      numeratorText: month.promotionRateOffsetNumeratorText,
+      denominatorText: month.promotionRateOffsetDenominatorText,
+    }),
+    compensatoryComplementRate: parseCanonicalExactAmount({
+      numeratorText: month.compensatoryComplementRateNumeratorText,
+      denominatorText: month.compensatoryComplementRateDenominatorText,
+    }),
+    theoreticalCompensatoryComplement: parseCanonicalExactAmount({
+      numeratorText: month.theoreticalCompensatoryComplementNumeratorText,
+      denominatorText: month.theoreticalCompensatoryComplementDenominatorText,
+    }),
+    roundedCompensatoryComplementFcfa: parseCanonicalIntegerText(
+      month.roundedCompensatoryComplementFcfaText,
+      { allowNegative: false },
+    ),
+    promotionBudgetCostFcfa: parseCanonicalIntegerText(
+      month.promotionBudgetCostFcfaText,
+      { allowNegative: false },
+    ),
+    finalSalaryFcfa: parseCanonicalIntegerText(month.finalSalaryFcfaText, {
+      allowNegative: false,
+    }),
+    seniorityRatePercent: month.seniorityRatePercent,
+    promotionSeniorityImpactFcfa: parseCanonicalIntegerText(
+      month.promotionSeniorityImpactFcfaText,
+      { allowNegative: false },
+    ),
+    compensatorySeniorityImpactFcfa: parseCanonicalIntegerText(
+      month.compensatorySeniorityImpactFcfaText,
+      { allowNegative: false },
+    ),
+    totalSeniorityImpactFcfa: parseCanonicalIntegerText(
+      month.totalSeniorityImpactFcfaText,
+      { allowNegative: false },
+    ),
+    paymentTiming: month.paymentTiming,
+    promotionPaymentTiming: month.promotionPaymentTiming,
+    coveredByCampaignPeriod: month.coveredByCampaignPeriod,
+    includedInCampaignEnvelope: month.includedInCampaignEnvelope,
+    promotionActive: month.promotionActive,
+    promotionStatus: month.promotionStatus,
+    isMinimumIncreasePopulationEmployee:
+      month.isMinimumIncreasePopulationEmployee,
+    guaranteedTotalIncrease: parseCanonicalExactAmount({
+      numeratorText: month.guaranteedTotalIncreaseNumeratorText,
+      denominatorText: month.guaranteedTotalIncreaseDenominatorText,
+    }),
+    applicablePromotionIncrementFcfa: parseCanonicalIntegerText(
+      month.applicablePromotionIncrementFcfaText,
+      { allowNegative: false },
+    ),
+    requiredMinimumComplement: parseCanonicalExactAmount({
+      numeratorText: month.requiredMinimumComplementNumeratorText,
+      denominatorText: month.requiredMinimumComplementDenominatorText,
+    }),
+    minimumComplementFloorFcfa: parseCanonicalIntegerText(
+      month.minimumComplementFloorFcfaText,
+      { allowNegative: false },
+    ),
+    weightedComplement: parseCanonicalExactAmount({
+      numeratorText: month.weightedComplementNumeratorText,
+      denominatorText: month.weightedComplementDenominatorText,
+    }),
+    theoreticalComplement: parseCanonicalExactAmount({
+      numeratorText: month.theoreticalComplementNumeratorText,
+      denominatorText: month.theoreticalComplementDenominatorText,
+    }),
+    actualComplementAboveMinimumFcfa: parseCanonicalIntegerText(
+      month.actualComplementAboveMinimumFcfaText,
+      { allowNegative: false },
+    ),
+  };
+}
+
+function cloneMonth(
+  month: PersistedSimulationEmployeeMonthResult,
+): PersistedSimulationEmployeeMonthResult {
+  return { ...month };
+}
+
+function cloneEmployee(
+  employee: PersistedSimulationEmployeeResult,
+): PersistedSimulationEmployeeResult {
+  return {
+    ...employee,
+    months: employee.months ? employee.months.map(cloneMonth) : [],
+  };
+}
+
 export class MemorySimulationHistoryRepository
   implements SimulationHistoryRepository
 {
   private nextRunId = 1;
   private nextEmployeeRowId = 1;
+  private nextMonthRowId = 1;
   private readonly runs = new Map<number, StoredRun>();
 
   async saveSimulationRun(
@@ -83,7 +196,7 @@ export class MemorySimulationHistoryRepository
       id,
       campaignId: dto.campaignId,
       runNumber,
-      resultSchemaVersion: 2,
+      resultSchemaVersion: dto.resultSchemaVersion ?? RESULT_SCHEMA_VERSION,
       campaignName: dto.campaignName,
       campaignYear: dto.campaignYear,
       campaignStatusAtRun: dto.campaignStatusAtRun,
@@ -202,6 +315,14 @@ export class MemorySimulationHistoryRepository
             { allowNegative: false },
           ),
           explanationSteps: parseExplanationSteps(employee.explanationStepsJson),
+          months: (employee.months ?? [])
+            .slice()
+            .sort((a, b) => a.month - b.month)
+            .map((month) => {
+              const monthId = this.nextMonthRowId;
+              this.nextMonthRowId += 1;
+              return mapMonthDto(month, monthId, rowId);
+            }),
         };
       })
       .sort((left, right) => compareEmployeeId(left.employeeId, right.employeeId));
@@ -255,7 +376,7 @@ export class MemorySimulationHistoryRepository
     if (!run) return null;
     return {
       summary: { ...run.summary },
-      employees: run.employees.map((employee) => ({ ...employee })),
+      employees: run.employees.map(cloneEmployee),
     };
   }
 
@@ -264,6 +385,20 @@ export class MemorySimulationHistoryRepository
   ): Promise<PersistedSimulationEmployeeResult[]> {
     const run = this.runs.get(runId);
     if (!run) return [];
-    return run.employees.map((employee) => ({ ...employee }));
+    return run.employees.map(cloneEmployee);
+  }
+
+  async listSimulationEmployeeMonthResults(
+    employeeResultId: number,
+  ): Promise<PersistedSimulationEmployeeMonthResult[]> {
+    for (const run of this.runs.values()) {
+      const employee = run.employees.find(
+        (candidate) => candidate.id === employeeResultId,
+      );
+      if (employee) {
+        return (employee.months ?? []).map(cloneMonth);
+      }
+    }
+    return [];
   }
 }

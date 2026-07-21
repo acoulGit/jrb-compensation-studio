@@ -8,6 +8,7 @@ import {
   DEFAULT_SIMULATION_HISTORY_PAGE_SIZE,
   MAX_SIMULATION_HISTORY_PAGE_SIZE,
   type PaginatedSimulationRuns,
+  type PersistedSimulationEmployeeMonthResult,
   type PersistedSimulationEmployeeResult,
   type PersistedSimulationRunDetail,
   type PersistedSimulationRunSummary,
@@ -17,8 +18,10 @@ import {
 } from "../../../application/campaignSimulation/simulationPersistenceModels";
 import { getDatabase } from "../connection";
 import {
+  mapSimulationEmployeeMonthResult,
   mapSimulationEmployeeResult,
   mapSimulationRunSummary,
+  type SimulationEmployeeMonthResultRow,
   type SimulationEmployeeResultRow,
   type SimulationRunRow,
 } from "../simulationHistoryMappers";
@@ -100,6 +103,11 @@ export class SqliteSimulationHistoryRepository
     const summary = await this.getSimulationRunSummary(runId);
     if (!summary) return null;
     const employees = await this.listSimulationEmployeeResults(runId);
+    for (const employee of employees) {
+      employee.months = await this.listSimulationEmployeeMonthResults(
+        employee.id,
+      );
+    }
     return { summary, employees };
   }
 
@@ -115,5 +123,19 @@ export class SqliteSimulationHistoryRepository
       [runId],
     );
     return rows.map(mapSimulationEmployeeResult);
+  }
+
+  async listSimulationEmployeeMonthResults(
+    employeeResultId: number,
+  ): Promise<PersistedSimulationEmployeeMonthResult[]> {
+    const db = await getDatabase();
+    const rows = await db.select<SimulationEmployeeMonthResultRow[]>(
+      `SELECT *
+       FROM compensation_simulation_employee_month_results
+       WHERE employee_result_id = $1
+       ORDER BY month ASC`,
+      [employeeResultId],
+    );
+    return rows.map(mapSimulationEmployeeMonthResult);
   }
 }

@@ -10,6 +10,7 @@ import {
   parseCanonicalIntegerText,
 } from "../../application/campaignSimulation/canonicalDecimalText";
 import type {
+  PersistedSimulationEmployeeMonthResult,
   PersistedSimulationEmployeeResult,
   PersistedSimulationRunSummary,
 } from "../../application/campaignSimulation/simulationPersistenceModels";
@@ -85,6 +86,73 @@ export interface SimulationEmployeeResultRow {
   explanation_steps_json: string;
 }
 
+/** Ligne mensuelle persistée (schema v3, Lot 2B-P1). */
+export interface SimulationEmployeeMonthResultRow {
+  id: number;
+  employee_result_id: number;
+  month: number;
+  base_salary_fcfa_text: string;
+  grade_code: string;
+  job_family_code: string;
+  salary_position_label: string | null;
+  target_compensatory_rate_num_text: string;
+  target_compensatory_rate_den_text: string;
+  promotion_rate_offset_num_text: string;
+  promotion_rate_offset_den_text: string;
+  compensatory_complement_rate_num_text: string;
+  compensatory_complement_rate_den_text: string;
+  theoretical_compensatory_complement_num_text: string;
+  theoretical_compensatory_complement_den_text: string;
+  rounded_compensatory_complement_fcfa_text: string;
+  promotion_budget_cost_fcfa_text: string;
+  final_salary_fcfa_text: string;
+  seniority_rate_percent: number;
+  promotion_seniority_impact_fcfa_text: string;
+  compensatory_seniority_impact_fcfa_text: string;
+  total_seniority_impact_fcfa_text: string;
+  payment_timing: string;
+  promotion_payment_timing: string;
+  covered_by_campaign_period: number;
+  included_in_campaign_envelope: number;
+  promotion_active: number;
+  promotion_status: string;
+  is_minimum_increase_population_employee: number;
+  guaranteed_total_increase_num_text: string;
+  guaranteed_total_increase_den_text: string;
+  applicable_promotion_increment_fcfa_text: string;
+  required_minimum_complement_num_text: string;
+  required_minimum_complement_den_text: string;
+  minimum_complement_floor_fcfa_text: string;
+  weighted_complement_num_text: string;
+  weighted_complement_den_text: string;
+  theoretical_complement_num_text: string;
+  theoretical_complement_den_text: string;
+  actual_complement_above_minimum_fcfa_text: string;
+}
+
+function asPaymentTiming(
+  value: string,
+): PersistedSimulationEmployeeMonthResult["paymentTiming"] {
+  if (value === "outside_campaign" || value === "reminder" || value === "direct") {
+    return value;
+  }
+  throw new Error(`Timing de paiement persisté invalide: ${value}`);
+}
+
+function asPromotionPaymentTiming(
+  value: string,
+): PersistedSimulationEmployeeMonthResult["promotionPaymentTiming"] {
+  if (
+    value === "outside_campaign" ||
+    value === "reminder" ||
+    value === "direct" ||
+    value === "not_applicable"
+  ) {
+    return value;
+  }
+  throw new Error(`Timing de promotion persisté invalide: ${value}`);
+}
+
 function asCampaignStatus(value: string): CampaignStatus {
   if (value === "draft" || value === "active" || value === "archived") {
     return value;
@@ -130,6 +198,101 @@ function parseExplanationSteps(
   } catch {
     return [];
   }
+}
+
+export function mapSimulationEmployeeMonthResult(
+  row: SimulationEmployeeMonthResultRow,
+): PersistedSimulationEmployeeMonthResult {
+  const positiveIntegerText = { allowNegative: false } as const;
+  return {
+    id: row.id,
+    employeeResultId: row.employee_result_id,
+    month: row.month,
+    baseSalaryFcfa: parseCanonicalIntegerText(
+      row.base_salary_fcfa_text,
+      positiveIntegerText,
+    ),
+    gradeCode: row.grade_code,
+    jobFamilyCode: row.job_family_code,
+    salaryPositionLabel: row.salary_position_label,
+    targetCompensatoryRate: parseCanonicalExactAmount({
+      numeratorText: row.target_compensatory_rate_num_text,
+      denominatorText: row.target_compensatory_rate_den_text,
+    }),
+    promotionRateOffset: parseCanonicalExactAmount({
+      numeratorText: row.promotion_rate_offset_num_text,
+      denominatorText: row.promotion_rate_offset_den_text,
+    }),
+    compensatoryComplementRate: parseCanonicalExactAmount({
+      numeratorText: row.compensatory_complement_rate_num_text,
+      denominatorText: row.compensatory_complement_rate_den_text,
+    }),
+    theoreticalCompensatoryComplement: parseCanonicalExactAmount({
+      numeratorText: row.theoretical_compensatory_complement_num_text,
+      denominatorText: row.theoretical_compensatory_complement_den_text,
+    }),
+    roundedCompensatoryComplementFcfa: parseCanonicalIntegerText(
+      row.rounded_compensatory_complement_fcfa_text,
+      positiveIntegerText,
+    ),
+    promotionBudgetCostFcfa: parseCanonicalIntegerText(
+      row.promotion_budget_cost_fcfa_text,
+      positiveIntegerText,
+    ),
+    finalSalaryFcfa: parseCanonicalIntegerText(
+      row.final_salary_fcfa_text,
+      positiveIntegerText,
+    ),
+    seniorityRatePercent: row.seniority_rate_percent,
+    promotionSeniorityImpactFcfa: parseCanonicalIntegerText(
+      row.promotion_seniority_impact_fcfa_text,
+      positiveIntegerText,
+    ),
+    compensatorySeniorityImpactFcfa: parseCanonicalIntegerText(
+      row.compensatory_seniority_impact_fcfa_text,
+      positiveIntegerText,
+    ),
+    totalSeniorityImpactFcfa: parseCanonicalIntegerText(
+      row.total_seniority_impact_fcfa_text,
+      positiveIntegerText,
+    ),
+    paymentTiming: asPaymentTiming(row.payment_timing),
+    promotionPaymentTiming: asPromotionPaymentTiming(row.promotion_payment_timing),
+    coveredByCampaignPeriod: row.covered_by_campaign_period === 1,
+    includedInCampaignEnvelope: row.included_in_campaign_envelope === 1,
+    promotionActive: row.promotion_active === 1,
+    promotionStatus: row.promotion_status,
+    isMinimumIncreasePopulationEmployee:
+      row.is_minimum_increase_population_employee === 1,
+    guaranteedTotalIncrease: parseCanonicalExactAmount({
+      numeratorText: row.guaranteed_total_increase_num_text,
+      denominatorText: row.guaranteed_total_increase_den_text,
+    }),
+    applicablePromotionIncrementFcfa: parseCanonicalIntegerText(
+      row.applicable_promotion_increment_fcfa_text,
+      positiveIntegerText,
+    ),
+    requiredMinimumComplement: parseCanonicalExactAmount({
+      numeratorText: row.required_minimum_complement_num_text,
+      denominatorText: row.required_minimum_complement_den_text,
+    }),
+    minimumComplementFloorFcfa: parseCanonicalIntegerText(
+      row.minimum_complement_floor_fcfa_text,
+      positiveIntegerText,
+    ),
+    weightedComplement: parseCanonicalExactAmount({
+      numeratorText: row.weighted_complement_num_text,
+      denominatorText: row.weighted_complement_den_text,
+    }),
+    theoreticalComplement: parseCanonicalExactAmount({
+      numeratorText: row.theoretical_complement_num_text,
+      denominatorText: row.theoretical_complement_den_text,
+    }),
+    actualComplementAboveMinimumFcfa: parseCanonicalIntegerText(
+      row.actual_complement_above_minimum_fcfa_text,
+      positiveIntegerText,
+    ),
+  };
 }
 
 export function mapSimulationRunSummary(

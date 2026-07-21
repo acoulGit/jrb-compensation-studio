@@ -8,6 +8,56 @@ import type { CampaignStatus } from "../../domain/campaign/models";
 import type { NineBoxMode } from "../../domain/compensationReference/models";
 import type { SimulationPersistenceCode } from "./simulationPersistenceCodes";
 
+/**
+ * Trajectoire mensuelle persistée (schema v3, Lot 2B-P1).
+ * Un DTO par mois (1 = janvier … 12 = décembre). Codes calendrier stables,
+ * dérivés du domaine sans recalcul métier.
+ */
+export interface SaveSimulationEmployeeMonthDto {
+  month: number;
+  baseSalaryFcfaText: string;
+  gradeCode: string;
+  jobFamilyCode: string;
+  salaryPositionLabel: string | null;
+  targetCompensatoryRateNumeratorText: string;
+  targetCompensatoryRateDenominatorText: string;
+  promotionRateOffsetNumeratorText: string;
+  promotionRateOffsetDenominatorText: string;
+  compensatoryComplementRateNumeratorText: string;
+  compensatoryComplementRateDenominatorText: string;
+  theoreticalCompensatoryComplementNumeratorText: string;
+  theoreticalCompensatoryComplementDenominatorText: string;
+  roundedCompensatoryComplementFcfaText: string;
+  promotionBudgetCostFcfaText: string;
+  finalSalaryFcfaText: string;
+  seniorityRatePercent: number;
+  promotionSeniorityImpactFcfaText: string;
+  compensatorySeniorityImpactFcfaText: string;
+  totalSeniorityImpactFcfaText: string;
+  paymentTiming: "outside_campaign" | "reminder" | "direct";
+  promotionPaymentTiming:
+    | "outside_campaign"
+    | "reminder"
+    | "direct"
+    | "not_applicable";
+  coveredByCampaignPeriod: boolean;
+  includedInCampaignEnvelope: boolean;
+  promotionActive: boolean;
+  promotionStatus: string;
+  isMinimumIncreasePopulationEmployee: boolean;
+  guaranteedTotalIncreaseNumeratorText: string;
+  guaranteedTotalIncreaseDenominatorText: string;
+  applicablePromotionIncrementFcfaText: string;
+  requiredMinimumComplementNumeratorText: string;
+  requiredMinimumComplementDenominatorText: string;
+  minimumComplementFloorFcfaText: string;
+  weightedComplementNumeratorText: string;
+  weightedComplementDenominatorText: string;
+  theoreticalComplementNumeratorText: string;
+  theoreticalComplementDenominatorText: string;
+  actualComplementAboveMinimumFcfaText: string;
+}
+
 export interface SaveSimulationEmployeeDto {
   employeeId: string;
   employeeDisplayName: string | null;
@@ -42,6 +92,75 @@ export interface SaveSimulationEmployeeDto {
   individualRoundingDeltaDenominatorText: string;
   finalSalaryFcfaText: string;
   explanationStepsJson: string;
+
+  /**
+   * Champs schema v3 (Lot 2B-P1). Optionnels : absents pour les DTO v2
+   * historiques (mappés en NULL côté persistance, aucun faux zéro).
+   */
+  annualTheoreticalAllocationNumeratorText?: string;
+  annualTheoreticalAllocationDenominatorText?: string;
+  annualActualCostFcfaText?: string;
+  annualRoundingDeltaNumeratorText?: string;
+  annualRoundingDeltaDenominatorText?: string;
+  campaignYear?: number | null;
+  retroactivityStartMonth?: number | null;
+  technicalApplicationMonth?: number | null;
+  campaignCoveredMonthCount?: number | null;
+  retroactiveMonths?: number | null;
+  remainingDirectPaymentMonths?: number | null;
+  baseSalaryReminderFcfaText?: string;
+  remainingYearDirectIncreaseCostFcfaText?: string;
+  annualActualBaseIncreaseCostFcfaText?: string;
+  hireDate?: string | null;
+  technicalApplicationMonthSeniorityRatePercent?: number | null;
+  seniorityReminderFcfaText?: string;
+  remainingYearDirectSeniorityImpactFcfaText?: string;
+  annualSeniorityImpactFcfaText?: string;
+  fullYearRunRatePromotionCostFcfaText?: string;
+  fullYearRunRateCompensatoryCostFcfaText?: string;
+  fullYearRunRateCombinedBaseMeasureCostFcfaText?: string;
+  fullYearRunRateSeniorityImpactFcfaText?: string;
+  compensatoryMeasureEligible?: boolean | null;
+  isPromotionBudgetPopulationEmployee?: boolean | null;
+  employmentStatus?: string | null;
+  contractType?: string | null;
+  promotionStatusKind?: string | null;
+  compensatoryEligibilityKind?: string | null;
+  compensatoryIneligibilityReasonCode?: string | null;
+  hasStructuredPromotion?: boolean | null;
+  promotionDate?: string | null;
+  promotionYear?: number | null;
+  promotionMonth?: number | null;
+  previousGradeCode?: string | null;
+  promotedGradeCode?: string | null;
+  previousJobFamilyCode?: string | null;
+  promotedJobFamilyCode?: string | null;
+  salaryBeforePromotionFcfaText?: string | null;
+  salaryAfterPromotionFcfaText?: string | null;
+  promotionAmountFcfaText?: string | null;
+  promotionRateNumeratorText?: string | null;
+  promotionRateDenominatorText?: string | null;
+  promotionCampaignCostInformativeFcfaText?: string;
+  annualPromotionBudgetCostFcfaText?: string;
+  promotionCostAlreadyPaidBeforeTechnicalMonthFcfaText?: string;
+  promotionCostFromTechnicalMonthToDecemberFcfaText?: string;
+  annualPromotionSeniorityImpactFcfaText?: string;
+  combinedAnnualSeniorityImpactFcfaText?: string;
+  combinedAnnualActualCostFcfaText?: string;
+  technicalMonthCompensatoryComplementFcfaText?: string;
+  technicalMonthFinalSalaryFcfaText?: string;
+  isMinimumIncreasePopulationEmployee?: boolean | null;
+  minimumIncreaseExclusionReason?: string | null;
+  campaignPeriodMinimumComplementFloorCostFcfaText?: string;
+  campaignPeriodCompensationAboveMinimumCostFcfaText?: string;
+  minimumCompensatoryReminderFcfaText?: string;
+  aboveMinimumCompensatoryReminderFcfaText?: string;
+  minimumRemainingYearDirectCostFcfaText?: string;
+  aboveMinimumRemainingYearDirectCostFcfaText?: string;
+  fullYearRunRateMinimumComplementCostFcfaText?: string;
+  fullYearRunRateCompensationAboveMinimumCostFcfaText?: string;
+  /** Trajectoire mensuelle (12 mois) — présente uniquement en schema v3. */
+  months?: SaveSimulationEmployeeMonthDto[];
 }
 
 export interface SaveSimulationRunDto {
@@ -73,6 +192,73 @@ export interface SaveSimulationRunDto {
   actualOperationAmountFcfaText: string;
   totalRoundingDeltaNumeratorText: string;
   totalRoundingDeltaDenominatorText: string;
+
+  /**
+   * Version de schéma cible du snapshot. Absente = schema v3 par défaut
+   * (les DTO v2 historiques ne fixent pas ce champ).
+   */
+  resultSchemaVersion?: number;
+
+  /** Champs schema v3 (Lot 2B-P1) — configuration contrat v4. */
+  retroactivityStartMonth?: number | null;
+  technicalApplicationMonth?: number | null;
+  campaignCoveredMonthCount?: number | null;
+  reminderMonthCount?: number | null;
+  directPaymentMonthCount?: number | null;
+  calculationContractVersion?: number | null;
+  seniorityImpactContractVersion?: number | null;
+  minimumIncreaseContractVersion?: number | null;
+  minimumIncreaseMode?: string | null;
+  minimumMonthlyAmountText?: string | null;
+  minimumRateNumeratorText?: string | null;
+  minimumRateDenominatorText?: string | null;
+
+  /** Enveloppe promotion-aware (v3). */
+  promotionCampaignPeriodBudgetCostText?: string;
+  totalMinimumComplementFloorCostText?: string;
+  availableBudgetAfterPromotionsNumeratorText?: string;
+  availableBudgetAfterPromotionsDenominatorText?: string;
+  availableBudgetAfterPromotionsAndMinimumNumeratorText?: string;
+  availableBudgetAfterPromotionsAndMinimumDenominatorText?: string;
+  theoreticalCompensatoryCampaignPeriodCostNumeratorText?: string;
+  theoreticalCompensatoryCampaignPeriodCostDenominatorText?: string;
+  actualCompensatoryCampaignPeriodCostText?: string;
+  actualMinimumComplementPaidCostText?: string;
+  actualCompensationAboveMinimumCostText?: string;
+  actualCombinedCampaignPeriodCostText?: string;
+  compensatoryCalibrationRateNumeratorText?: string;
+  compensatoryCalibrationRateDenominatorText?: string;
+  minimumIncreasePopulationEmployeeCount?: number | null;
+  promotedIncludedEmployeeCount?: number | null;
+
+  /** Rappels / directs / ancienneté / plein effet (population, v3). */
+  totalBaseSalaryReminderText?: string;
+  totalRemainingYearDirectIncreaseCostText?: string;
+  totalAnnualActualBaseIncreaseCostText?: string;
+  totalSeniorityReminderText?: string;
+  totalRemainingYearDirectSeniorityImpactText?: string;
+  totalAnnualSeniorityImpactText?: string;
+  totalAnnualPromotionSeniorityImpactText?: string;
+  totalAnnualPromotionBudgetCostText?: string;
+  totalCombinedAnnualActualCostText?: string;
+  totalCombinedAnnualSeniorityImpactText?: string;
+  fullYearRunRatePromotionCostText?: string;
+  fullYearRunRateCompensatoryCostText?: string;
+  fullYearRunRateCombinedBaseMeasureCostText?: string;
+  fullYearRunRateSeniorityImpactText?: string;
+  fullYearRunRateMinimumComplementCostText?: string;
+  fullYearRunRateCompensationAboveMinimumCostText?: string;
+
+  /** Calendrier de paiement agrégé (v3). */
+  promotionCostPaidBeforeTechnicalMonthText?: string;
+  promotionCostFromTechnicalMonthToDecemberText?: string;
+  minimumCompensatoryReminderText?: string;
+  aboveMinimumCompensatoryReminderText?: string;
+  totalCompensatoryReminderText?: string;
+  minimumRemainingYearDirectCostText?: string;
+  aboveMinimumRemainingYearDirectCostText?: string;
+  totalRemainingYearDirectCompensatoryCostText?: string;
+
   employees: SaveSimulationEmployeeDto[];
 }
 
@@ -146,6 +332,48 @@ export interface PersistedSimulationEmployeeResult {
     formula?: string;
     outputValue?: string;
   }[];
+  /** Trajectoire mensuelle relue (schema v3). Vide pour snapshots v1/v2. */
+  months?: PersistedSimulationEmployeeMonthResult[];
+}
+
+/** Ligne mensuelle relue (schema v3, Lot 2B-P1). */
+export interface PersistedSimulationEmployeeMonthResult {
+  id: number;
+  employeeResultId: number;
+  month: number;
+  baseSalaryFcfa: bigint;
+  gradeCode: string;
+  jobFamilyCode: string;
+  salaryPositionLabel: string | null;
+  targetCompensatoryRate: ExactAmount;
+  promotionRateOffset: ExactAmount;
+  compensatoryComplementRate: ExactAmount;
+  theoreticalCompensatoryComplement: ExactAmount;
+  roundedCompensatoryComplementFcfa: bigint;
+  promotionBudgetCostFcfa: bigint;
+  finalSalaryFcfa: bigint;
+  seniorityRatePercent: number;
+  promotionSeniorityImpactFcfa: bigint;
+  compensatorySeniorityImpactFcfa: bigint;
+  totalSeniorityImpactFcfa: bigint;
+  paymentTiming: "outside_campaign" | "reminder" | "direct";
+  promotionPaymentTiming:
+    | "outside_campaign"
+    | "reminder"
+    | "direct"
+    | "not_applicable";
+  coveredByCampaignPeriod: boolean;
+  includedInCampaignEnvelope: boolean;
+  promotionActive: boolean;
+  promotionStatus: string;
+  isMinimumIncreasePopulationEmployee: boolean;
+  guaranteedTotalIncrease: ExactAmount;
+  applicablePromotionIncrementFcfa: bigint;
+  requiredMinimumComplement: ExactAmount;
+  minimumComplementFloorFcfa: bigint;
+  weightedComplement: ExactAmount;
+  theoreticalComplement: ExactAmount;
+  actualComplementAboveMinimumFcfa: bigint;
 }
 
 export interface PersistedSimulationRunDetail {

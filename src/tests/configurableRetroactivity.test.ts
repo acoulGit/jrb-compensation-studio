@@ -804,22 +804,25 @@ describe("Lot 2A-H2D-1 — rétroactivité configurable", () => {
     expect(view.populationSummary.campaignCoveredMonthCount).toBe(9);
   });
 
-  it("19. mapExecutionResultToSaveDto / assert refuse contrat 3 / schema 2", () => {
+  it("19. mapExecutionResultToSaveDto / schema v3 consolidé (contrat 4 persistable)", () => {
     expect(CALCULATION_CONTRACT_VERSION).toBe(4);
-    expect(RESULT_SCHEMA_VERSION).toBe(2);
+    expect(RESULT_SCHEMA_VERSION).toBe(3);
+    // Contrat ≥ 3 exige schema ≥ 3 : refus explicite si schema 2.
     expect(() =>
       assertSimulationResultPersistable({
         calculationContractVersion: 4,
         resultSchemaVersion: 2,
       }),
-    ).toThrow(/consolidat/i);
-    expect(() =>
-      mapExecutionResultToSaveDto({
-        result: samplePersistableResult({ calculationContractVersion: 3 }),
-        expectedCampaignStatus: "active",
-        sourceImportFileName: null,
-      }),
-    ).toThrow(/consolidat/i);
+    ).toThrow(/schema/i);
+    // Schema v3 : le contrat v4 est désormais persistable, sans recalcul.
+    const dto = mapExecutionResultToSaveDto({
+      result: samplePersistableResult({ calculationContractVersion: 4 }),
+      expectedCampaignStatus: "active",
+      sourceImportFileName: null,
+    });
+    expect(dto.resultSchemaVersion).toBe(3);
+    expect(dto.calculationContractVersion).toBe(4);
+    expect(dto.retroactivityStartMonth).toBe(1);
     // Schema legacy v2 + contrat 2 toujours accepté pour snapshots historiques.
     expect(() =>
       assertSimulationResultPersistable({
