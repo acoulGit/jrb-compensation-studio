@@ -260,6 +260,9 @@ describe("Lot 2B-1 — mapping salarié", () => {
         potentialLevel: "medium",
         confirmedUnderperformer: false,
         promotion: null,
+        contractType: "cdi",
+        employmentStatus: "active",
+        compensatoryMeasureEligible: true,
       });
     }
     expect(employee).toEqual(clone);

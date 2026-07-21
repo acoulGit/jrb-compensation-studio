@@ -706,3 +706,110 @@ l’allocation budgétaire ni `result_schema_version` / contrat v2.
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked` : OK
 - migrations 0001–0005 inchangées ; 0006 créée
 - stash 2B-4B intact ; aucun commit
+
+## 2026-07-21 — Lot 2A-H2C-2A correction sémantique coût / erreurs
+
+### Objectif
+
+- `annualPromotionBudgetCostFcfa` = coût **imputable** uniquement ;
+  coût brut informatif = `promotionInclusion.promotionCampaignCostFcfa` ;
+- `totalAnnualPromotionBudgetCostFcfa` = Σ exacte des coûts imputables ;
+- `NO_COMPENSATORY_ALLOCATION_CAPACITY` / `PROMOTION_COST_EXCEEDS_BUDGET`
+  conservent leur code (non masqués en `POPULATION_CALCULATION_FAILED`).
+
+### Vérifications
+
+- `pnpm test` / `pnpm build` / cargo ; stash intact ; aucun commit
+
+## 2026-07-21 — Lot 2A-H2C-2A audit éligibilité avant commit
+
+### Objectif
+
+Clarifier et brancher la séparation population budget promotion vs éligibilité
+complément compensatoire, en réutilisant les règles documentées (CDI/CDD,
+12 mois au 31/12 N-1, gel `external_availability`).
+
+### Livrables
+
+- `compensatoryMeasureEligibility.ts` — `isCompensatoryMeasureEligible`
+- Mapping import → `contractType` + éligibilité calculée
+- Fallback statut/contrat absents limité aux fixtures techniques
+- Tests pipeline (contrat, ancienneté, promu non éligible, etc.)
+- Parité fixture 5 000 023 inchangée
+- Stash intact ; aucun commit ; migrations inchangées
+
+## 2026-07-21 — Lot 2A-H2C-2A : moteur budget promotion / calibrage compensatoire
+
+### Objectif
+
+Intégrer le coût des promotions structurées (Lot 2A-H2C-1) au budget annuel
+et calibrer le complément compensatoire matriciel sur le reliquat, avec une
+résolution **mensuelle** (12 expositions/salarié) pour absorber les
+promotions en cours d’année, tout en garantissant une parité stricte avec le
+moteur existant en l’absence de promotion structurée.
+
+### Livrables
+
+- `promotionBudgetPopulation.ts` — statuts d’emploi consommant le budget
+  (`isPromotionBudgetPopulationEmployee` ; `active` / `group_detachment` /
+  `legal_leave` ; absent ⇒ `active` par rétro-compatibilité)
+- `promotionCompensatoryCalibration.ts` — solveur exact piecewise
+  (`solvePromotionAwareCompensatoryCalibrationRate`, BigInt/fractions
+  uniquement) + helpers de coût annuel promotion
+  (`PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION = 1`)
+- `promotionAwareEmployeeCompensation.ts` — expositions mensuelles puis
+  finalisation par salarié (arrondi mensuel, ventilation ancienneté
+  promotion/compensatoire, coût combiné)
+  (`PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION = 1`)
+- `calculatePreparedPopulationCompensation.ts` réécrit : nouveau pipeline
+  (coût promotion → `PROMOTION_COST_EXCEEDS_BUDGET` si dépassement → budget
+  disponible → calibrage → finalisation → invariants population)
+- `PreparedEmployeeCalculationInput` : `employmentStatus`,
+  `compensatoryMeasureEligible` (tous deux optionnels, défauts
+  rétro-compatibles)
+- Nouveaux champs résultat salarié/population (`monthlyCompensationTrajectory`,
+  `totalAnnualPromotionBudgetCostFcfa`, `availableAnnualCompensatoryBudget`,
+  `compensatoryCalibrationRate`, totaux combinés et ancienneté ventilée)
+- Nouveaux codes d’erreur : `INVALID_EMPLOYMENT_STATUS`,
+  `INVALID_COMPENSATORY_MEASURE_ELIGIBLE`, `PROMOTION_COST_EXCEEDS_BUDGET`,
+  `NO_COMPENSATORY_ALLOCATION_CAPACITY` (remontée dans
+  `POPULATION_CALCULATION_FAILED`), `PROMOTION_BUDGET_INVARIANT_FAILED`
+- Wiring `employmentStatus` : `EmployeeSnapshot` →
+  `mapImportedEmployeeToPreparedInput`
+- Fingerprint de simulation (Lot 2B-3) étendu : `employmentStatus`,
+  `compensatoryMeasureEligible`, versions de contrat calibrage / trajectoire
+  mensuelle
+- Tests `promotionBudgetEngine.test.ts` (solveur, population budget,
+  dépassement budget, statuts non payants, éligibilité compensatoire,
+  ventilation ancienneté)
+- Docs BUSINESS_RULES, CALCULATION_CONTRACT, HR_IMPORT, DEVELOPMENT_LOG
+
+### Parité
+
+- `annualBudgetMonthlyIncrease.test.ts` inchangé et **toujours au vert** :
+  sans promotion structurée, `promotionRateOffset = 0` partout et
+  `availableAnnualCompensatoryBudget = budget annuel cible`, donc résultats
+  strictement identiques au moteur Lot 2A-3/H2A/H2B.
+- `result_schema_version` inchangé (= 2) ; aucune migration créée/modifiée.
+
+### Vérifications
+
+- `pnpm test` : 328 passed (25 fichiers)
+- `pnpm build` : OK
+- `cargo fmt --check` / `cargo check` : OK (aucun fichier Rust modifié dans ce
+  lot) ; `cargo test` non concluant dans cet environnement d’exécution
+  (espace disque insuffisant sur le volume de travail, sans rapport avec ce
+  lot — voir limites connues)
+- migrations 0001–0006 inchangées (`git diff -- src-tauri/migrations` vide)
+- stash `wip/lot-2b-4b-before-annual-budget-fix` intact ; aucun commit
+
+### Limites connues
+
+- Environnement d’exécution à espace disque très contraint : `cargo test`
+  (build complet) a échoué avec `no space on device` indépendamment du code
+  produit ; `cargo fmt --check` et `cargo check` (build incrémental) ont
+  réussi. À rejouer sur un environnement disposant de plus d’espace disque
+  libre si une validation Rust complète est requise.
+- Couverture de tests du nouveau moteur volontairement ciblée (scénarios clés
+  du brief) plutôt qu’exhaustive sur toutes les combinaisons possibles de
+  statuts / éligibilité / mois de promotion.

@@ -12,6 +12,9 @@
  * | potentialLevel     | nineBoxCode → facteurs 9-Box   | si mode l’exige ; sinon omis            |
  * | confirmedUnderperformer | confirmedUnderperformer   | booléen explicite (Lot 1C post-import)  |
  * | hireDate           | hireDate                   | ISO YYYY-MM-DD (Lot 2A-H2B)             |
+ * | employmentStatus   | employmentStatus           | propagé (Lot 2A-H2C-2)                  |
+ * | contractType       | contractType               | propagé ; éligibilité mesure (H2C-2A)   |
+ * | compensatoryMeasureEligible | règles métier documentées | `isCompensatoryMeasureEligible` |
  *
  * Aucune valeur par défaut silencieuse dans ce mapper.
  */
@@ -21,6 +24,7 @@ import type { PreparedEmployeeCalculationInput } from "../../domain/compensation
 import {
   PromotionValidationError,
   buildPromotionEvent,
+  isCompensatoryMeasureEligible,
   validatePromotionAgainstDecemberSnapshot,
 } from "../../domain/compensationCalculation";
 import type {
@@ -350,6 +354,14 @@ export function mapImportedEmployeeToPreparedInput(
     hireDate: hireDateRaw,
     confirmedUnderperformer: employee.confirmedUnderperformer,
     promotion,
+    contractType: employee.contractType,
+    employmentStatus: employee.employmentStatus ?? null,
+    compensatoryMeasureEligible: isCompensatoryMeasureEligible({
+      contractType: employee.contractType,
+      hireDate: hireDateRaw,
+      campaignYear: context.campaignYear,
+      employmentStatus: employee.employmentStatus,
+    }),
     ...(performanceLevel !== undefined ? { performanceLevel } : {}),
     ...(potentialLevel !== undefined ? { potentialLevel } : {}),
   };

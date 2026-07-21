@@ -174,6 +174,10 @@ export function buildConfigurationFingerprint(parts: {
   seniorityImpactContractVersion?: number;
   /** Version du contrat trajectoire promotion (Lot 2A-H2C-1). */
   promotionTrajectoryContractVersion?: number;
+  /** Version du contrat de calibrage compensatoire (Lot 2A-H2C-2). */
+  promotionCompensatoryCalibrationContractVersion?: number;
+  /** Version du contrat de trajectoire mensuelle promotion-aware (Lot 2A-H2C-2). */
+  promotionAwareCompensationContractVersion?: number;
 }): string {
   return [
     `contract:v${parts.calculationContractVersion ?? 2}`,
@@ -190,5 +194,7 @@ export function buildConfigurationFingerprint(parts: {
     `appMonth:${parts.technicalApplicationMonth ?? ""}`,
     `seniority:v${parts.seniorityImpactContractVersion ?? 1}`,
     `promotion:v${parts.promotionTrajectoryContractVersion ?? 1}`,
+    `calibration:v${parts.promotionCompensatoryCalibrationContractVersion ?? 1}`,
+    `promoAware:v${parts.promotionAwareCompensationContractVersion ?? 1}`,
   ].join("|");
 }

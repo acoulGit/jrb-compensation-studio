@@ -244,7 +244,10 @@ exclure les directeurs conformément aux règles validées.
 Évaluer contrat, ancienneté au 31 décembre N-1, fin de période d’essai et statut
 d’emploi. Geler les actions en cas de disponibilité hors groupe.
 
-**À implémenter dans un lot ultérieur.**
+**Lot 2A-H2C-2A** : prédicat `isCompensatoryMeasureEligible` (contrat CDI/CDD,
+ancienneté ≥ 12 mois au 31/12 N-1, gel `external_availability`). Distinct de
+la population budgétaire promotion. Période d’essai : règle documentée non
+opérationalisée (absence de champ d’import).
 
 ### 4. Positionnement dans la grille
 
@@ -308,13 +311,91 @@ groupe structuré il est conservé sans créer d’événement ; avec groupe str
 le montant canonique est `salaryAfter − salaryBefore` (rejet si saisie
 explicite différente).
 
-**H2C-2 (ultérieur)** : intégrer le coût / complément compensatoire au budget ;
-calculer uniquement le complément lorsque la cible matricielle dépasse
-l’augmentation de promotion déjà reçue ; rappel du complément sur salaire promu
-si `promotionMonth < technicalApplicationMonth`.
+**Lot 2A-H2C-2 (moteur budget promotion / calibrage compensatoire)** : intègre
+le coût des promotions incluses au budget annuel et calibre le complément
+compensatoire matriciel sur le reliquat.
 
-Le moteur d’allocation Lot 2A n’est **pas** modifié par H2C-1.
-`CALCULATION_CONTRACT_VERSION` reste **2**.
+Pipeline (`calculatePreparedPopulationCompensation`) :
+
+1. Validation d’entrée + résolution du budget + validation du calendrier
+   d’application (inchangé du Lot 2A-3/H2A).
+2. Préparation individuelle (`calculatePreparedEmployeeCompensation`) pour les
+   champs instantané décembre (compatibilité UI / legacy).
+3. Construction, par salarié, de 12 expositions mensuelles
+   (`buildEmployeePromotionAwareExposures`) : salaire du mois, S0 du mois,
+   facteur matriciel effectif du mois (0 si sous-performant confirmé ou
+   `compensatoryMeasureEligible === false`), `promotionRateOffset` mensuel issu
+   de la trajectoire promotion (Lot 2A-H2C-1) et coût de promotion du mois.
+4. Somme `totalAnnualPromotionBudgetCostFcfa` = **somme exacte** des
+   `annualPromotionBudgetCostFcfa` salariés. Chaque coût salarié imputable vaut :
+   `includedInSimulation && isPromotionBudgetPopulationEmployee`
+   ? `promotionInclusion.promotionCampaignCostFcfa` : `0`.
+   Le coût brut informatif reste dans `promotionInclusion.promotionCampaignCostFcfa`
+   (y compris hors population budget).
+   Statuts consommant le budget : `active`, `group_detachment`,
+   `legal_leave` ; `employmentStatus` absent/`null` ⇒ traité comme `active`
+   (fixtures techniques). Exclus : `external_availability`,
+   `suspended`, `departed`, `other`.
+5. Si `totalAnnualPromotionBudgetCostFcfa > budget annuel cible` ⇒
+   `PROMOTION_COST_EXCEEDS_BUDGET` (code conservé, aucun résultat partiel).
+6. `availableAnnualCompensatoryBudget = budget annuel cible −
+   totalAnnualPromotionBudgetCostFcfa`.
+7. Résolution exacte (BigInt / fractions) d’un taux unique de calibrage
+   `compensatoryCalibrationRate` par solveur piecewise
+   (`solvePromotionAwareCompensatoryCalibrationRate`,
+   `promotionCompensatoryCalibration.ts`) sur l’ensemble des 12 × N expositions
+   mensuelles éligibles (facteur > 0) :
+   - `theoreticalComplement(rate) = Σ salaire × max(0, rate×facteur − offset)`
+     où `offset = promotionRateOffset` du mois (0 hors promotion incluse) ;
+   - recherche du taux tel que `theoreticalComplement(rate) =
+     availableAnnualCompensatoryBudget`, en tenant compte des seuils
+     `offset/facteur` où une exposition redevient active ;
+   - sans exposition éligible et budget disponible > 0 ⇒
+     `NO_COMPENSATORY_ALLOCATION_CAPACITY` (code **conservé**, non remplacé
+     par `POPULATION_CALCULATION_FAILED`).
+8. Finalisation mensuelle par salarié
+   (`finalizeEmployeePromotionAwareCompensation`) : complément théorique
+   arrondi mois par mois (`nearest_half_up`, pas paramétrable),
+   `finalSalaryFcfa = baseSalaryFcfa(mois) + complémentArrondi` (le montant de
+   promotion n’est **pas** ajouté une seconde fois, il est déjà dans
+   `baseSalaryFcfa` du mois).
+9. Rappel / paiement direct (sémantique H2A conservée) : calculés uniquement
+   sur les mois **compensatoires arrondis** (avant/à partir du mois
+   d’application technique), jamais sur la part promotion (la promotion n’a
+   pas de rappel propre, payée dès son mois d’effet — cf. H2C-1).
+10. Ancienneté (sémantique H2B conservée) ventilée par mois entre part
+    promotion et part compensatoire :
+    `combinedIncrease = promotionIncrement + complémentArrondi` ;
+    `totalSeniorityImpact = ceil(combinedIncrease × taux/100)` ;
+    `promotionSeniorityImpact = ceil(promotionIncrement × taux/100)` ;
+    `compensatorySeniorityImpact = totalSeniorityImpact −
+    promotionSeniorityImpact` (jamais négatif).
+11. **Sans promotion structurée dans la population**, le pipeline est
+    strictement équivalent au Lot 2A-3/H2A/H2B : `promotionRateOffset = 0`
+    partout, `availableAnnualCompensatoryBudget = budget annuel cible`, taux de
+    calibrage identique à `calibrationCoefficient` historique. Parité vérifiée
+    par la fixture `annualBudgetMonthlyIncrease.test.ts` (inchangée).
+
+Champs population supplémentaires : `totalAnnualPromotionBudgetCostFcfa`,
+`availableAnnualCompensatoryBudget`, `compensatoryCalibrationRate`,
+`totalCombinedAnnualActualCostFcfa`, `totalAnnualPromotionSeniorityImpactFcfa`,
+`totalCombinedAnnualSeniorityImpactFcfa`, `promotedIncludedEmployeeCount`.
+Champs salarié supplémentaires : `employmentStatus`,
+`compensatoryMeasureEligible`, `isPromotionBudgetPopulationEmployee`,
+`annualPromotionBudgetCostFcfa`, `monthlyCompensationTrajectory`
+(`MonthlyCompensationTrajectoryEntry[]`), `combinedAnnualActualCostFcfa`,
+`annualPromotionSeniorityImpactFcfa`, `combinedAnnualSeniorityImpactFcfa`.
+
+Le moteur d’allocation Lot 2A n’est pas modifié dans son principe (poids
+`salary × effectiveMatrixWeight`, arrondi individuel) : H2C-2 ajoute la
+consommation budgétaire des promotions incluses et bascule le calibrage vers
+une résolution **mensuelle** (12 expositions/salarié) au lieu d’une résolution
+annuelle unique, pour absorber les variations de facteur/salaire induites par
+une promotion en cours d’année. `CALCULATION_CONTRACT_VERSION` reste **2**
+(aucun changement de forme des entrées/validations de base) ;
+`PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION` et
+`PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION` (= 1) versionnent les nouveaux
+contrats de calibrage / trajectoire mensuelle.
 
 ### 8. Traitement des corrections et mesures distinctes
 

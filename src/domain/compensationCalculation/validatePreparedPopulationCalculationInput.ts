@@ -9,6 +9,7 @@ import type {
 import { ROUNDING_MODES } from "./populationAllocationModels";
 import { BUDGET_TARGET_MODES } from "./budgetTargetModels";
 import { NINE_BOX_MODES } from "../compensationReference/models";
+import { PROMOTION_BUDGET_EMPLOYMENT_STATUSES } from "./promotionBudgetPopulation";
 
 function issue(
   partial: PopulationCalculationIssue,
@@ -269,6 +270,39 @@ export function validatePreparedPopulationCalculationInput(
         code: "INVALID_HIRE_DATE",
         field: "hireDate",
         message: "La date d’embauche doit être au format ISO YYYY-MM-DD.",
+        step: "validate_input",
+      }),
+    );
+  }
+
+  if (
+    employee.employmentStatus !== undefined &&
+    employee.employmentStatus !== null &&
+    !(PROMOTION_BUDGET_EMPLOYMENT_STATUSES as readonly string[]).includes(
+      employee.employmentStatus,
+    )
+  ) {
+    issues.push(
+      issue({
+        employeeId: employee.employeeId,
+        code: "INVALID_EMPLOYMENT_STATUS",
+        field: "employmentStatus",
+        message: `Statut d’emploi non supporté : ${String(employee.employmentStatus)}.`,
+        step: "validate_input",
+      }),
+    );
+  }
+
+  if (
+    employee.compensatoryMeasureEligible !== undefined &&
+    typeof employee.compensatoryMeasureEligible !== "boolean"
+  ) {
+    issues.push(
+      issue({
+        employeeId: employee.employeeId,
+        code: "INVALID_COMPENSATORY_MEASURE_ELIGIBLE",
+        field: "compensatoryMeasureEligible",
+        message: "compensatoryMeasureEligible doit être un booléen si renseigné.",
         step: "validate_input",
       }),
     );

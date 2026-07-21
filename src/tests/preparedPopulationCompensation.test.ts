@@ -419,24 +419,26 @@ describe("Lot 2A-4 — orchestrateur population", () => {
     expect(withUnder.populationSummary.confirmedUnderperformerCount).toBe(1);
     expect(withUnder.populationSummary.zeroWeightEmployeeCount).toBe(1);
 
-    expectPopulationFailure(() =>
-      calculatePreparedPopulationCompensation(
-        buildInput({
-          employees: [
-            {
-              employeeId: "U1",
-              familyCode: "F1",
-              gradeCode: "G1",
-              salaryFcfa: 1_000_000,
-              performanceLevel: "high",
-              potentialLevel: "high",
-              hireDate: "2020-07-15",
-              confirmedUnderperformer: true,
-            },
-          ],
-          budgetTarget: { mode: "manual_amount", manualBudgetFcfa: 10_000 },
-        }),
-      ),
+    expectPopulationFailure(
+      () =>
+        calculatePreparedPopulationCompensation(
+          buildInput({
+            employees: [
+              {
+                employeeId: "U1",
+                familyCode: "F1",
+                gradeCode: "G1",
+                salaryFcfa: 1_000_000,
+                performanceLevel: "high",
+                potentialLevel: "high",
+                hireDate: "2020-07-15",
+                confirmedUnderperformer: true,
+              },
+            ],
+            budgetTarget: { mode: "manual_amount", manualBudgetFcfa: 10_000 },
+          }),
+        ),
+      "NO_COMPENSATORY_ALLOCATION_CAPACITY",
     );
   });
 

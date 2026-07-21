@@ -150,6 +150,23 @@ Montant réel = Σ montants arrondis ; écart total = montant réel − budget c
 - Les intérimaires et prestataires sont exclus.
 - En cas de disponibilité hors groupe, les actions sont gelées.
 
+**Opérationnalisation Lot 2A-H2C-2A** : prédicat pur
+`isCompensatoryMeasureEligible` (`compensatoryMeasureEligibility.ts`),
+distinct de `isPromotionBudgetPopulationEmployee`.
+
+| Règle documentée | Application moteur |
+| --- | --- |
+| CDI / CDD | inclus (`contractType` ∈ {`cdi`,`cdd`}) |
+| Intérim / prestataire | exclus (`temporary`, `contractor`, `other`) |
+| Ancienneté ≥ 12 mois au 31/12 N-1 | `hireDate ≤ 31/12/(N-2)` |
+| Disponibilité hors groupe | gel → inéligible (`external_availability`) |
+| Période d’essai terminée | **non opérationalisée** (pas de champ d’import) |
+
+Un salarié promu peut consommer le budget promotion tout en étant inéligible
+au complément (facteur effectif 0, aucune exposition solveur positive).
+Le sous-performant confirmé conserve le coût de promotion ; son complément
+effectif reste nul (poids matriciel 0).
+
 ## Ancienneté
 
 - L’ancienneté représente 1 % du salaire de base courant.
@@ -182,7 +199,8 @@ moteur.
   canonique est le delta dérivé (BigInt) ; `promotionAmount` historique n’est
   accepté que s’il est vide/0/égal au delta, sinon `PROMOTION_AMOUNT_MISMATCH`.
   Fenêtre N-1 ou N ; cohérence avec le snapshot décembre N-1. Trajectoire
-  mensuelle et coût campagne préparés pour H2C-2, sans modifier l’allocation.
+  mensuelle et coût campagne consommés par le moteur budget promotion /
+  calibrage compensatoire (Lot 2A-H2C-2, cf. section dédiée).
 - **Intégrité** : aucun import partiel ; remplacement atomique de la population
   courante ; historique des lots conservé (`current` / `superseded`).
 - **Campagne archivée** : import bloqué (lecture seule).
@@ -275,6 +293,43 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
 - Ventilation rappel / direct selon `technicalApplicationMonth` (H2A).
 - Hors périmètre H2B : TPA, CNSS, charges, taxes, prime historique.
 
+## Moteur budget promotion / calibrage compensatoire (2A-H2C-2)
+
+- Le coût annuel des promotions **incluses** dans la simulation (fenêtre
+  N-1/N, non exclues après le mois d’application technique) est déduit du
+  budget annuel cible **avant** le calibrage du complément matriciel.
+- Seuls les salariés en position de **consommer le budget** contribuent au
+  coût de promotion déduit : statut d’emploi `active`, `group_detachment`
+  ou `legal_leave` (`isPromotionBudgetPopulationEmployee`). Statut absent
+  ⇒ traité comme `active` (rétro-compatibilité des salariés préparés avant
+  ce lot).
+- Les statuts `external_availability`, `suspended`, `departed` et `other`
+  n’engagent pas le budget : la promotion reste importée et visible dans les
+  résultats, mais son coût n’est pas comptabilisé dans l’enveloppe.
+- Si le coût annuel des promotions incluses dépasse le budget annuel cible,
+  la simulation est bloquée : « Le coût annuel des promotions incluses
+  dépasse l’enveloppe disponible. Augmentez le budget ou revoyez la
+  population de la campagne. »
+- Le reliquat (`budget annuel cible − coût annuel promotions incluses`) est
+  ensuite intégralement dévolu au complément compensatoire matriciel, calibré
+  par un taux **unique** appliqué à tous les salariés/mois éligibles (salaire
+  × facteur matriciel effectif du mois), après déduction de l’augmentation de
+  promotion déjà perçue le mois concerné.
+- Un salarié sous-performant confirmé ou marqué non éligible à la mesure
+  compensatoire (`compensatoryMeasureEligible = false`) a un facteur
+  compensatoire nul, y compris les mois où une promotion est active : la
+  promotion continue de s’appliquer, seul le complément matriciel est exclu.
+- Si aucun salarié n’est éligible au complément compensatoire alors qu’un
+  reliquat de budget existe, la simulation est bloquée (capacité
+  d’allocation compensatoire nulle) : « Aucun salarié éligible ne peut
+  absorber le reliquat de budget compensatoire après déduction du coût des
+  promotions. Vérifiez l’éligibilité de la population ou le budget cible. »
+- Sans promotion structurée dans la population, ce lot ne change **aucun**
+  résultat par rapport au moteur Lot 2A-3/H2A/H2B (parité stricte, y compris
+  arrondis et écarts).
+- Hors périmètre H2C-2 : correction Sout- distincte, mesures RH/sociales,
+  TPA, CNSS, charges patronales.
+
 ## Persistance de simulation (Lot 2B-4A)
 
 - Enregistrement **explicite** d’un snapshot immuable (append-only).
@@ -291,15 +346,14 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
 
 - Un sous-performant confirmé reçoit 0 % matriciel.
 - Une mesure RH ou sociale distincte et motivée reste possible.
-- En cas de promotion, un complément est accordé seulement si la cible
-  matricielle dépasse l’augmentation de promotion déjà reçue
-  (moteur de complément : H2C-2 ; ce lot H2C-1 capture la trajectoire et le
-  coût de promotion sans modifier l’allocation).
+- En cas de promotion, un complément matriciel est accordé seulement si la
+  cible matricielle dépasse l’augmentation de promotion déjà reçue (moteur de
+  complément : Lot 2A-H2C-2, cf. section dédiée ci-dessous).
 - Une promotion en N postérieure au mois d’application technique est exclue
   du calcul courant (`EXCLUDED_AFTER_TECHNICAL_APPLICATION_MONTH`) tout en
   conservant les données importées. Pas de rappel propre à la promotion
-  (payée dès le mois d’effet) ; le rappel du complément compensatoire reste
-  H2C-2.
+  (payée dès le mois d’effet) ; le rappel du complément compensatoire suit la
+  règle H2A (mois compensatoires uniquement).
 - La correction Sout- est distincte et peut être étalée sur deux ans.
 - L’arrondi final individuel est effectué au multiple d’un pas paramétrable
   (politique `nearest_half_up`) ; le pas n’est pas figé à 5 FCFA.

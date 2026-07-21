@@ -60,12 +60,16 @@ Le Lot **2B-3** l’appelle **uniquement** après un clic explicite
 
 `buildSimulationSourceFingerprint` / `buildConfigurationFingerprint` couvrent
 au minimum : campaignId, statut, mode d’évaluation, lot RH courant, population
-préparée (salaire, famille, grade, Performance/Potentiel, sous-performant),
+préparée (salaire, famille, grade, Performance/Potentiel, sous-performant,
+**`employmentStatus`**, **`compensatoryMeasureEligible`**, promotion structurée),
 référentiels (S0, positions, facteurs), budget, arrondi, **`campaignYear`**,
-**`technicalApplicationMonth`**, **`SENIORITY_IMPACT_CONTRACT_VERSION`**, et
+**`technicalApplicationMonth`**, **`SENIORITY_IMPACT_CONTRACT_VERSION`**,
+**`PROMOTION_TRAJECTORY_CONTRACT_VERSION`**,
+**`PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION`**,
+**`PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION`** (Lot 2A-H2C-2), et
 **`hireDate`** dans l’identité population. Hash FNV-1a déterministe sans
-dépendance externe. Deux mois d’application ou dates d’embauche distincts ⇒
-fingerprints distincts.
+dépendance externe. Deux mois d’application, dates d’embauche, statuts
+d’emploi ou éligibilités compensatoires distincts ⇒ fingerprints distincts.
 
 Si les sources changent après validation :
 
@@ -107,7 +111,8 @@ bloquante : échec structuré, pas de totaux partiels présentés comme valides.
 
 Un résultat courant devient stale (retiré de l’affichage courant) si budget,
 arrondi, lot, population, salaires, famille/grade, Performance/Potentiel,
-sous-performant, S0, positions, facteurs, mode d’évaluation ou statut
+sous-performant, statut d’emploi, éligibilité compensatoire, promotion
+structurée, S0, positions, facteurs, mode d’évaluation ou statut
 campagne changent. Message :
 
 *Résultat obsolète — les données ou la configuration ont changé.*

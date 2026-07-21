@@ -59,7 +59,13 @@ export type CompensationCalculationErrorCode =
   | "HIRE_DATE_AFTER_CAMPAIGN_YEAR"
   | "INVALID_SENIORITY_RATE"
   | "INVALID_SENIORITY_ANNIVERSARY_COUNT"
-  | "SENIORITY_IMPACT_INVARIANT_FAILED";
+  | "SENIORITY_IMPACT_INVARIANT_FAILED"
+  // Lot 2A-H2C-2 — moteur budget promotion / calibrage compensatoire
+  | "INVALID_EMPLOYMENT_STATUS"
+  | "INVALID_COMPENSATORY_MEASURE_ELIGIBLE"
+  | "PROMOTION_COST_EXCEEDS_BUDGET"
+  | "NO_COMPENSATORY_ALLOCATION_CAPACITY"
+  | "PROMOTION_BUDGET_INVARIANT_FAILED";
 
 export class CompensationCalculationError extends Error {
   readonly code: CompensationCalculationErrorCode;

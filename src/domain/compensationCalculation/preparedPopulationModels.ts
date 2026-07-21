@@ -13,7 +13,12 @@ import type {
   SalaryPositionResult,
 } from "./models";
 import type { NineBoxMode, PerformanceLevel, PotentialLevel } from "../compensationReference/models";
-import type { PromotionEvent } from "./promotionTrajectory";
+import type {
+  PromotionCampaignCostPreview,
+  PromotionEvent,
+  PromotionInclusionStatus,
+} from "./promotionTrajectory";
+import type { PromotionBudgetEmploymentStatus } from "./promotionBudgetPopulation";
 import type { RoundingPolicy } from "./populationAllocationModels";
 
 /**
@@ -53,6 +58,24 @@ export interface PreparedEmployeeCalculationInput {
   confirmedUnderperformer: boolean;
   /** Promotion structurée importée (Lot 2A-H2C-1) — null si absent. */
   promotion?: PromotionEvent | null;
+  /**
+   * Type de contrat (Lot 2A-H2C-2A) — alimente `isCompensatoryMeasureEligible`.
+   * Absent/undefined : compatibilité fixtures techniques uniquement ;
+   * l’import RH réel impose toujours un contrat.
+   */
+  contractType?: string | null;
+  /**
+   * Statut d'emploi (Lot 2A-H2C-2) — déterminant pour la consommation du
+   * budget promotion. Absent/undefined ⇒ traité comme "active" pour la
+   * population promotion (compat fixtures) ; l’import RH impose le statut.
+   */
+  employmentStatus?: PromotionBudgetEmploymentStatus | null;
+  /**
+   * Override d’éligibilité à la mesure compensatoire.
+   * Préférer laisser le prédicat `isCompensatoryMeasureEligible` calculer.
+   * `false` force l’inéligibilité (tests / préparation manuelle).
+   */
+  compensatoryMeasureEligible?: boolean;
 }
 
 export interface PopulationCalculationReferences {
@@ -194,8 +217,87 @@ export interface EmployeeCompensationCalculationResult {
   remainingYearDirectSeniorityImpactFcfa: bigint;
   /** Incidence annuelle totale d’ancienneté (hors budget). */
   annualSeniorityImpactFcfa: bigint;
+  /** Statut d'emploi propagé (Lot 2A-H2C-2). Null si absent à l'entrée. */
+  employmentStatus: PromotionBudgetEmploymentStatus | null;
+  /** Éligibilité effective à la mesure compensatoire (Lot 2A-H2C-2). */
+  compensatoryMeasureEligible: boolean;
+  /** Appartenance à la population de consommation du budget promotion. */
+  isPromotionBudgetPopulationEmployee: boolean;
+  /** Promotion structurée retenue à l'entrée — null si absente. */
+  promotion: PromotionEvent | null;
+  /** Année ISO de la promotion (N-1 ou N) — null si absente. */
+  promotionYear: number | null;
+  /** Mois ISO de la promotion — null si absente. */
+  promotionMonth: number | null;
+  /** Aperçu d'inclusion/coût de la promotion dans la simulation courante. */
+  promotionInclusion: PromotionCampaignCostPreview;
+  /**
+   * Coût annuel de promotion **imputable à l’enveloppe** uniquement :
+   * `includedInSimulation && isPromotionBudgetPopulationEmployee`
+   * ? `promotionInclusion.promotionCampaignCostFcfa` : 0.
+   * Le coût brut informatif reste dans `promotionInclusion.promotionCampaignCostFcfa`.
+   */
+  annualPromotionBudgetCostFcfa: bigint;
+  /** Trajectoire mensuelle complète janvier–décembre (Lot 2A-H2C-2). */
+  monthlyCompensationTrajectory: readonly MonthlyCompensationTrajectoryEntry[];
+  /** Coût annuel combiné = compensatoire réel + promotion imputable. */
+  combinedAnnualActualCostFcfa: bigint;
+  /** Incidence annuelle d'ancienneté attribuable à la promotion (hors budget). */
+  annualPromotionSeniorityImpactFcfa: bigint;
+  /** Incidence annuelle d'ancienneté combinée (compensatoire + promotion). */
+  combinedAnnualSeniorityImpactFcfa: bigint;
   blockingReason?: MatrixBlockingReason;
   explanationSteps: CalculationExplanationStep[];
+}
+
+/**
+ * Entrée mensuelle de la trajectoire de rémunération consciente des
+ * promotions (Lot 2A-H2C-2). Une entrée par mois (1 = janvier … 12 = décembre).
+ */
+export interface MonthlyCompensationTrajectoryEntry {
+  month: number;
+  /** Salaire de base du mois (post-promotion si active ce mois). */
+  baseSalaryFcfa: bigint;
+  gradeCode: string;
+  jobFamilyCode: string;
+  promotionActive: boolean;
+  promotionStatus: PromotionInclusionStatus;
+  /** Médiane S0 résolue pour (famille, grade) du mois. */
+  s0Fcfa: bigint;
+  /** Facteur matriciel théorique du mois (avant blocages/exclusions). */
+  theoreticalCompensationFactor: ExactAmount;
+  /**
+   * Facteur matriciel effectif du mois utilisé pour la mesure compensatoire
+   * (0 si sous-performant confirmé OU compensatoryMeasureEligible === false).
+   */
+  effectiveCompensationFactor: ExactAmount;
+  /**
+   * Part de taux déjà consommée par la promotion incluse ce mois-ci
+   * (0 si aucune promotion active/incluse ce mois).
+   */
+  promotionRateOffset: ExactAmount;
+  /** Taux cible = calibrationRate × effectiveCompensationFactor. */
+  targetCompensatoryRate: ExactAmount;
+  /** max(0, targetCompensatoryRate − promotionRateOffset). */
+  compensatoryComplementRate: ExactAmount;
+  /** Complément compensatoire exact avant arrondi = salaire × taux. */
+  theoreticalCompensatoryComplement: ExactAmount;
+  /** Complément compensatoire arrondi au pas de la politique d'arrondi. */
+  roundedCompensatoryComplementFcfa: bigint;
+  /** Salaire final du mois = baseSalaryFcfa + roundedCompensatoryComplementFcfa. */
+  finalSalaryFcfa: bigint;
+  /** Coût de promotion imputable au mois (0 hors mois actif inclus). */
+  promotionBudgetCostFcfa: bigint;
+  /** promotionBudgetCostFcfa + roundedCompensatoryComplementFcfa. */
+  combinedIncreaseFcfa: bigint;
+  paymentTiming: "reminder" | "direct";
+  seniorityRatePercent: number;
+  /** Incidence d'ancienneté sur l'augmentation combinée du mois. */
+  totalSeniorityImpactFcfa: bigint;
+  /** Part de l'incidence d'ancienneté attribuable à la promotion seule. */
+  promotionSeniorityImpactFcfa: bigint;
+  /** Part de l'incidence d'ancienneté attribuable au complément compensatoire. */
+  compensatorySeniorityImpactFcfa: bigint;
 }
 
 export interface PopulationCalculationSummary {
@@ -230,6 +332,20 @@ export interface PopulationCalculationSummary {
   totalSeniorityReminderFcfa: bigint;
   totalRemainingYearDirectSeniorityImpactFcfa: bigint;
   totalAnnualSeniorityImpactFcfa: bigint;
+  /** Nombre de salariés porteurs d'une promotion incluse dans la simulation. */
+  promotedIncludedEmployeeCount: number;
+  /** Taux mensuel de calibrage compensatoire résolu (Lot 2A-H2C-2). */
+  compensatoryCalibrationRate: ExactAmount;
+  /** Σ coûts annuels de promotion imputables (population budget promotion). */
+  totalAnnualPromotionBudgetCostFcfa: bigint;
+  /** annualBudgetTarget − totalAnnualPromotionBudgetCostFcfa. */
+  availableAnnualCompensatoryBudget: ExactAmount;
+  /** Σ (coût compensatoire réel + coût promotion imputable) par salarié. */
+  totalCombinedAnnualActualCostFcfa: bigint;
+  /** Σ incidence annuelle d'ancienneté attribuable aux promotions. */
+  totalAnnualPromotionSeniorityImpactFcfa: bigint;
+  /** Σ incidence annuelle d'ancienneté combinée (compensatoire + promotion). */
+  totalCombinedAnnualSeniorityImpactFcfa: bigint;
 }
 
 export interface PreparedPopulationCalculationResult {
@@ -255,6 +371,13 @@ export interface PreparedPopulationCalculationResult {
   totalSeniorityReminderFcfa: bigint;
   totalRemainingYearDirectSeniorityImpactFcfa: bigint;
   totalAnnualSeniorityImpactFcfa: bigint;
+  promotedIncludedEmployeeCount: number;
+  compensatoryCalibrationRate: ExactAmount;
+  totalAnnualPromotionBudgetCostFcfa: bigint;
+  availableAnnualCompensatoryBudget: ExactAmount;
+  totalCombinedAnnualActualCostFcfa: bigint;
+  totalAnnualPromotionSeniorityImpactFcfa: bigint;
+  totalCombinedAnnualSeniorityImpactFcfa: bigint;
   populationSummary: PopulationCalculationSummary;
   explanationSteps: CalculationExplanationStep[];
 }

@@ -320,14 +320,52 @@ Résultats de domaine purs (non stockés) :
 | `totalRemainingYearDirectSeniorityImpactFcfa` | Σ directs ancienneté |
 | `totalAnnualSeniorityImpactFcfa` | Σ annuel ancienneté |
 | `SENIORITY_IMPACT_CONTRACT_VERSION` | `1` (H2B) |
+
+### Lot 2A-H2C-2 (non persisté)
+
+| Concept | Nature |
+| --- | --- |
+| `employmentStatus` | Entrée préparée, optionnel ; défaut `active` si absent/`null` |
+| `compensatoryMeasureEligible` | Entrée préparée / résultat ; calculé par `isCompensatoryMeasureEligible` |
+| `contractType` | Entrée préparée optionnelle (obligatoire à l’import RH) ; CDI/CDD vs exclus |
+| `isCompensatoryMeasureEligible` | Prédicat domaine : contrat + ancienneté 12 mois N-1 + gel disponibilité |
+| `isPromotionBudgetPopulationEmployee` | Dérivé : `active` / `group_detachment` / `legal_leave` |
+| `PROMOTION_BUDGET_POPULATION_STATUSES` | Constante des statuts consommant le budget |
+| `annualPromotionBudgetCostFcfa` | Coût annuel **imputable** à l’enveloppe (0 si hors population budget ou promo exclue) |
+| `promotionInclusion.promotionCampaignCostFcfa` | Coût brut informatif H2C-1 (peut rester > 0 hors population) |
+| `totalAnnualPromotionBudgetCostFcfa` | Σ exacte des `annualPromotionBudgetCostFcfa` salariés |
+| `totalAnnualPromotionBudgetCostFcfa` | Σ coût annuel promotion, population consommant le budget |
+| `availableAnnualCompensatoryBudget` | `budget annuel cible − totalAnnualPromotionBudgetCostFcfa` |
+| `compensatoryCalibrationRate` | Taux unique de calibrage compensatoire (`ExactAmount`) |
+| `PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION` | `1` (H2C-2) |
+| `MonthlyCompensationTrajectoryEntry` | Détail mensuel (salaire, facteurs, offset promo, complément, ancienneté ventilée) |
+| `PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION` | `1` (H2C-2) |
+| `combinedAnnualActualCostFcfa` | Coût annuel salarié = promotion + complément compensatoire |
+| `totalCombinedAnnualActualCostFcfa` | Σ coût annuel combiné population |
+| `annualPromotionSeniorityImpactFcfa` | Part ancienneté attribuable à la promotion |
+| `compensatorySeniorityImpactFcfa` (mensuel) | Part ancienneté attribuable au complément compensatoire |
+| `combinedAnnualSeniorityImpactFcfa` | Σ ancienneté promotion + compensatoire (salarié) |
+| `totalAnnualPromotionSeniorityImpactFcfa` | Σ population, part promotion |
+| `totalCombinedAnnualSeniorityImpactFcfa` | Σ population, part combinée |
+| `promotedIncludedEmployeeCount` | Nombre de salariés avec promotion incluse |
+| `PROMOTION_COST_EXCEEDS_BUDGET` | Coût promotion > budget annuel cible (bloquant) |
+| `NO_COMPENSATORY_ALLOCATION_CAPACITY` | Aucun salarié éligible pour absorber le reliquat (remonté en `POPULATION_CALCULATION_FAILED`) |
+| `PROMOTION_BUDGET_INVARIANT_FAILED` | Invariant interne coût promotion/budget rompu |
+
+### Concepts transverses
+
+| Concept | Nature |
+| --- | --- |
 | `PopulationCalculationSummary` | Synthèse annuelle/mensuelle + calendrier |
-| `CALCULATION_CONTRACT_VERSION` | `2` (H1) |
-| `RESULT_SCHEMA_VERSION` | `2` (snapshots ; inchangé en H2A/H2B) |
+| `CALCULATION_CONTRACT_VERSION` | `2` (H1 ; inchangé en H2C-2) |
+| `RESULT_SCHEMA_VERSION` | `2` (snapshots ; inchangé en H2A/H2B/H2C-2) |
 | `POPULATION_CALCULATION_FAILED` | Échec atomique + `issues[]` |
 
-Éligibilité, masse auto, promotion, TPA/CNSS/charges, prime historique,
-persistance des champs H2A/H2B en colonnes dédiées et alertes budgétaires
-restent à produire dans des lots ultérieurs.
+Éligibilité, masse auto, TPA/CNSS/charges, prime historique, persistance des
+champs H2A/H2B/H2C-2 en colonnes dédiées et alertes budgétaires restent à
+produire dans des lots ultérieurs. La promotion structurée (coût, trajectoire
+mensuelle, calibrage compensatoire) est intégrée au moteur depuis les Lots
+2A-H2C-1/H2C-2, mais reste calculée en mémoire (non persistée en résultat).
 
 ### Lot 2B-1 (non persisté — readiness)
 

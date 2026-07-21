@@ -8,10 +8,11 @@ consultable dans l’application (aperçu, population courante, historique des
 lots).
 
 Hors périmètre : calcul d’éligibilité, positionnement, proposition
-matricielle, budget, simulation complète H2C-2, ancienneté (autre lot),
-export, sauvegarde automatisée, chiffrement, conservation du fichier source
-sur disque. La **promotion structurée** (Lot 2A-H2C-1) est importée et
-persistée ; le coût campagne n’est pas encore intégré au budget.
+matricielle, ancienneté (autre lot), export, sauvegarde automatisée,
+chiffrement, conservation du fichier source sur disque. La **promotion
+structurée** (Lot 2A-H2C-1) est importée et persistée ; son coût est intégré
+au budget par le moteur de calcul (Lot 2A-H2C-2, cf.
+`docs/CALCULATION_CONTRACT.md`), pas au stade de l’import.
 
 ## Principe d’import local
 
@@ -171,9 +172,11 @@ respectivement à `temporary` et `contractor` dans le modèle d’import.
 | `departed` | Départ | sorti, parti, departed |
 | `other` | Autre | autre, other |
 
-La disponibilité hors groupe (`external_availability`) sera exploitée par le
-futur moteur pour geler les actions ; l’import ne calcule pas encore
-d’éligibilité.
+La disponibilité hors groupe (`external_availability`) est exploitée par le
+moteur (Lot 2A-H2C-2A) pour geler l’éligibilité à la mesure compensatoire via
+`isCompensatoryMeasureEligible`. L’import lui-même ne calcule pas l’éligibilité
+au moment de la normalisation : le mapping campagne → entrée préparée et le
+moteur appliquent le prédicat documenté.
 
 ## Règles de validation
 

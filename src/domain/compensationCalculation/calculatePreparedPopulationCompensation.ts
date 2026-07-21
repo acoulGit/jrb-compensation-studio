@@ -1,17 +1,36 @@
-/** Orchestrateur end-to-end population préparée (Lot 2A-4 / correctif 2A-H1). */
+/**
+ * Orchestrateur end-to-end population préparée (Lot 2A-4 / correctif 2A-H1 /
+ * Lot 2A-H2C-2 — moteur budget promotion + calibrage compensatoire).
+ *
+ * Pipeline H2C-2 :
+ * 1. valider structurellement + résoudre le budget ANNUEL + valider le
+ *    calendrier d'application (inchangé) ;
+ * 2. préparer chaque salarié (snapshot décembre — position, évaluation,
+ *    poids matriciel) via `calculatePreparedEmployeeCompensation`,
+ *    conservé pour compatibilité d'affichage ;
+ * 3. construire, pour chaque salarié, la trajectoire mensuelle consciente
+ *    des promotions (12 expositions salaire/facteur/décalage) ;
+ * 4. sommer le coût annuel de promotion imputable (population budget
+ *    promotion uniquement) ; si ce coût dépasse le budget annuel cible,
+ *    échec explicite ;
+ * 5. résoudre le taux unique de calibrage compensatoire sur l'enveloppe
+ *    disponible restante (budget annuel − coût promotion imputable) ;
+ * 6. finaliser chaque salarié : compléments mensuels arrondis, salaire
+ *    final mensuel, incidence d'ancienneté ventilée promotion/compensatoire.
+ *
+ * Parité stricte : en l'absence de toute promotion structurée dans la
+ * population, l'arithmétique rationnelle exacte garantit des résultats
+ * bit-à-bit identiques à l'ancien moteur (Lot 2A-H1).
+ *
+ * Atomicité fonctionnelle : aucune simulation partielle réussie si une erreur.
+ */
 
-import { allocateTheoreticalPopulationBudget } from "./allocateTheoreticalPopulationBudget";
-import {
-  computeBaseSalaryReminderBreakdown,
-  technicalApplicationMonthLabelFr,
-  validateApplicationCalendar,
-} from "./baseSalaryReminder";
-import { computeSeniorityImpactBreakdown } from "./seniorityImpact";
+import { technicalApplicationMonthLabelFr, validateApplicationCalendar } from "./baseSalaryReminder";
 import { calculatePreparedEmployeeCompensation } from "./calculatePreparedEmployeeCompensation";
-import { ANNUAL_BUDGET_PERIOD_MONTHS } from "./calculationContract";
 import { CompensationCalculationError } from "./errors";
 import {
   addFractions,
+  compareFractions,
   divideFractions,
   exactAmountFromInteger,
   formatExactAmount,
@@ -22,24 +41,38 @@ import {
   type ExactAmount,
 } from "./exactFraction";
 import type { CalculationExplanationStep } from "./models";
+import {
+  buildEmployeePromotionAwareExposures,
+  finalizeEmployeePromotionAwareCompensation,
+  type EmployeePromotionAwareExposureResult,
+} from "./promotionAwareEmployeeCompensation";
+import {
+  solvePromotionAwareCompensatoryCalibrationRate,
+  sumPromotionAnnualBudgetCostFcfa,
+  type PromotionCompensatoryExposure,
+} from "./promotionCompensatoryCalibration";
+import { PromotionValidationError } from "./promotionTrajectory";
 import type {
   EmployeeCompensationCalculationResult,
   PopulationCalculationIssue,
+  PopulationCalculationSummary,
+  PreparedEmployeeCalculationInput,
   PreparedEmployeeCalculationResult,
   PreparedPopulationCalculationInput,
   PreparedPopulationCalculationResult,
-  PopulationCalculationSummary,
 } from "./preparedPopulationModels";
 import {
   ALLOCATION_BASIS_SALARY_TIMES_MATRIX_WEIGHT,
   compareEmployeeIdAsc,
 } from "./preparedPopulationModels";
 import { resolveBudgetTarget } from "./resolveBudgetTarget";
-import { roundPopulationAllocations } from "./roundPopulationAllocations";
 import {
   toIssueLikes,
   validatePreparedPopulationCalculationInput,
 } from "./validatePreparedPopulationCalculationInput";
+
+const ZERO: ExactAmount = exactAmountFromInteger(0n);
+const TWELVE: ExactAmount = exactAmountFromInteger(12n);
 
 function wrapEmployeeError(
   employeeId: string,
@@ -47,6 +80,15 @@ function wrapEmployeeError(
   step: string,
 ): PopulationCalculationIssue {
   if (error instanceof CompensationCalculationError) {
+    return {
+      employeeId,
+      code: error.code,
+      message: error.message,
+      step,
+      details: { sourceCode: error.code },
+    };
+  }
+  if (error instanceof PromotionValidationError) {
     return {
       employeeId,
       code: error.code,
@@ -63,18 +105,27 @@ function wrapEmployeeError(
   };
 }
 
-/**
- * Calcule le calibrage et le montant matriciel d’une population préparée.
- *
- * Pipeline H1 :
- * 1. résoudre le budget ANNUEL ;
- * 2. allouer les parts ANNUELLES exactes ;
- * 3. convertir chaque part en augmentation MENSUELLE (/ 12) ;
- * 4. arrondir uniquement l’augmentation mensuelle ;
- * 5. coût annuel réel = Σ (mensuel arrondi × 12).
- *
- * Atomicité fonctionnelle : aucune simulation partielle réussie si une erreur.
- */
+/** Parse minimal du pas d'arrondi (mêmes règles que `roundPopulationAllocations`). */
+function parseRoundingStepFcfa(policy: PreparedPopulationCalculationInput["roundingPolicy"]): bigint {
+  const raw = policy.stepFcfa;
+  if (typeof raw === "bigint") {
+    if (raw <= 0n) {
+      throw new CompensationCalculationError(
+        "INVALID_ROUNDING_STEP",
+        "Le pas d'arrondi doit être un entier FCFA strictement positif.",
+      );
+    }
+    return raw;
+  }
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw <= 0) {
+    throw new CompensationCalculationError(
+      "INVALID_ROUNDING_STEP",
+      "Le pas d'arrondi doit être un entier FCFA strictement positif.",
+    );
+  }
+  return BigInt(raw);
+}
+
 export function calculatePreparedPopulationCompensation(
   input: PreparedPopulationCalculationInput,
 ): PreparedPopulationCalculationResult {
@@ -154,6 +205,7 @@ export function calculatePreparedPopulationCompensation(
     throw error;
   }
 
+  const stepFcfa = parseRoundingStepFcfa(input.roundingPolicy);
   const annualBudgetTarget = budgetTargetResult.exactAmount;
 
   // Tri déterministe non mutable
@@ -161,333 +213,413 @@ export function calculatePreparedPopulationCompensation(
     compareEmployeeIdAsc(left.employeeId, right.employeeId),
   );
 
-  let totalAllocationWeight = exactAmountFromInteger(0n);
+  const rawEmployeeById = new Map<string, PreparedEmployeeCalculationInput>(
+    input.employees.map((employee) => [employee.employeeId, employee]),
+  );
+
+  let totalAllocationWeight: ExactAmount = ZERO;
   for (const employee of sortedPrepared) {
-    totalAllocationWeight = addFractions(
-      totalAllocationWeight,
-      employee.allocationWeight,
+    totalAllocationWeight = addFractions(totalAllocationWeight, employee.allocationWeight);
+  }
+
+  // Étape 3 — expositions mensuelles conscientes des promotions.
+  const exposuresByEmployeeId = new Map<string, EmployeePromotionAwareExposureResult>();
+  const exposureIssues: PopulationCalculationIssue[] = [];
+  for (const prepared of sortedPrepared) {
+    const raw = rawEmployeeById.get(prepared.employeeId)!;
+    try {
+      const exposures = buildEmployeePromotionAwareExposures({
+        employeeId: prepared.employeeId,
+        hireDate: prepared.hireDate,
+        decemberBaseSalaryFcfa: prepared.salaryFcfa,
+        currentGradeCode: prepared.gradeCode,
+        currentJobFamilyCode: prepared.familyCode,
+        promotion: raw.promotion ?? null,
+        employmentStatus: raw.employmentStatus ?? null,
+        contractType: raw.contractType ?? null,
+        // Override uniquement si forcé à false (tests) ; sinon prédicat documenté.
+        compensatoryMeasureEligible:
+          raw.compensatoryMeasureEligible === false ? false : undefined,
+        confirmedUnderperformer: raw.confirmedUnderperformer,
+        performanceLevel: raw.performanceLevel,
+        potentialLevel: raw.potentialLevel,
+        campaignYear: input.campaignYear,
+        technicalApplicationMonth: input.technicalApplicationMonth,
+        evaluationMode: input.references.evaluationMode,
+        salaryGrid: input.references.salaryGrid,
+        salaryPositions: input.references.salaryPositions,
+        performanceFactors: input.references.performanceFactors,
+        potentialFactors: input.references.potentialFactors,
+        nineBoxFactors: input.references.nineBoxFactors,
+      });
+      exposuresByEmployeeId.set(prepared.employeeId, exposures);
+    } catch (error) {
+      exposureIssues.push(
+        wrapEmployeeError(prepared.employeeId, error, "promotion_exposure"),
+      );
+    }
+  }
+
+  if (exposureIssues.length > 0) {
+    throw new CompensationCalculationError(
+      "POPULATION_CALCULATION_FAILED",
+      "Le calcul des trajectoires de promotion a échoué ; aucun résultat global valide.",
+      toIssueLikes(exposureIssues),
     );
   }
 
-  const allocationEmployees = sortedPrepared.map((employee) => ({
-    employeeId: employee.employeeId,
-    effectiveWeightNumerator: employee.allocationWeight.numerator,
-    effectiveWeightScale: employee.allocationWeight.denominator,
-  }));
+  // Étape 4 — coût annuel de promotion imputable (population budget promotion).
+  const totalAnnualPromotionBudgetCostFcfa = sumPromotionAnnualBudgetCostFcfa(
+    [...exposuresByEmployeeId.values()].map((exposures) => ({
+      costPreview: exposures.costPreview,
+      isPromotionBudgetPopulationEmployee: exposures.isPromotionBudgetPopulationEmployee,
+    })),
+  );
 
-  let theoreticalAnnual;
+  if (
+    compareFractions(
+      exactAmountFromInteger(totalAnnualPromotionBudgetCostFcfa),
+      annualBudgetTarget,
+    ) > 0
+  ) {
+    const overrun = subtractFractions(
+      exactAmountFromInteger(totalAnnualPromotionBudgetCostFcfa),
+      annualBudgetTarget,
+    );
+    throw new CompensationCalculationError(
+      "PROMOTION_COST_EXCEEDS_BUDGET",
+      "Le coût annuel des promotions incluses dépasse l'enveloppe disponible. Augmentez le budget ou revoyez la population de la campagne.",
+      toIssueLikes([
+        {
+          code: "PROMOTION_COST_EXCEEDS_BUDGET",
+          message:
+            "Le coût annuel des promotions incluses dépasse l'enveloppe disponible. Augmentez le budget ou revoyez la population de la campagne.",
+          step: "promotion_budget_check",
+          details: {
+            annualBudgetTargetFcfa: formatExactAmount(annualBudgetTarget),
+            totalAnnualPromotionBudgetCostFcfa: totalAnnualPromotionBudgetCostFcfa.toString(),
+            overrunFcfa: formatExactAmount(overrun),
+          },
+        },
+      ]),
+    );
+  }
+
+  // Étape 5 — enveloppe compensatoire disponible + taux unique de calibrage.
+  const availableAnnualCompensatoryBudget = subtractFractions(
+    annualBudgetTarget,
+    exactAmountFromInteger(totalAnnualPromotionBudgetCostFcfa),
+  );
+
+  const calibrationExposures: PromotionCompensatoryExposure[] = [];
+  for (const [employeeId, exposures] of exposuresByEmployeeId) {
+    for (const month of exposures.months) {
+      calibrationExposures.push({
+        employeeId,
+        month: month.month,
+        salary: month.baseSalaryFcfa,
+        factor: month.effectiveCompensationFactor,
+        promotionRateOffset: month.promotionRateOffset,
+      });
+    }
+  }
+
+  let compensatoryCalibrationRate: ExactAmount;
   try {
-    theoreticalAnnual = allocateTheoreticalPopulationBudget({
-      budgetTarget: budgetTargetResult,
-      employees: allocationEmployees,
+    compensatoryCalibrationRate = solvePromotionAwareCompensatoryCalibrationRate({
+      availableBudget: availableAnnualCompensatoryBudget,
+      exposures: calibrationExposures,
     });
   } catch (error) {
     if (error instanceof CompensationCalculationError) {
-      throw new CompensationCalculationError(
-        "POPULATION_CALCULATION_FAILED",
-        error.message,
-        toIssueLikes([
-          {
-            code: error.code,
-            message: error.message,
-            step: "theoretical_allocation",
-          },
-        ]),
-      );
+      // Conserver le code métier d’origine (ex. NO_COMPENSATORY_ALLOCATION_CAPACITY).
+      throw error;
     }
-    throw error;
+    throw new CompensationCalculationError(
+      "POPULATION_CALCULATION_FAILED",
+      error instanceof Error
+        ? error.message
+        : "Échec inattendu du calibrage compensatoire.",
+      toIssueLikes([
+        {
+          code: "POPULATION_CALCULATION_FAILED",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Échec inattendu du calibrage compensatoire.",
+          step: "compensatory_calibration",
+        },
+      ]),
+    );
   }
 
-  // Conversion annuelle → mensuelle exacte (÷ 12), sans arrondi préalable.
-  const monthlyBudgetTarget = divideFractions(
-    annualBudgetTarget,
-    exactAmountFromInteger(ANNUAL_BUDGET_PERIOD_MONTHS),
-  );
-  const monthlyTheoretical = {
-    ...theoreticalAnnual,
-    budgetTarget: monthlyBudgetTarget,
-    theoreticalAllocatedTotal: divideFractions(
-      theoreticalAnnual.theoreticalAllocatedTotal,
-      exactAmountFromInteger(ANNUAL_BUDGET_PERIOD_MONTHS),
-    ),
-    allocations: theoreticalAnnual.allocations.map((allocation) => ({
-      ...allocation,
-      theoreticalAmount: divideFractions(
-        allocation.theoreticalAmount,
-        exactAmountFromInteger(ANNUAL_BUDGET_PERIOD_MONTHS),
-      ),
-    })),
-  };
+  const calibrationCoefficient = multiplyFractions(compensatoryCalibrationRate, TWELVE);
 
-  const roundedMonthly = roundPopulationAllocations({
-    theoretical: monthlyTheoretical,
-    roundingPolicy: input.roundingPolicy,
-  });
+  // Étape 6 — finalisation par salarié.
+  const finalizeIssues: PopulationCalculationIssue[] = [];
+  const employees: EmployeeCompensationCalculationResult[] = [];
 
-  // Coût annuel réel = Σ (mensuel arrondi × 12) — ne pas comparer la somme
-  // des mensuels arrondis au budget annuel directement.
-  const annualActualOperationCostFcfa =
-    roundedMonthly.actualOperationAmountFcfa * ANNUAL_BUDGET_PERIOD_MONTHS;
-  const annualTotalRoundingDelta = subtractFractions(
-    exactAmountFromInteger(annualActualOperationCostFcfa),
-    annualBudgetTarget,
-  );
+  for (const prepared of sortedPrepared) {
+    const raw = rawEmployeeById.get(prepared.employeeId)!;
+    const exposures = exposuresByEmployeeId.get(prepared.employeeId)!;
 
-  const calibrationCoefficient: ExactAmount = isZeroFraction(
-    totalAllocationWeight,
-  )
-    ? exactAmountFromInteger(0n)
-    : divideFractions(annualBudgetTarget, totalAllocationWeight);
-
-  const roundedById = new Map(
-    roundedMonthly.allocations.map((item) => [item.employeeId, item]),
-  );
-  const annualTheoById = new Map(
-    theoreticalAnnual.allocations.map((item) => [item.employeeId, item]),
-  );
-
-  const employees: EmployeeCompensationCalculationResult[] = sortedPrepared.map(
-    (prepared) => {
-      const annualTheo = annualTheoById.get(prepared.employeeId)!;
-      const monthlyRound = roundedById.get(prepared.employeeId)!;
-      const annualTheoreticalAllocation = annualTheo.theoreticalAmount;
-      const monthlyTheoreticalIncrease = monthlyRound.theoreticalAmount;
-      const monthlyFinalRoundedIncreaseFcfa =
-        monthlyRound.finalRoundedAmountFcfa;
-      const monthlyRoundingDelta = monthlyRound.individualRoundingDelta;
-      const annualActualCostFcfa =
-        monthlyFinalRoundedIncreaseFcfa * ANNUAL_BUDGET_PERIOD_MONTHS;
-      const annualRoundingDelta = subtractFractions(
-        exactAmountFromInteger(annualActualCostFcfa),
-        annualTheoreticalAllocation,
-      );
-
-      // Taux mensuel = monthlyIncrease / monthlySalary
-      // (= annualAllocation / (monthlySalary × 12)).
-      const monthlyTheoreticalIncreaseRate =
-        prepared.salaryFcfa === 0n || isZeroFraction(monthlyTheoreticalIncrease)
-          ? exactAmountFromInteger(0n)
-          : divideFractions(
-              monthlyTheoreticalIncrease,
-              exactAmountFromInteger(prepared.salaryFcfa),
-            );
-
-      const monthlyFinalSalaryFcfa =
-        prepared.salaryFcfa + monthlyFinalRoundedIncreaseFcfa;
-
-      const reminder = computeBaseSalaryReminderBreakdown({
+    let finalized;
+    try {
+      finalized = finalizeEmployeePromotionAwareCompensation({
+        employeeId: prepared.employeeId,
+        hireDate: prepared.hireDate,
         campaignYear: input.campaignYear,
         technicalApplicationMonth: input.technicalApplicationMonth,
-        monthlyFinalIncreaseFcfa: monthlyFinalRoundedIncreaseFcfa,
+        months: exposures.months,
+        calibrationRate: compensatoryCalibrationRate,
+        roundingPolicy: { mode: "nearest_half_up", stepFcfa },
+        costPreview: exposures.costPreview,
+        isPromotionBudgetPopulationEmployee:
+          exposures.isPromotionBudgetPopulationEmployee,
       });
+    } catch (error) {
+      finalizeIssues.push(wrapEmployeeError(prepared.employeeId, error, "finalize_compensation"));
+      continue;
+    }
 
-      if (reminder.annualActualBaseIncreaseCostFcfa !== annualActualCostFcfa) {
-        throw new CompensationCalculationError(
-          "BASE_SALARY_REMINDER_INVARIANT_FAILED",
-          `Incohérence coût annuel pour ${prepared.employeeId}.`,
-        );
-      }
+    const decemberEntry = finalized.monthlyCompensationTrajectory.find(
+      (entry) => entry.month === 12,
+    )!;
 
-      let seniority;
-      try {
-        seniority = computeSeniorityImpactBreakdown({
-          hireDate: prepared.hireDate,
+    const monthlyTheoreticalIncrease = decemberEntry.theoreticalCompensatoryComplement;
+    const monthlyFinalRoundedIncreaseFcfa = decemberEntry.roundedCompensatoryComplementFcfa;
+    const monthlyRoundingDelta = subtractFractions(
+      exactAmountFromInteger(monthlyFinalRoundedIncreaseFcfa),
+      monthlyTheoreticalIncrease,
+    );
+    const monthlyTheoreticalIncreaseRate =
+      decemberEntry.baseSalaryFcfa === 0n || isZeroFraction(monthlyTheoreticalIncrease)
+        ? ZERO
+        : divideFractions(
+            monthlyTheoreticalIncrease,
+            exactAmountFromInteger(decemberEntry.baseSalaryFcfa),
+          );
+
+    const annualTheoreticalAllocation = finalized.annualTheoreticalCompensatoryAllocation;
+    const annualActualCostFcfa = finalized.annualActualCompensatoryCostFcfa;
+    const annualRoundingDelta = subtractFractions(
+      exactAmountFromInteger(annualActualCostFcfa),
+      annualTheoreticalAllocation,
+    );
+
+    const retroactiveMonths = input.technicalApplicationMonth - 1;
+    const remainingDirectPaymentMonths = 13 - input.technicalApplicationMonth;
+
+    const combinedAnnualActualCostFcfa =
+      annualActualCostFcfa + finalized.annualPromotionBudgetCostFcfa;
+
+    const employeeSteps: CalculationExplanationStep[] = [
+      ...prepared.explanationSteps,
+      {
+        code: "EMPLOYEE_PROMOTION_INCLUSION",
+        label: "Inclusion de la promotion structurée",
+        inputValues: {
+          hasPromotion: raw.promotion !== null && raw.promotion !== undefined,
+          promotionYear: exposures.promotionYear,
+          promotionMonth: exposures.promotionMonth,
+          includedInSimulation: exposures.costPreview.includedInSimulation,
+          exclusionReason: exposures.costPreview.exclusionReason,
+        },
+        outputValue: exposures.costPreview.promotionCampaignCostFcfa.toString(),
+        formula: "buildPromotionAwareMonthlySalaryTrajectory",
+        reason:
+          "Une promotion N-1 est active toute l'année ; une promotion N est active à partir de son mois d'effet si celui-ci n'excède pas le mois d'application technique.",
+      },
+      {
+        code: "EMPLOYEE_COMPENSATORY_CALIBRATION_RATE",
+        label: "Taux de calibrage compensatoire",
+        inputValues: {
+          compensatoryCalibrationRate: formatExactAmount(compensatoryCalibrationRate),
+          availableAnnualCompensatoryBudget: formatExactAmount(
+            availableAnnualCompensatoryBudget,
+          ),
+        },
+        outputValue: formatExactAmount(compensatoryCalibrationRate),
+        formula:
+          "Σ salaire×max(0, taux×facteur − décalagePromotion) = budget compensatoire disponible",
+        reason: "Taux unique résolu sur l'ensemble des expositions mensuelles de la population.",
+      },
+      {
+        code: "EMPLOYEE_MONTHLY_COMPENSATORY_COMPLEMENT",
+        label: "Complément compensatoire mensuel (décembre)",
+        inputValues: {
+          targetCompensatoryRate: formatExactAmount(decemberEntry.targetCompensatoryRate),
+          promotionRateOffset: formatExactAmount(decemberEntry.promotionRateOffset),
+        },
+        outputValue: formatExactAmount(monthlyTheoreticalIncrease),
+        formula:
+          "complément = salaire × max(0, calibrationRate×facteurEffectif − décalagePromotion)",
+        reason: "Le décalage neutralise la part de taux déjà consommée par une promotion incluse.",
+      },
+      {
+        code: "EMPLOYEE_MONTHLY_FINAL_ROUNDED",
+        label: "Complément compensatoire mensuel arrondi (décembre)",
+        inputValues: {
+          monthlyTheoreticalIncrease: formatExactAmount(monthlyTheoreticalIncrease),
+          stepFcfa: stepFcfa.toString(),
+        },
+        outputValue: monthlyFinalRoundedIncreaseFcfa.toString(),
+        formula: "round(theoreticalCompensatoryComplement, roundingPolicy)",
+        reason: "Arrondi appliqué mois par mois (pas d'arrondi annuel préalable).",
+      },
+      {
+        code: "EMPLOYEE_ANNUAL_ACTUAL_COMPENSATORY_COST",
+        label: "Coût annuel réel compensatoire",
+        inputValues: {
+          annualActualCostFcfa: annualActualCostFcfa.toString(),
+        },
+        outputValue: annualActualCostFcfa.toString(),
+        formula: "Σ (12 mois) roundedCompensatoryComplementFcfa",
+        reason: "Somme des compléments mensuels arrondis (hors coût de promotion).",
+      },
+      {
+        code: "EMPLOYEE_BASE_SALARY_REMINDER",
+        label: "Rappel de salaire de base (compensatoire)",
+        inputValues: {
           campaignYear: input.campaignYear,
           technicalApplicationMonth: input.technicalApplicationMonth,
-          monthlyFinalIncreaseFcfa: monthlyFinalRoundedIncreaseFcfa,
-        });
-      } catch (error) {
-        if (error instanceof CompensationCalculationError) {
-          throw new CompensationCalculationError(
-            "POPULATION_CALCULATION_FAILED",
-            error.message,
-            toIssueLikes([
-              {
-                employeeId: prepared.employeeId,
-                code: error.code,
-                message: error.message,
-                field: "hireDate",
-                step: "seniority_impact",
-              },
-            ]),
-          );
-        }
-        throw error;
-      }
+          technicalApplicationMonthLabel: technicalApplicationMonthLabelFr(
+            input.technicalApplicationMonth,
+          ),
+          retroactiveMonths,
+          remainingDirectPaymentMonths,
+        },
+        outputValue: finalized.baseSalaryReminderFcfa.toString(),
+        formula:
+          "rappel = Σ compléments mensuels arrondis (mois < moisApplication) ; direct = Σ (mois ≥ moisApplication)",
+        reason:
+          "Somme directe des mois (et non multiplication par un montant constant) car le complément peut varier avec la promotion.",
+      },
+      {
+        code: "EMPLOYEE_SENIORITY_IMPACT",
+        label: "Incidence supplémentaire d'ancienneté (part compensatoire)",
+        inputValues: {
+          hireDate: finalized.hireDate,
+          technicalApplicationMonthSeniorityRatePercent:
+            finalized.technicalApplicationMonthSeniorityRatePercent,
+          annualPromotionSeniorityImpactFcfa:
+            finalized.annualPromotionSeniorityImpactFcfa.toString(),
+        },
+        outputValue: finalized.annualSeniorityImpactFcfa.toString(),
+        formula:
+          "totalImpact = plafond_fcfa((promo+compensatoire)×rate/100) ; compensatoire = totalImpact − plafond_fcfa(promo×rate/100)",
+        reason:
+          "Hors budget — la part imputable à la promotion est isolée pour ne pas la compter deux fois.",
+      },
+      {
+        code: "EMPLOYEE_MONTHLY_FINAL_SALARY",
+        label: "Nouveau salaire mensuel (décembre)",
+        inputValues: {
+          decemberBaseSalaryFcfa: decemberEntry.baseSalaryFcfa.toString(),
+          monthlyFinalRoundedIncreaseFcfa: monthlyFinalRoundedIncreaseFcfa.toString(),
+        },
+        outputValue: decemberEntry.finalSalaryFcfa.toString(),
+        formula: "finalSalary = baseSalaryFcfa(mois) + roundedCompensatoryComplementFcfa(mois)",
+        reason: "Le montant de la promotion n'est jamais ajouté deux fois.",
+      },
+    ];
 
-      const employeeSteps: CalculationExplanationStep[] = [
-        ...prepared.explanationSteps,
-        {
-          code: "EMPLOYEE_ANNUAL_THEORETICAL_ALLOCATION",
-          label: "Allocation théorique annuelle",
-          inputValues: {
-            allocationWeight: formatExactAmount(prepared.allocationWeight),
-            totalAllocationWeight: formatExactAmount(totalAllocationWeight),
-            annualBudgetTarget: formatExactAmount(annualBudgetTarget),
-            calibrationCoefficient: formatExactAmount(calibrationCoefficient),
-          },
-          outputValue: formatExactAmount(annualTheoreticalAllocation),
-          formula:
-            "annualBudget × (monthlySalary × effectiveMatrixWeight) / Σ(monthlySalary × effectiveMatrixWeight)",
-          reason:
-            "Part annuelle exacte ; aucun arrondi. Le facteur 12 du poids s’annule.",
-        },
-        {
-          code: "EMPLOYEE_MONTHLY_THEORETICAL_INCREASE",
-          label: "Augmentation mensuelle théorique",
-          inputValues: {
-            annualTheoreticalAllocation: formatExactAmount(
-              annualTheoreticalAllocation,
-            ),
-            annualBudgetPeriodMonths: ANNUAL_BUDGET_PERIOD_MONTHS.toString(),
-          },
-          outputValue: formatExactAmount(monthlyTheoreticalIncrease),
-          formula: "monthlyTheoreticalIncrease = annualTheoreticalAllocation / 12",
-          reason: "Division rationnelle exacte ; pas d’arrondi avant le pas mensuel.",
-        },
-        {
-          code: "EMPLOYEE_MONTHLY_INCREASE_RATE",
-          label: "Taux d’augmentation mensuel",
-          inputValues: {
-            monthlyTheoreticalIncrease: formatExactAmount(
-              monthlyTheoreticalIncrease,
-            ),
-            monthlyBaseSalary: prepared.salaryFcfa.toString(),
-          },
-          outputValue: formatExactAmount(monthlyTheoreticalIncreaseRate),
-          formula:
-            "monthlyRate = monthlyTheoreticalIncrease / monthlyBaseSalary",
-          reason:
-            "Équivaut à annualAllocation / (monthlySalary × 12). Ne jamais diviser l’annuel par le mensuel sans ÷12.",
-        },
-        ...monthlyRound.explanationSteps,
-        {
-          code: "EMPLOYEE_MONTHLY_FINAL_ROUNDED",
-          label: "Augmentation mensuelle finale arrondie",
-          inputValues: {
-            monthlyTheoreticalIncrease: formatExactAmount(
-              monthlyTheoreticalIncrease,
-            ),
-            stepFcfa: roundedMonthly.roundingPolicy.stepFcfa.toString(),
-          },
-          outputValue: monthlyFinalRoundedIncreaseFcfa.toString(),
-          formula: "round(monthlyTheoreticalIncrease, roundingPolicy)",
-          reason: "Seul stade d’arrondi du pipeline (pas mensuel).",
-        },
-        {
-          code: "EMPLOYEE_ANNUAL_ACTUAL_COST",
-          label: "Coût annuel réel",
-          inputValues: {
-            monthlyFinalRoundedIncreaseFcfa:
-              monthlyFinalRoundedIncreaseFcfa.toString(),
-            annualBudgetPeriodMonths: ANNUAL_BUDGET_PERIOD_MONTHS.toString(),
-          },
-          outputValue: annualActualCostFcfa.toString(),
-          formula: "annualActualCost = monthlyFinalRoundedIncrease × 12",
-          reason: "Annualisation exacte de l’augmentation mensuelle arrondie.",
-        },
-        {
-          code: "EMPLOYEE_BASE_SALARY_REMINDER",
-          label: "Rappel de salaire de base",
-          inputValues: {
-            campaignYear: reminder.campaignYear,
-            technicalApplicationMonth: reminder.technicalApplicationMonth,
-            technicalApplicationMonthLabel: technicalApplicationMonthLabelFr(
-              reminder.technicalApplicationMonth,
-            ),
-            retroactiveMonths: reminder.retroactiveMonths,
-            remainingDirectPaymentMonths: reminder.remainingDirectPaymentMonths,
-            monthlyFinalIncreaseFcfa: monthlyFinalRoundedIncreaseFcfa.toString(),
-          },
-          outputValue: reminder.baseSalaryReminderFcfa.toString(),
-          formula:
-            "rappel = monthlyFinal × (moisApplication - 1) ; direct = monthlyFinal × (13 - moisApplication)",
-          reason:
-            "Décalage de paiement depuis le 1er janvier — pas de coût additionnel au budget annuel.",
-        },
-        {
-          code: "EMPLOYEE_SENIORITY_IMPACT",
-          label: "Incidence supplémentaire d’ancienneté",
-          inputValues: {
-            hireDate: seniority.hireDate,
-            technicalApplicationMonthSeniorityRatePercent:
-              seniority.technicalApplicationMonthSeniorityRatePercent,
-            monthlyFinalIncreaseFcfa: monthlyFinalRoundedIncreaseFcfa.toString(),
-            seniorityReminderFcfa: seniority.seniorityReminderFcfa.toString(),
-            remainingYearDirectSeniorityImpactFcfa:
-              seniority.remainingYearDirectSeniorityImpactFcfa.toString(),
-          },
-          outputValue: seniority.annualSeniorityImpactFcfa.toString(),
-          formula:
-            "mensuel = plafond_fcfa(monthlyFinal × rate% / 100) ; annuel = Σ mois",
-          reason:
-            "Hors budget — approximation conventionnelle sur l’augmentation uniquement, sans prime historique.",
-        },
-        {
-          code: "EMPLOYEE_MONTHLY_FINAL_SALARY",
-          label: "Nouveau salaire mensuel",
-          inputValues: {
-            monthlyBaseSalary: prepared.salaryFcfa.toString(),
-            monthlyFinalRoundedIncreaseFcfa:
-              monthlyFinalRoundedIncreaseFcfa.toString(),
-          },
-          outputValue: monthlyFinalSalaryFcfa.toString(),
-          formula:
-            "monthlyFinalSalary = monthlyBaseSalary + monthlyFinalRoundedIncrease",
-          reason: "Le nouveau salaire reste mensuel.",
-        },
-      ];
+    employees.push({
+      employeeId: prepared.employeeId,
+      familyCode: prepared.familyCode,
+      gradeCode: prepared.gradeCode,
+      salaryFcfa: prepared.salaryFcfa,
+      s0Fcfa: prepared.s0Resolution.s0Fcfa,
+      salaryRatioBasisPoints: prepared.salaryPositionResult.ratioBasisPoints,
+      salaryPositionCode: prepared.salaryPositionResult.positionCode,
+      salaryPositionLabel: prepared.salaryPositionResult.positionLabel,
+      positionFactorMilli: prepared.salaryPositionResult.positionFactorMilli,
+      evaluationMode: prepared.evaluationFactorResult.mode,
+      performanceLevel: prepared.evaluationFactorResult.performanceLevel,
+      potentialLevel: prepared.evaluationFactorResult.potentialLevel,
+      evaluationFactorNumerator: prepared.evaluationFactorResult.exactFactorNumerator,
+      evaluationFactorScale: prepared.evaluationFactorResult.exactFactorScale,
+      theoreticalMatrixWeight: prepared.theoreticalMatrixWeight,
+      effectiveMatrixWeight: prepared.effectiveMatrixWeight,
+      allocationWeight: prepared.allocationWeight,
+      calibrationCoefficient,
+      annualTheoreticalAllocation,
+      monthlyTheoreticalIncrease,
+      monthlyTheoreticalIncreaseRate,
+      monthlyFinalRoundedIncreaseFcfa,
+      monthlyRoundingDelta,
+      annualActualCostFcfa,
+      annualRoundingDelta,
+      monthlyFinalSalaryFcfa: decemberEntry.finalSalaryFcfa,
+      campaignYear: input.campaignYear,
+      technicalApplicationMonth: input.technicalApplicationMonth,
+      retroactiveMonths,
+      remainingDirectPaymentMonths,
+      baseSalaryReminderFcfa: finalized.baseSalaryReminderFcfa,
+      remainingYearDirectIncreaseCostFcfa: finalized.remainingYearDirectIncreaseCostFcfa,
+      annualActualBaseIncreaseCostFcfa: annualActualCostFcfa,
+      hireDate: finalized.hireDate,
+      technicalApplicationMonthSeniorityRatePercent:
+        finalized.technicalApplicationMonthSeniorityRatePercent,
+      monthlySeniorityImpactSchedule: finalized.monthlyCompensationTrajectory.map((entry) => ({
+        month: entry.month,
+        ratePercent: entry.seniorityRatePercent,
+        monthlySeniorityImpactFcfa: entry.compensatorySeniorityImpactFcfa,
+        paymentTiming: entry.paymentTiming,
+      })),
+      seniorityReminderFcfa: finalized.seniorityReminderFcfa,
+      remainingYearDirectSeniorityImpactFcfa: finalized.remainingYearDirectSeniorityImpactFcfa,
+      annualSeniorityImpactFcfa: finalized.annualSeniorityImpactFcfa,
+      employmentStatus: raw.employmentStatus ?? null,
+      compensatoryMeasureEligible: exposures.compensatoryMeasureEligible,
+      isPromotionBudgetPopulationEmployee: exposures.isPromotionBudgetPopulationEmployee,
+      promotion: raw.promotion ?? null,
+      promotionYear: exposures.promotionYear,
+      promotionMonth: exposures.promotionMonth,
+      promotionInclusion: exposures.costPreview,
+      annualPromotionBudgetCostFcfa: finalized.annualPromotionBudgetCostFcfa,
+      monthlyCompensationTrajectory: finalized.monthlyCompensationTrajectory,
+      combinedAnnualActualCostFcfa,
+      annualPromotionSeniorityImpactFcfa: finalized.annualPromotionSeniorityImpactFcfa,
+      combinedAnnualSeniorityImpactFcfa: finalized.combinedAnnualSeniorityImpactFcfa,
+      blockingReason: prepared.blockingReason,
+      explanationSteps: employeeSteps,
+    });
+  }
 
-      return {
-        employeeId: prepared.employeeId,
-        familyCode: prepared.familyCode,
-        gradeCode: prepared.gradeCode,
-        salaryFcfa: prepared.salaryFcfa,
-        s0Fcfa: prepared.s0Resolution.s0Fcfa,
-        salaryRatioBasisPoints: prepared.salaryPositionResult.ratioBasisPoints,
-        salaryPositionCode: prepared.salaryPositionResult.positionCode,
-        salaryPositionLabel: prepared.salaryPositionResult.positionLabel,
-        positionFactorMilli: prepared.salaryPositionResult.positionFactorMilli,
-        evaluationMode: prepared.evaluationFactorResult.mode,
-        performanceLevel: prepared.evaluationFactorResult.performanceLevel,
-        potentialLevel: prepared.evaluationFactorResult.potentialLevel,
-        evaluationFactorNumerator:
-          prepared.evaluationFactorResult.exactFactorNumerator,
-        evaluationFactorScale: prepared.evaluationFactorResult.exactFactorScale,
-        theoreticalMatrixWeight: prepared.theoreticalMatrixWeight,
-        effectiveMatrixWeight: prepared.effectiveMatrixWeight,
-        allocationWeight: prepared.allocationWeight,
-        calibrationCoefficient,
-        annualTheoreticalAllocation,
-        monthlyTheoreticalIncrease,
-        monthlyTheoreticalIncreaseRate,
-        monthlyFinalRoundedIncreaseFcfa,
-        monthlyRoundingDelta,
-        annualActualCostFcfa,
-        annualRoundingDelta,
-        monthlyFinalSalaryFcfa,
-        campaignYear: reminder.campaignYear,
-        technicalApplicationMonth: reminder.technicalApplicationMonth,
-        retroactiveMonths: reminder.retroactiveMonths,
-        remainingDirectPaymentMonths: reminder.remainingDirectPaymentMonths,
-        baseSalaryReminderFcfa: reminder.baseSalaryReminderFcfa,
-        remainingYearDirectIncreaseCostFcfa:
-          reminder.remainingYearDirectIncreaseCostFcfa,
-        annualActualBaseIncreaseCostFcfa:
-          reminder.annualActualBaseIncreaseCostFcfa,
-        hireDate: seniority.hireDate,
-        technicalApplicationMonthSeniorityRatePercent:
-          seniority.technicalApplicationMonthSeniorityRatePercent,
-        monthlySeniorityImpactSchedule: seniority.monthlySeniorityImpactSchedule,
-        seniorityReminderFcfa: seniority.seniorityReminderFcfa,
-        remainingYearDirectSeniorityImpactFcfa:
-          seniority.remainingYearDirectSeniorityImpactFcfa,
-        annualSeniorityImpactFcfa: seniority.annualSeniorityImpactFcfa,
-        blockingReason: prepared.blockingReason,
-        explanationSteps: employeeSteps,
-      };
-    },
+  if (finalizeIssues.length > 0) {
+    throw new CompensationCalculationError(
+      "POPULATION_CALCULATION_FAILED",
+      "La finalisation de la rémunération a échoué ; aucun résultat global valide.",
+      toIssueLikes(finalizeIssues),
+    );
+  }
+
+  // Invariant : total population = somme exacte des coûts imputables salariés.
+  const summedEmployeePromotionBudgetCostFcfa = employees.reduce(
+    (sum, employee) => sum + employee.annualPromotionBudgetCostFcfa,
+    0n,
   );
+  if (summedEmployeePromotionBudgetCostFcfa !== totalAnnualPromotionBudgetCostFcfa) {
+    throw new CompensationCalculationError(
+      "PROMOTION_BUDGET_INVARIANT_FAILED",
+      "Le total population des coûts de promotion imputables diverge de la somme des salariés.",
+      toIssueLikes([
+        {
+          code: "PROMOTION_BUDGET_INVARIANT_FAILED",
+          message:
+            "Le total population des coûts de promotion imputables diverge de la somme des salariés.",
+          step: "promotion_budget_invariant",
+          details: {
+            totalAnnualPromotionBudgetCostFcfa:
+              totalAnnualPromotionBudgetCostFcfa.toString(),
+            summedEmployeePromotionBudgetCostFcfa:
+              summedEmployeePromotionBudgetCostFcfa.toString(),
+          },
+        },
+      ]),
+    );
+  }
 
   let populationSalarySumFcfa = 0n;
   let positiveWeightEmployeeCount = 0;
@@ -499,17 +631,33 @@ export function calculatePreparedPopulationCompensation(
   let totalSeniorityReminderFcfa = 0n;
   let totalRemainingYearDirectSeniorityImpactFcfa = 0n;
   let totalAnnualSeniorityImpactFcfa = 0n;
+  let annualActualOperationCostFcfa = 0n;
+  let annualTheoreticalAllocatedTotal: ExactAmount = ZERO;
+  let promotedIncludedEmployeeCount = 0;
+  let totalCombinedAnnualActualCostFcfa = 0n;
+  let totalAnnualPromotionSeniorityImpactFcfa = 0n;
+  let totalCombinedAnnualSeniorityImpactFcfa = 0n;
+
   for (const employee of employees) {
     populationSalarySumFcfa += employee.salaryFcfa;
     totalBaseSalaryReminderFcfa += employee.baseSalaryReminderFcfa;
-    totalRemainingYearDirectIncreaseCostFcfa +=
-      employee.remainingYearDirectIncreaseCostFcfa;
-    totalAnnualActualBaseIncreaseCostFcfa +=
-      employee.annualActualBaseIncreaseCostFcfa;
+    totalRemainingYearDirectIncreaseCostFcfa += employee.remainingYearDirectIncreaseCostFcfa;
+    totalAnnualActualBaseIncreaseCostFcfa += employee.annualActualBaseIncreaseCostFcfa;
     totalSeniorityReminderFcfa += employee.seniorityReminderFcfa;
     totalRemainingYearDirectSeniorityImpactFcfa +=
       employee.remainingYearDirectSeniorityImpactFcfa;
     totalAnnualSeniorityImpactFcfa += employee.annualSeniorityImpactFcfa;
+    annualActualOperationCostFcfa += employee.annualActualCostFcfa;
+    annualTheoreticalAllocatedTotal = addFractions(
+      annualTheoreticalAllocatedTotal,
+      employee.annualTheoreticalAllocation,
+    );
+    totalCombinedAnnualActualCostFcfa += employee.combinedAnnualActualCostFcfa;
+    totalAnnualPromotionSeniorityImpactFcfa += employee.annualPromotionSeniorityImpactFcfa;
+    totalCombinedAnnualSeniorityImpactFcfa += employee.combinedAnnualSeniorityImpactFcfa;
+    if (employee.promotionInclusion.includedInSimulation) {
+      promotedIncludedEmployeeCount += 1;
+    }
     if (isZeroFraction(employee.allocationWeight)) {
       zeroWeightEmployeeCount += 1;
     } else {
@@ -536,8 +684,7 @@ export function calculatePreparedPopulationCompensation(
     );
   }
   if (
-    totalSeniorityReminderFcfa +
-      totalRemainingYearDirectSeniorityImpactFcfa !==
+    totalSeniorityReminderFcfa + totalRemainingYearDirectSeniorityImpactFcfa !==
     totalAnnualSeniorityImpactFcfa
   ) {
     throw new CompensationCalculationError(
@@ -545,10 +692,21 @@ export function calculatePreparedPopulationCompensation(
       "Incohérence population : rappel ancienneté + direct ≠ annuel.",
     );
   }
+  if (!fractionsEqual(annualTheoreticalAllocatedTotal, availableAnnualCompensatoryBudget)) {
+    throw new CompensationCalculationError(
+      "THEORETICAL_ALLOCATION_RECONCILIATION_FAILED",
+      "La somme théorique compensatoire annuelle ne reproduit pas l'enveloppe compensatoire disponible.",
+    );
+  }
 
-  const annualTheoreticalAllocatedTotal =
-    theoreticalAnnual.theoreticalAllocatedTotal;
-  const monthlyTheoreticalIncreaseTotal = monthlyTheoretical.theoreticalAllocatedTotal;
+  const annualTotalRoundingDelta = subtractFractions(
+    exactAmountFromInteger(annualActualOperationCostFcfa),
+    annualTheoreticalAllocatedTotal,
+  );
+  const monthlyTheoreticalIncreaseTotal = divideFractions(
+    annualTheoreticalAllocatedTotal,
+    TWELVE,
+  );
 
   const populationSummary: PopulationCalculationSummary = {
     employeeCount: employees.length,
@@ -562,10 +720,13 @@ export function calculatePreparedPopulationCompensation(
     monthlyTheoreticalIncreaseTotal,
     annualActualOperationCostFcfa,
     annualTotalRoundingDelta,
-    roundingStepFcfa: roundedMonthly.roundingPolicy.stepFcfa,
+    roundingStepFcfa: stepFcfa,
     evaluationMode: input.references.evaluationMode,
     allocationBasis: ALLOCATION_BASIS_SALARY_TIMES_MATRIX_WEIGHT,
-    isTheoreticalBudgetExactlyAllocated: theoreticalAnnual.isExactlyAllocated,
+    isTheoreticalBudgetExactlyAllocated: fractionsEqual(
+      annualTheoreticalAllocatedTotal,
+      availableAnnualCompensatoryBudget,
+    ),
     populationSalarySumFcfa,
     campaignYear: input.campaignYear,
     technicalApplicationMonth: input.technicalApplicationMonth,
@@ -575,6 +736,13 @@ export function calculatePreparedPopulationCompensation(
     totalSeniorityReminderFcfa,
     totalRemainingYearDirectSeniorityImpactFcfa,
     totalAnnualSeniorityImpactFcfa,
+    promotedIncludedEmployeeCount,
+    compensatoryCalibrationRate,
+    totalAnnualPromotionBudgetCostFcfa,
+    availableAnnualCompensatoryBudget,
+    totalCombinedAnnualActualCostFcfa,
+    totalAnnualPromotionSeniorityImpactFcfa,
+    totalCombinedAnnualSeniorityImpactFcfa,
   };
 
   const explanationSteps: CalculationExplanationStep[] = [
@@ -585,93 +753,77 @@ export function calculatePreparedPopulationCompensation(
       inputValues: {
         allocationBasis: ALLOCATION_BASIS_SALARY_TIMES_MATRIX_WEIGHT,
         employeeCount: employees.length,
-        annualBudgetPeriodMonths: ANNUAL_BUDGET_PERIOD_MONTHS.toString(),
       },
       outputValue: ALLOCATION_BASIS_SALARY_TIMES_MATRIX_WEIGHT,
       formula:
-        "allocationWeight = monthlySalaryFcfa × effectiveMatrixWeight (facteur 12 s’annule)",
-      reason:
-        "Convention JRB : même poids matriciel ⇒ même taux théorique d’augmentation mensuel.",
+        "allocationWeight = monthlySalaryFcfa × effectiveMatrixWeight (décembre, information)",
+      reason: "Convention JRB conservée pour compatibilité d'affichage.",
+    },
+    {
+      code: "POPULATION_PROMOTION_BUDGET_COST",
+      label: "Coût annuel de promotion imputable",
+      inputValues: {
+        annualBudgetTarget: formatExactAmount(annualBudgetTarget),
+        promotedIncludedEmployeeCount,
+      },
+      outputValue: totalAnnualPromotionBudgetCostFcfa.toString(),
+      formula:
+        "Σ coûtPromotion (salariés de la population budget promotion, promotion incluse)",
+      reason: "Consomme l'enveloppe annuelle avant répartition de la mesure compensatoire.",
+    },
+    {
+      code: "POPULATION_AVAILABLE_COMPENSATORY_BUDGET",
+      label: "Enveloppe compensatoire disponible",
+      inputValues: {
+        annualBudgetTarget: formatExactAmount(annualBudgetTarget),
+        totalAnnualPromotionBudgetCostFcfa: totalAnnualPromotionBudgetCostFcfa.toString(),
+      },
+      outputValue: formatExactAmount(availableAnnualCompensatoryBudget),
+      formula: "availableAnnualCompensatoryBudget = annualBudgetTarget − coût promotion imputable",
+      reason: "Répartie exactement par le taux unique de calibrage compensatoire.",
+    },
+    {
+      code: "POPULATION_COMPENSATORY_CALIBRATION_RATE",
+      label: "Taux de calibrage compensatoire résolu",
+      inputValues: {
+        availableAnnualCompensatoryBudget: formatExactAmount(availableAnnualCompensatoryBudget),
+      },
+      outputValue: formatExactAmount(compensatoryCalibrationRate),
+      formula:
+        "Σ salaire×max(0, taux×facteur − décalagePromotion) = enveloppe compensatoire disponible",
+      reason: "Solveur exact piecewise (aucune conversion Number).",
     },
     {
       code: "POPULATION_ANNUAL_THEORETICAL_TOTAL",
-      label: "Total théorique annuel alloué",
+      label: "Total théorique compensatoire annuel alloué",
       inputValues: {
-        totalAllocationWeight: formatExactAmount(totalAllocationWeight),
-        calibrationCoefficient: formatExactAmount(calibrationCoefficient),
-        populationMonthlySalarySumFcfa: populationSalarySumFcfa.toString(),
+        availableAnnualCompensatoryBudget: formatExactAmount(availableAnnualCompensatoryBudget),
       },
       outputValue: formatExactAmount(annualTheoreticalAllocatedTotal),
-      formula: "Σ annualTheoreticalAllocation = annualBudgetTarget",
-      reason: "Invariant rationnel ; allocation sur l’enveloppe annuelle complète.",
-    },
-    {
-      code: "POPULATION_MONTHLY_THEORETICAL_TOTAL",
-      label: "Total théorique mensuel",
-      inputValues: {
-        annualTheoreticalAllocatedTotal: formatExactAmount(
-          annualTheoreticalAllocatedTotal,
-        ),
-      },
-      outputValue: formatExactAmount(monthlyTheoreticalIncreaseTotal),
-      formula: "monthlyTheoreticalIncreaseTotal = annualTheoreticalAllocatedTotal / 12",
-      reason: "Division exacte avant arrondi individuel.",
+      formula: "Σ annualTheoreticalAllocation = availableAnnualCompensatoryBudget",
+      reason: "Invariant rationnel démontré analytiquement par construction du solveur.",
     },
     {
       code: "POPULATION_ANNUAL_ACTUAL_OPERATION_COST",
-      label: "Coût annuel réel de l’opération",
+      label: "Coût annuel réel compensatoire de l'opération",
       inputValues: {
-        roundingMode: roundedMonthly.roundingPolicy.mode,
-        stepFcfa: roundedMonthly.roundingPolicy.stepFcfa.toString(),
-        monthlyRoundedTotal: roundedMonthly.actualOperationAmountFcfa.toString(),
+        roundingMode: input.roundingPolicy.mode,
+        stepFcfa: stepFcfa.toString(),
       },
       outputValue: annualActualOperationCostFcfa.toString(),
-      formula: "Σ (monthlyFinalRoundedIncrease × 12)",
-      reason:
-        "Ne pas comparer la somme des augmentations mensuelles arrondies au budget annuel.",
+      formula: "Σ (12 mois × N salariés) roundedCompensatoryComplementFcfa",
+      reason: "Coût compensatoire seul — le coût de promotion est comptabilisé séparément.",
     },
     {
       code: "POPULATION_ANNUAL_TOTAL_ROUNDING_DELTA",
-      label: "Écart annuel total d’arrondi",
+      label: "Écart annuel total d'arrondi",
       inputValues: {
         annualActualOperationCostFcfa: annualActualOperationCostFcfa.toString(),
-        annualBudgetTarget: formatExactAmount(annualBudgetTarget),
+        availableAnnualCompensatoryBudget: formatExactAmount(availableAnnualCompensatoryBudget),
       },
       outputValue: formatExactAmount(annualTotalRoundingDelta),
-      formula: "annualActualOperationCost − annualBudgetTarget",
-      reason: "Équivaut à Σ monthlyRoundingDelta × 12 ; peut être négatif, nul ou positif.",
-    },
-    {
-      code: "POPULATION_BASE_SALARY_REMINDER",
-      label: "Rappel de salaire de base (population)",
-      inputValues: {
-        campaignYear: input.campaignYear,
-        technicalApplicationMonth: input.technicalApplicationMonth,
-        technicalApplicationMonthLabel: technicalApplicationMonthLabelFr(
-          input.technicalApplicationMonth,
-        ),
-        totalBaseSalaryReminderFcfa: totalBaseSalaryReminderFcfa.toString(),
-        totalRemainingYearDirectIncreaseCostFcfa:
-          totalRemainingYearDirectIncreaseCostFcfa.toString(),
-      },
-      outputValue: totalAnnualActualBaseIncreaseCostFcfa.toString(),
-      formula:
-        "Σrappel + Σdirect = Σ(monthlyFinal × 12) — décalage de paiement, pas de coût additionnel",
-      reason:
-        "Le rappel ne double pas le budget annuel ; il ventile uniquement le calendrier de versement.",
-    },
-    {
-      code: "POPULATION_SENIORITY_IMPACT",
-      label: "Incidence supplémentaire d’ancienneté (population)",
-      inputValues: {
-        totalSeniorityReminderFcfa: totalSeniorityReminderFcfa.toString(),
-        totalRemainingYearDirectSeniorityImpactFcfa:
-          totalRemainingYearDirectSeniorityImpactFcfa.toString(),
-      },
-      outputValue: totalAnnualSeniorityImpactFcfa.toString(),
-      formula: "Σrappel + Σdirect = Σ incidences mensuelles — hors budget",
-      reason:
-        "Ne modifie ni le budget cible, ni l’allocation théorique, ni le coût annuel de base.",
+      formula: "annualActualOperationCost − availableAnnualCompensatoryBudget",
+      reason: "Peut être négatif, nul ou positif.",
     },
     {
       code: "NO_FORCED_RECONCILIATION",
@@ -679,42 +831,14 @@ export function calculatePreparedPopulationCompensation(
       inputValues: { method: "none" },
       outputValue: false,
       formula: "no largest-remainder",
-      reason: "Le coût annuel réel n’est pas forcé au budget cible.",
+      reason: "Le coût annuel réel n'est pas forcé au budget cible.",
     },
   ];
-
-  if (
-    !fractionsEqual(annualTheoreticalAllocatedTotal, annualBudgetTarget)
-  ) {
-    throw new CompensationCalculationError(
-      "THEORETICAL_ALLOCATION_RECONCILIATION_FAILED",
-      "La somme théorique annuelle ne reproduit pas le budget annuel cible.",
-    );
-  }
-
-  // Vérification d’équivalence : écart annuel = Σ écarts mensuels × 12
-  let sumMonthlyDeltas = exactAmountFromInteger(0n);
-  for (const employee of employees) {
-    sumMonthlyDeltas = addFractions(
-      sumMonthlyDeltas,
-      employee.monthlyRoundingDelta,
-    );
-  }
-  const expectedAnnualDelta = multiplyFractions(
-    sumMonthlyDeltas,
-    exactAmountFromInteger(ANNUAL_BUDGET_PERIOD_MONTHS),
-  );
-  if (!fractionsEqual(expectedAnnualDelta, annualTotalRoundingDelta)) {
-    throw new CompensationCalculationError(
-      "POPULATION_CALCULATION_FAILED",
-      "Incohérence écart annuel / écarts mensuels × 12.",
-    );
-  }
 
   return {
     budgetTargetResult,
     evaluationMode: input.references.evaluationMode,
-    roundingPolicy: roundedMonthly.roundingPolicy,
+    roundingPolicy: { mode: input.roundingPolicy.mode, stepFcfa },
     allocationBasis: ALLOCATION_BASIS_SALARY_TIMES_MATRIX_WEIGHT,
     totalAllocationWeight,
     calibrationCoefficient,
@@ -730,6 +854,13 @@ export function calculatePreparedPopulationCompensation(
     totalSeniorityReminderFcfa,
     totalRemainingYearDirectSeniorityImpactFcfa,
     totalAnnualSeniorityImpactFcfa,
+    promotedIncludedEmployeeCount,
+    compensatoryCalibrationRate,
+    totalAnnualPromotionBudgetCostFcfa,
+    availableAnnualCompensatoryBudget,
+    totalCombinedAnnualActualCostFcfa,
+    totalAnnualPromotionSeniorityImpactFcfa,
+    totalCombinedAnnualSeniorityImpactFcfa,
     populationSummary,
     explanationSteps,
   };

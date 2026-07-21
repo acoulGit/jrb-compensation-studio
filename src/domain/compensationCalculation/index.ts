@@ -69,6 +69,37 @@ export {
   type PromotionEvent,
   type PromotionInclusionStatus,
 } from "./promotionTrajectory";
+export {
+  PROMOTION_BUDGET_EMPLOYMENT_STATUSES,
+  PROMOTION_BUDGET_POPULATION_STATUSES,
+  isPromotionBudgetPopulationEmployee,
+  type PromotionBudgetEmploymentStatus,
+} from "./promotionBudgetPopulation";
+export {
+  COMPENSATORY_ELIGIBLE_CONTRACT_TYPES,
+  COMPENSATORY_MEASURE_ELIGIBILITY_CONTRACT_VERSION,
+  hasMinimumSeniorityAtDecemberNMinus1,
+  isCompensatoryMeasureEligible,
+  type CompensatoryEligibleContractType,
+  type CompensatoryMeasureEligibilityInput,
+} from "./compensatoryMeasureEligibility";
+export {
+  PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION,
+  promotionAnnualBudgetCostFcfa,
+  solvePromotionAwareCompensatoryCalibrationRate,
+  sumPromotionAnnualBudgetCostFcfa,
+  type PromotionCompensatoryExposure,
+} from "./promotionCompensatoryCalibration";
+export {
+  PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION,
+  buildEmployeePromotionAwareExposures,
+  finalizeEmployeePromotionAwareCompensation,
+  type BuildEmployeePromotionAwareExposuresInput,
+  type EmployeeMonthlyExposureContext,
+  type EmployeePromotionAwareExposureResult,
+  type FinalizeEmployeePromotionAwareCompensationInput,
+  type FinalizeEmployeePromotionAwareCompensationResult,
+} from "./promotionAwareEmployeeCompensation";
 export { calculatePopulationBudgetAllocation } from "./calculatePopulationBudgetAllocation";
 export {
   CompensationCalculationError,
@@ -130,6 +161,7 @@ export {
   type AllocationBasis,
   type EmployeeCompensationCalculationResult,
   type EmployeeS0Resolution,
+  type MonthlyCompensationTrajectoryEntry,
   type PopulationCalculationIssue,
   type PopulationCalculationReferences,
   type PopulationCalculationSummary,

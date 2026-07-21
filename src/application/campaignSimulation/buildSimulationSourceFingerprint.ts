@@ -8,6 +8,8 @@ import type { PreparedEmployeeCalculationInput } from "../../domain/compensation
 import type { PopulationCalculationReferences } from "../../domain/compensationCalculation";
 import { SENIORITY_IMPACT_CONTRACT_VERSION } from "../../domain/compensationCalculation";
 import { PROMOTION_TRAJECTORY_CONTRACT_VERSION } from "../../domain/compensationCalculation";
+import { PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION } from "../../domain/compensationCalculation";
+import { PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION } from "../../domain/compensationCalculation";
 import type { CampaignStatus } from "../../domain/campaign/models";
 import type { NineBoxMode } from "../../domain/compensationReference/models";
 import { buildConfigurationFingerprint } from "./formatExactBudgetDisplay";
@@ -74,6 +76,14 @@ export function buildSimulationSourceFingerprint(
       pot: employee.potentialLevel ?? "",
       under: employee.confirmedUnderperformer ? "1" : "0",
       promo: promotionToken(employee.promotion),
+      status: employee.employmentStatus ?? "",
+      contract: employee.contractType ?? "",
+      compElig:
+        employee.compensatoryMeasureEligible === undefined
+          ? ""
+          : employee.compensatoryMeasureEligible
+            ? "1"
+            : "0",
     }))
     .sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
 
@@ -132,6 +142,9 @@ export function buildSimulationSourceFingerprint(
     technicalApplicationMonth: input.technicalApplicationMonth,
     seniorityImpactContractVersion: SENIORITY_IMPACT_CONTRACT_VERSION,
     promotionTrajectoryContractVersion: PROMOTION_TRAJECTORY_CONTRACT_VERSION,
+    promotionCompensatoryCalibrationContractVersion:
+      PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION,
+    promotionAwareCompensationContractVersion: PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION,
   });
 
   const canonical = [
