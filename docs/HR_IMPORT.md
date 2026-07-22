@@ -105,8 +105,13 @@ du facteur neutre 1 utilisé par le Lot H1. Le code 9-Box source, s’il est
 présent, reste ignoré pour le calcul mais conservé pour affichage (« Performance
 à confirmer »).
 
-Groupe promotion (Lot 2A-H2C-1) : optionnel mais cohérent. Si `promotionDate`
-est renseignée, salaires avant/après et grades avant/après sont obligatoires.
+Groupe promotion (Lot 2A-H2C-1, évolué Lot 2B-RC1-H3) : optionnel mais
+cohérent. Si `promotionDate` est renseignée, salaires avant/après sont
+obligatoires. L’ancien grade est obligatoire (ou déduit du grade courant).
+Le **nouveau grade est facultatif** : cellule vide → conservation de l’ancien
+grade (promotion salariale sans changement de grade). Un même grade
+explicite (ex. G3 → G3) est accepté. Les familles avant/après restent
+résolues avec fallback vers la famille courante / précédente.
 Les familles absentes réutilisent la famille courante.
 
 `promotionAmount` est un **champ historique de compatibilité**. Sans promotion

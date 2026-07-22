@@ -1170,7 +1170,8 @@ async fn schema_v4_export_includes_nine_box_headers_and_dashboard_counter() {
 fn input_with_months_v5(campaign_id: i64, batch_id: Option<i64>) -> SaveSimulationRunInput {
     let mut input = input_with_months_v4(campaign_id, batch_id);
     input.result_schema_version = Some(5);
-    input.calculation_contract_version = Some(6);
+    // Lot 2B-RC1-H3 : contrat courant 7 (schema 5 inchangé).
+    input.calculation_contract_version = Some(7);
     input.nine_box_confirmation_factor_milli = Some(900);
     if let Some(employee) = input.employees.get_mut(0) {
         employee.neutralize_nine_box_effect = Some(true);

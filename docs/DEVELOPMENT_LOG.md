@@ -1259,3 +1259,27 @@ existants.
 - `pnpm test` (incl. `src/tests/nineBoxConfirmationFactor.test.ts`) /
   `pnpm build` / `cargo fmt --check` / `cargo check` / `cargo test`
 - Aucun commit ; branche `feature/lot-2b-rc1-h2-nine-box-confirmation`.
+
+## 2026-07-22 — Lot 2B-RC1-H3 : promotion salariale sans changement de grade
+
+### Objectif
+
+Autoriser une promotion avec hausse salariale lorsque le grade après est
+identique au grade avant, ou vide (conservation du grade d’origine).
+
+### Choix
+
+- Suppression du rejet `PROMOTION_REQUIRES_GRADE_CHANGE` dans
+  `buildPromotionEvent`.
+- Import : `promotedGradeCode` facultatif → fallback vers l’ancien grade
+  (sinon grade courant) ; familles : fallback existant élargi.
+- Contrôles salariaux / date / groupe partiel inchangés.
+- Versionnement : `CALCULATION_CONTRACT_VERSION` 6→**7** ;
+  `RESULT_SCHEMA_VERSION` reste **5** (structure déjà compatible) ;
+  **aucune migration**.
+- Export Excel : accepte contrats 6 et 7 sur schema 5.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
+- Aucun commit ; branche `feature/lot-2b-rc1-h3-same-grade-promotion`.

@@ -211,14 +211,28 @@ export function readPromotionImportGroup(input: {
     "salaryAfterPromotion",
     "le salaire après promotion",
   );
-  requireField(previousGrade.present, "previousGradeCode", "l’ancien grade");
-  requireField(promotedGrade.present, "promotedGradeCode", "le nouveau grade");
+  // Lot 2B-RC1-H3 : nouveau grade facultatif — fallback vers ancien grade
+  // (sinon grade courant de la ligne). L’ancien grade reste obligatoire,
+  // sauf s’il peut être déduit du grade courant.
+  const resolvedPreviousGradeCode =
+    previousGrade.value || input.currentGradeCode || "";
+  if (!resolvedPreviousGradeCode) {
+    pushError(
+      input.rowIssues,
+      "promotion_incomplete_group",
+      input.sourceRowNumber,
+      "previousGradeCode",
+      "La date de promotion exige l’ancien grade (ou un grade courant résolu sur la ligne).",
+    );
+  }
+  const resolvedPromotedGradeCode =
+    promotedGrade.value || resolvedPreviousGradeCode || input.currentGradeCode || "";
 
   if (
     !salaryBefore.value ||
     !salaryAfter.value ||
-    !previousGrade.value ||
-    !promotedGrade.value
+    !resolvedPreviousGradeCode ||
+    !resolvedPromotedGradeCode
   ) {
     return empty;
   }
@@ -226,7 +240,10 @@ export function readPromotionImportGroup(input: {
   const resolvedPreviousFamilyCode =
     previousFamily.value || input.currentJobFamilyCode || "";
   const resolvedPromotedFamilyCode =
-    promotedFamily.value || input.currentJobFamilyCode || "";
+    promotedFamily.value ||
+    previousFamily.value ||
+    input.currentJobFamilyCode ||
+    "";
 
   if (!resolvedPreviousFamilyCode) {
     pushError(
@@ -243,7 +260,7 @@ export function readPromotionImportGroup(input: {
       "promotion_incomplete_group",
       input.sourceRowNumber,
       "promotedJobFamilyCode",
-      "Famille après promotion requise (ou famille courante résolue sur la ligne).",
+      "Famille après promotion requise (ou famille courante / précédente résolue).",
     );
   }
 
@@ -256,9 +273,9 @@ export function readPromotionImportGroup(input: {
       ? jobFamilyByCode.get(resolvedPromotedFamilyCode.toUpperCase()) ?? null
       : null;
   const previousGradeRef =
-    gradeByCode.get(previousGrade.value.toUpperCase()) ?? null;
+    gradeByCode.get(resolvedPreviousGradeCode.toUpperCase()) ?? null;
   const promotedGradeRef =
-    gradeByCode.get(promotedGrade.value.toUpperCase()) ?? null;
+    gradeByCode.get(resolvedPromotedGradeCode.toUpperCase()) ?? null;
 
   if (!previousGradeRef) {
     pushError(
@@ -266,17 +283,28 @@ export function readPromotionImportGroup(input: {
       "unknown_previous_grade",
       input.sourceRowNumber,
       "previousGradeCode",
-      `Ancien grade inconnu dans le référentiel : « ${previousGrade.value} ».`,
+      `Ancien grade inconnu dans le référentiel : « ${resolvedPreviousGradeCode} ».`,
     );
   }
   if (!promotedGradeRef) {
-    pushError(
-      input.rowIssues,
-      "unknown_promoted_grade",
-      input.sourceRowNumber,
-      "promotedGradeCode",
-      `Nouveau grade inconnu dans le référentiel : « ${promotedGrade.value} ».`,
-    );
+    // Uniquement si une valeur explicite invalide a été fournie (pas le fallback).
+    if (promotedGrade.present && promotedGrade.value) {
+      pushError(
+        input.rowIssues,
+        "unknown_promoted_grade",
+        input.sourceRowNumber,
+        "promotedGradeCode",
+        `Nouveau grade inconnu dans le référentiel : « ${promotedGrade.value} ».`,
+      );
+    } else {
+      pushError(
+        input.rowIssues,
+        "unknown_promoted_grade",
+        input.sourceRowNumber,
+        "promotedGradeCode",
+        `Grade après promotion introuvable après fallback : « ${resolvedPromotedGradeCode} ».`,
+      );
+    }
   }
   if (resolvedPreviousFamilyCode && !previousFamilyRef) {
     pushError(

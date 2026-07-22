@@ -3,7 +3,7 @@
 ## Objectif
 
 Produire, à partir d’un **snapshot de simulation persisté** (schema v3, v4 ou
-v5, contrats v4/v5/v6), un classeur Excel `.xlsx` destiné aux équipes RH, avec
+v5, contrats v4/v5/v6/v7), un classeur Excel `.xlsx` destiné aux équipes RH, avec
 **protection par mot de passe optionnelle** et **écriture atomique**.
 
 L’export reste une **lecture fidèle** du snapshot immutable : aucun recalcul
@@ -33,6 +33,11 @@ traitement 9-Box évoluent, sans nouvelle colonne d’import :
   antérieur (jamais de `0,900` fabriqué pour un snapshot v3/v4).
 - Snapshots v4 : les libellés historiques du Lot H1 sont conservés à
   l’export (le bloc 3 varie selon `result_schema_version`).
+
+Depuis le Lot **2B-RC1-H3** (contrat v7, même schema v5) : une promotion avec
+grade avant = grade après (ou grade après vide résolu par fallback) est
+exportée normalement (montants, taux, trajectoire) sans exiger de changement
+de grade. L’export accepte les contrats 6 et 7 sur schema 5.
 
 ## Feuilles produites (ordre)
 

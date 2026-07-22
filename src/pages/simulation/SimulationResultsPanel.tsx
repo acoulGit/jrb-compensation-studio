@@ -912,6 +912,11 @@ function EmployeeDetailDrawer({
                   <dt>Ancien → nouveau grade</dt>
                   <dd>
                     {employee.previousGradeCode} → {employee.promotedGradeCode}
+                    {employee.previousGradeCode &&
+                    employee.promotedGradeCode &&
+                    employee.previousGradeCode === employee.promotedGradeCode
+                      ? " (grade conservé)"
+                      : ""}
                   </dd>
                 </div>
                 <div>

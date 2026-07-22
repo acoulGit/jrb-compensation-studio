@@ -20,7 +20,7 @@ import type { NineBoxFactor } from "../domain/compensationReference/models";
 
 describe("Lot 2B-RC1-H1 — versions", () => {
   it("expose le contrat v5/schema v4 historiques (Lot 2B-RC1-H2 : contrat courant = 6)", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(6);
+    expect(CALCULATION_CONTRACT_VERSION).toBe(7);
     expect(RESULT_SCHEMA_VERSION_V4).toBe(4);
     expect(RESULT_SCHEMA_VERSION_V3).toBe(3);
   });

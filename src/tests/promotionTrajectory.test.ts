@@ -82,18 +82,19 @@ describe("Lot 2A-H2C-1 — PromotionEvent", () => {
     ).toThrow(PromotionValidationError);
   });
 
-  it("rejette même grade et dates ISO invalides", () => {
-    expect(() =>
-      buildPromotionEvent({
-        promotionDate: "2026-04-15",
-        salaryBeforePromotionFcfa: 500_000n,
-        salaryAfterPromotionFcfa: 550_000n,
-        previousGradeCode: "G1",
-        promotedGradeCode: "G1",
-        previousJobFamilyCode: "F1",
-        promotedJobFamilyCode: "F1",
-      }),
-    ).toThrow(PromotionValidationError);
+  it("accepte même grade (promotion salariale) et rejette dates ISO invalides", () => {
+    const sameGrade = buildPromotionEvent({
+      promotionDate: "2026-04-15",
+      salaryBeforePromotionFcfa: 500_000n,
+      salaryAfterPromotionFcfa: 550_000n,
+      previousGradeCode: "G1",
+      promotedGradeCode: "G1",
+      previousJobFamilyCode: "F1",
+      promotedJobFamilyCode: "F1",
+    });
+    expect(sameGrade.previousGradeCode).toBe("G1");
+    expect(sameGrade.promotedGradeCode).toBe("G1");
+    expect(sameGrade.promotionAmountFcfa).toBe(50_000n);
     expect(() => parsePromotionDateIso("2026/04/15")).toThrow(
       PromotionValidationError,
     );

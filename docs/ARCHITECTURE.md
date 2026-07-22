@@ -152,6 +152,8 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
   `0009_nine_box_confirmation_factor.sql` (schema v5 / contrat v6 :
   coefficient provisoire `nine_box_confirmation_factor_milli` sur
   `campaign_reference_config` et sur le run de simulation ; Lot 2B-RC1-H2).
+  Promotion salariale sans changement de grade autorisée (contrat v7, schema v5
+  inchangé ; Lot 2B-RC1-H3).
 - Commande Rust `save_simulation_run` (transaction SQLx dédiée) : écrit le run
   (`result_schema_version = 3`), les salariés et **12 mois** par salarié en une
   seule transaction, sans recalcul.

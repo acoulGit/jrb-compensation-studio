@@ -137,17 +137,15 @@ export function buildPromotionEvent(input: {
     );
   }
   const previousGrade = input.previousGradeCode.trim().toUpperCase();
+  // Lot 2B-RC1-H3 : le grade après peut être identique au grade avant
+  // (promotion salariale sans changement de grade). Chaîne vide refusée ici ;
+  // le fallback import/mapping doit fournir un code avant d’appeler cette
+  // fonction.
   const promotedGrade = input.promotedGradeCode.trim().toUpperCase();
   if (!previousGrade || !promotedGrade) {
     throw new PromotionValidationError(
       "MISSING_PROMOTION_GRADE",
-      "L’ancien et le nouveau grade sont obligatoires pour une promotion.",
-    );
-  }
-  if (previousGrade === promotedGrade) {
-    throw new PromotionValidationError(
-      "PROMOTION_REQUIRES_GRADE_CHANGE",
-      "Une promotion exige un changement de grade.",
+      "L’ancien grade est obligatoire pour une promotion (le nouveau grade peut être omis à l’import et reprend alors l’ancien).",
     );
   }
   const previousFamily = input.previousJobFamilyCode.trim().toUpperCase();

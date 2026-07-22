@@ -1,5 +1,5 @@
 /**
- * Contrat de calcul de campagne (Lot 2A-H1 → Lot 2B-RC1-H2).
+ * Contrat de calcul de campagne (Lot 2A-H1 → Lot 2B-RC1-H3).
  *
  * v2 : budget cible = coût annuel 12 mois (rétroactivité implicite janvier).
  * v3 : période budgétaire configurable via `retroactivityStartMonth`.
@@ -10,6 +10,8 @@
  *      la sous-performance confirmée reste applicable.
  * v6 : même déclencheur d’import (`neutralizeNineBoxEffect`) applique le
  *      coefficient global « Performance à confirmer » (milli, défaut 900).
+ * v7 : promotion salariale sans changement de grade autorisée
+ *      (même grade ou grade après vide → conservation du grade d’origine).
  *
  * Les salaires importés, S0 et le nouveau salaire restent MENSUELS.
  * L’arrondi s’applique uniquement à l’augmentation mensuelle individuelle
@@ -17,7 +19,7 @@
  */
 
 /** Version du contrat de calcul (empreintes / compatibilité). */
-export const CALCULATION_CONTRACT_VERSION = 6 as const;
+export const CALCULATION_CONTRACT_VERSION = 7 as const;
 
 /**
  * Nombre de mois d’une année civile complète (indicateur plein effet).
@@ -43,12 +45,15 @@ export const EMPLOYER_CHARGES_INCLUDED = false;
  *      (12 mois) persistés fidèlement, sans recalcul.
  * v4 = contrat v5 (migration 0008) : neutralisation individuelle 9-Box
  *      (facteur = 1,000 ; traitement « Effet 9-Box neutralisé »).
- * v5 = contrat v6 (migration 0009) : coefficient provisoire global
- *      « Performance à confirmer » ; traitement dédié.
+ * v5 = contrats v6–v7 (migration 0009) : coefficient provisoire global
+ *      « Performance à confirmer » ; structure promotion déjà capable de
+ *      stocker un grade après identique au grade avant (contrat v7).
  *
  * Règle de compatibilité d'écriture : un résultat contrat ≥ 6 exige schema ≥ 5.
  * Les snapshots v1–v4 restent lisibles mais ne doivent pas être
  * réinterprétés avec le modèle v5 (pas de 0,900 inventé pour v4).
+ * Contrat 6 et contrat 7 partagent le schema 5 (pas de migration structurelle
+ * pour H3).
  */
 export const RESULT_SCHEMA_VERSION = 5 as const;
 

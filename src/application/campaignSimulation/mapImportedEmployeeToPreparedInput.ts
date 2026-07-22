@@ -318,18 +318,25 @@ export function mapImportedEmployeeToPreparedInput(
 
   let promotion: PreparedEmployeeCalculationInput["promotion"] = null;
   if (employee.promotionDate) {
-    const previousGrade = context.gradesById.get(
-      Number(employee.previousGradeId),
-    );
-    const promotedGrade = context.gradesById.get(
-      Number(employee.promotedGradeId),
-    );
-    const previousFamily = context.familiesById.get(
-      Number(employee.previousJobFamilyId),
-    );
-    const promotedFamily = context.familiesById.get(
-      Number(employee.promotedJobFamilyId),
-    );
+    const previousGrade =
+      context.gradesById.get(Number(employee.previousGradeId)) ??
+      // Fallback défensif : grade courant du salarié si ancien grade absent.
+      grade ??
+      null;
+    const promotedGrade =
+      context.gradesById.get(Number(employee.promotedGradeId)) ??
+      // Lot 2B-RC1-H3 : grade après vide → conserver le grade d’origine.
+      previousGrade ??
+      null;
+    const previousFamily =
+      context.familiesById.get(Number(employee.previousJobFamilyId)) ??
+      family ??
+      null;
+    const promotedFamily =
+      context.familiesById.get(Number(employee.promotedJobFamilyId)) ??
+      previousFamily ??
+      family ??
+      null;
     if (
       !previousGrade ||
       !promotedGrade ||

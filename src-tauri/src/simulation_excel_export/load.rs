@@ -18,15 +18,17 @@ pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V4: i64 = 4;
 pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V5: i64 = 5;
 /// Contrat v6 — coefficient provisoire 9-Box (Lot 2B-RC1-H2).
 pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V6: i64 = 6;
+/// Contrat v7 — promotion salariale sans changement de grade (Lot 2B-RC1-H3).
+pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V7: i64 = 7;
 pub const EXPECTED_SENIORITY_IMPACT_CONTRACT_VERSION: i64 = 1;
 pub const EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION: i64 = 1;
 
 /// Alias historique (schema courant = v5).
 #[allow(dead_code)]
 pub const EXPECTED_RESULT_SCHEMA_VERSION: i64 = EXPECTED_RESULT_SCHEMA_VERSION_V5;
-/// Alias historique (contrat courant = v6).
+/// Alias courant (Lot 2B-RC1-H3) : contrat v7 / schema v5.
 #[allow(dead_code)]
-pub const EXPECTED_CALCULATION_CONTRACT_VERSION: i64 = EXPECTED_CALCULATION_CONTRACT_VERSION_V6;
+pub const EXPECTED_CALCULATION_CONTRACT_VERSION: i64 = EXPECTED_CALCULATION_CONTRACT_VERSION_V7;
 
 const EXPECTED_MONTH_COUNT: usize = 12;
 
@@ -67,7 +69,8 @@ fn validate_versions(run: &RunRow) -> Result<(), ExportError> {
     let contract_ok = run.calculation_contract_version
         == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V4)
         || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V5)
-        || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V6);
+        || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V6)
+        || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V7);
     if !contract_ok {
         return Err(ExportError::ContractNotSupported);
     }
