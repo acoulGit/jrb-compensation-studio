@@ -17,6 +17,7 @@ import {
   PERFORMANCE_FACTOR_COUNT,
   POTENTIAL_FACTOR_COUNT,
 } from "../../domain/compensationReference/models";
+import { isValidNineBoxConfirmationFactorMilli } from "../../domain/compensationReference/validationHelpers";
 import type { CampaignSimulationReadinessIssue } from "./campaignSimulationModels";
 
 export interface ReferencesBuildResult {
@@ -359,6 +360,17 @@ export function buildPopulationCalculationReferences(
     }
   }
 
+  if (!isValidNineBoxConfirmationFactorMilli(set.config.nineBoxConfirmationFactorMilli)) {
+    pushUniqueIssue(issues, {
+      scope: "references",
+      code: "INVALID_NINE_BOX_CONFIRMATION_FACTOR",
+      field: "nineBoxConfirmationFactorMilli",
+      severity: "blocking",
+      message:
+        "Le coefficient provisoire 9-Box « Performance à confirmer » doit être compris entre 0,500 et 1,000.",
+    });
+  }
+
   const blocking = issues.filter((issue) => issue.severity === "blocking");
   const engineOk = blocking.length === 0;
   // Alignement strict : pas de références moteur si la page Référentiels
@@ -390,6 +402,7 @@ export function buildPopulationCalculationReferences(
         factorMilli: factor.factorMilli,
         boxCode: factor.boxCode,
       })),
+      nineBoxConfirmationFactorMilli: set.config.nineBoxConfirmationFactorMilli,
     },
     issues,
     editorialReady: completeness.ready,

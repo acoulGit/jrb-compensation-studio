@@ -270,6 +270,9 @@ export interface SaveSimulationRunDto {
   /** Compteur population schema v4 (Lot 2B-RC1-H1). */
   neutralizeNineBoxEffectEmployeeCount?: number | null;
 
+  /** Coefficient provisoire global « Performance à confirmer » (Lot 2B-RC1-H2). */
+  nineBoxConfirmationFactorMilli?: number | null;
+
   employees: SaveSimulationEmployeeDto[];
 }
 
@@ -323,6 +326,8 @@ export interface PersistedSimulationRunSummary {
   fullYearRunRateCombinedBaseMeasureCostFcfa?: bigint | null;
   /** Compteur schema v4 — null pour snapshots v3. */
   neutralizeNineBoxEffectEmployeeCount?: number | null;
+  /** Coefficient provisoire 9-Box schema v5 — null pour snapshots v4 et antérieurs. */
+  nineBoxConfirmationFactorMilli?: number | null;
 }
 
 export interface PersistedSimulationEmployeeResult {

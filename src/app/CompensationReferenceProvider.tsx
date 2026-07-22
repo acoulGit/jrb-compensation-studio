@@ -59,6 +59,9 @@ interface CompensationReferenceContextValue {
   updateNineBoxOrientation: (
     orientation: NineBoxOrientation,
   ) => Promise<CompensationReferenceSet>;
+  updateNineBoxConfirmationFactorMilli: (
+    factorMilli: number,
+  ) => Promise<CompensationReferenceSet>;
 }
 
 const CompensationReferenceContext =
@@ -303,6 +306,17 @@ export function CompensationReferenceProvider({
           services.compensationReference.updateNineBoxOrientation(
             selectedCampaignId,
             orientation,
+          ),
+        );
+      },
+      updateNineBoxConfirmationFactorMilli: (factorMilli) => {
+        if (selectedCampaignId === null) {
+          return Promise.reject(new Error("Aucune campagne sélectionnée."));
+        }
+        return wrapMutation(() =>
+          services.compensationReference.updateNineBoxConfirmationFactorMilli(
+            selectedCampaignId,
+            factorMilli,
           ),
         );
       },

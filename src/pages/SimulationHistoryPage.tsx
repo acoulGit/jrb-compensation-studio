@@ -386,6 +386,9 @@ export function SimulationHistoryPage() {
             mode="persisted-readonly"
             roundingMode={detailView.summary.roundingMode}
             roundingStepLabel={detailView.summary.roundingStepLabel}
+            nineBoxConfirmationFactorLabel={
+              detailView.summary.nineBoxConfirmationFactorLabel
+            }
             closeButtonRef={closeButtonRef}
             testIdPrefix="simulation-history"
             onClose={() => {

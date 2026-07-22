@@ -148,7 +148,10 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
   contrat v4 + table `compensation_simulation_employee_month_results`),
   `0008_nine_box_neutralization.sql` (schema v4 / contrat v5 : colonnes
   `neutralize_nine_box_effect`, `source_nine_box_code`,
-  `nine_box_treatment_kind` + compteur run).
+  `nine_box_treatment_kind` + compteur run),
+  `0009_nine_box_confirmation_factor.sql` (schema v5 / contrat v6 :
+  coefficient provisoire `nine_box_confirmation_factor_milli` sur
+  `campaign_reference_config` et sur le run de simulation ; Lot 2B-RC1-H2).
 - Commande Rust `save_simulation_run` (transaction SQLx dédiée) : écrit le run
   (`result_schema_version = 3`), les salariés et **12 mois** par salarié en une
   seule transaction, sans recalcul.

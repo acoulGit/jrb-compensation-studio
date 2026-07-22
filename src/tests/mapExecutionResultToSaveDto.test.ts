@@ -5,6 +5,7 @@ import {
   withPromotionAwareBudgetSummary,
   withPromotionAwareEmployeeDefaults,
 } from "./simulationResultViewFixtures";
+import { DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI } from "../domain/compensationReference/defaults";
 
 function sampleResult(
   overrides: Partial<CampaignSimulationExecutionResult> = {},
@@ -46,6 +47,7 @@ function sampleResult(
       zeroWeightEmployeeCount: 0,
       confirmedUnderperformerCount: 0,
       neutralizeNineBoxEffectEmployeeCount: 0,
+      nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
       annualTheoreticalAllocatedTotal: { numerator: 25000003n, denominator: 1n },
       annualActualOperationCostFcfa: 25000000n,
       annualTotalRoundingDelta: { numerator: -3n, denominator: 1n },

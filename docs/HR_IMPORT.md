@@ -95,6 +95,16 @@ Si la colonne est absente du mapping, des valeurs par défaut s’appliquent.
 | `previousJobFamilyCode` | Ancienne famille | famille courante si absente |
 | `promotedJobFamilyCode` | Nouvelle famille | famille courante si absente |
 
+`neutralizeNineBoxEffect` (Lot 2B-RC1-H1, colonne « Neutraliser effet 9-Box »)
+— **aucun changement de colonne ni de libellé d’import** au Lot 2B-RC1-H2 :
+le déclencheur reste identique, seule la sémantique du traitement de calcul
+évolue. Sous contrat de calcul v6, `neutralizeNineBoxEffect = Oui` applique
+désormais le **coefficient provisoire 9-Box** paramétrable de la campagne
+(`nineBoxConfirmationFactorMilli`, défaut 0,900 — page Références), au lieu
+du facteur neutre 1 utilisé par le Lot H1. Le code 9-Box source, s’il est
+présent, reste ignoré pour le calcul mais conservé pour affichage (« Performance
+à confirmer »).
+
 Groupe promotion (Lot 2A-H2C-1) : optionnel mais cohérent. Si `promotionDate`
 est renseignée, salaires avant/après et grades avant/après sont obligatoires.
 Les familles absentes réutilisent la famille courante.

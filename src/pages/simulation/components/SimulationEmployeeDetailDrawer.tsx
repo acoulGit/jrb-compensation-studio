@@ -18,6 +18,8 @@ interface SimulationEmployeeDetailDrawerProps {
   mode: SimulationViewMode;
   roundingMode: string;
   roundingStepLabel: string;
+  /** Libellé du coefficient provisoire 9-Box (« 0,900 » ou « Non disponible »). */
+  nineBoxConfirmationFactorLabel?: string | null;
   onClose: () => void;
   closeButtonRef: RefObject<HTMLButtonElement | null>;
   testIdPrefix?: string;
@@ -28,6 +30,7 @@ export function SimulationEmployeeDetailDrawer({
   mode,
   roundingMode,
   roundingStepLabel,
+  nineBoxConfirmationFactorLabel,
   onClose,
   closeButtonRef,
   testIdPrefix = "simulation",
@@ -155,7 +158,11 @@ export function SimulationEmployeeDetailDrawer({
               </dd>
             </div>
             <div>
-              <dt>Effet 9-Box neutralisé</dt>
+              <dt>
+                {employee.nineBoxTreatmentKind === "nine_box_effect_neutralized"
+                  ? "Effet 9-Box neutralisé"
+                  : "Performance à confirmer"}
+              </dt>
               <dd data-testid={`${testIdPrefix}-detail-nine-box-neutralized`}>
                 {employee.neutralizeNineBoxEffect === null ||
                 employee.neutralizeNineBoxEffect === undefined
@@ -186,6 +193,22 @@ export function SimulationEmployeeDetailDrawer({
                     : "—")}
               </dd>
             </div>
+            {employee.nineBoxTreatmentKind === "performance_pending_confirmation" ? (
+              <>
+                <div>
+                  <dt>Coefficient provisoire 9-Box</dt>
+                  <dd data-testid={`${testIdPrefix}-detail-nine-box-confirmation-factor`}>
+                    {nineBoxConfirmationFactorLabel ?? "Non disponible"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Coefficient appliqué</dt>
+                  <dd data-testid={`${testIdPrefix}-detail-nine-box-applied-factor`}>
+                    {employee.evaluationFactorLabel}
+                  </dd>
+                </div>
+              </>
+            ) : null}
             <div>
               <dt>Poids théorique</dt>
               <dd data-testid={`${testIdPrefix}-detail-theo-weight`}>

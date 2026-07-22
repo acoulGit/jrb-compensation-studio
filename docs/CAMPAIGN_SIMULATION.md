@@ -14,6 +14,7 @@ d’augmentation.
 | **2B-4A** | Persistance transactionnelle immuable (sans UI Historique) |
 | **2B-P1** | Consolidation snapshot schema v3 (contrat v4 + trajectoire mensuelle, migration `0007`) |
 | **2B-RC1-H1** | Neutralisation individuelle effet 9-Box (contrat v5 / schema v4, migration `0008`) |
+| **2B-RC1-H2** | Coefficient provisoire 9-Box « Performance à confirmer » (contrat v6 / schema v5, migration `0009`) |
 | **2B-4B** | Bouton Enregistrer + page Historique (lecture seule, compatible schema v3 / dégradation v1-v2) |
 | **2B-UX1** | Confort UI : sidebar repliable, pages résultats fluides, détail salarié quasi plein écran (sans changement métier) |
 

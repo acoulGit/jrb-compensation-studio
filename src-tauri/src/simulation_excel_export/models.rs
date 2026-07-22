@@ -73,6 +73,9 @@ pub struct RunRow {
 
     // ---- Champs schema v4 (nullable pour anciens snapshots) ----
     pub neutralize_nine_box_effect_employee_count: Option<i64>,
+
+    // ---- Champ schema v5 (Lot 2B-RC1-H2) — NULL pour snapshots < v5 ----
+    pub nine_box_confirmation_factor_milli: Option<i64>,
 }
 
 /// Ligne `compensation_simulation_employee_results` (champs majeurs + v3 RH).

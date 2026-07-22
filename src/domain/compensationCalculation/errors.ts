@@ -77,7 +77,9 @@ export type CompensationCalculationErrorCode =
   | "INVALID_MINIMUM_MONTHLY_AMOUNT"
   | "MISSING_MINIMUM_INCREASE_RATE"
   | "INVALID_MINIMUM_INCREASE_RATE"
-  | "MINIMUM_GUARANTEE_EXCEEDS_BUDGET";
+  | "MINIMUM_GUARANTEE_EXCEEDS_BUDGET"
+  // Lot 2B-RC1-H2 — coefficient provisoire 9-Box (performance à confirmer)
+  | "INVALID_NINE_BOX_CONFIRMATION_FACTOR";
 
 export class CompensationCalculationError extends Error {
   readonly code: CompensationCalculationErrorCode;

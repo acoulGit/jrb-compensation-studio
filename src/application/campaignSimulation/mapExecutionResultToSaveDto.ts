@@ -82,6 +82,12 @@ export function assertSimulationResultPersistable(input: {
   resultSchemaVersion?: number;
 }): void {
   const schemaVersion = input.resultSchemaVersion ?? RESULT_SCHEMA_VERSION;
+  if (input.calculationContractVersion >= 6 && schemaVersion < 5) {
+    throw new CompensationCalculationError(
+      "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION",
+      "Cette simulation utilise le coefficient provisoire 9-Box « Performance à confirmer » et ne peut pas être enregistrée dans l’ancien format d’historique (schema < 5). Finalisez la consolidation en schema v5 avant l’enregistrement.",
+    );
+  }
   if (input.calculationContractVersion >= 5 && schemaVersion < 4) {
     throw new CompensationCalculationError(
       "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION",
@@ -595,6 +601,7 @@ export function mapExecutionResultToSaveDto(input: {
     ),
     neutralizeNineBoxEffectEmployeeCount:
       population.neutralizeNineBoxEffectEmployeeCount,
+    nineBoxConfirmationFactorMilli: population.nineBoxConfirmationFactorMilli,
     employees: result.employees.map(mapEmployee),
   };
 }

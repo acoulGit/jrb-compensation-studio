@@ -13,6 +13,7 @@ import type {
 } from "../domain/compensationCalculation";
 import { NO_MINIMUM_INCREASE_POLICY } from "../domain/compensationCalculation";
 import {
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_PERFORMANCE_FACTORS,
   DEFAULT_POTENTIAL_FACTORS,
@@ -63,6 +64,7 @@ function sampleResult(
       zeroWeightEmployeeCount: 0,
       confirmedUnderperformerCount: 0,
       neutralizeNineBoxEffectEmployeeCount: 0,
+      nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
       annualTheoreticalAllocatedTotal: { numerator: 25000003n, denominator: 1n },
       annualActualOperationCostFcfa: 25000000n,
       annualTotalRoundingDelta: { numerator: -3n, denominator: 1n },
@@ -217,6 +219,7 @@ function baseReferences(): PopulationCalculationReferences {
       factorMilli: f.factorMilli,
       boxCode: f.boxCode,
     })),
+    nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   };
 }
 

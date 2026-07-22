@@ -118,6 +118,7 @@ fn nine_box_treatment_fr(kind: &str) -> String {
         "nine_box_code_applied" => "Code 9-Box appliqué".into(),
         "nine_box_effect_neutralized" => "Effet 9-Box neutralisé".into(),
         "missing_nine_box_data_treatment" => "Traitement des données 9-Box manquantes".into(),
+        "performance_pending_confirmation" => "Performance à confirmer".into(),
         other => other.into(),
     }
 }
@@ -606,10 +607,15 @@ fn write_dashboard(
                 .count() as i64,
         )
     });
+    let neutralized_label = if run.result_schema_version >= 5 {
+        "Salariés avec performance en cours de confirmation"
+    } else {
+        "Salariés avec effet 9-Box neutralisé"
+    };
     label_opt_int(
         sheet,
         row,
-        "Salariés avec effet 9-Box neutralisé",
+        neutralized_label,
         &formats.label,
         neutralized_count,
     )?;
@@ -912,66 +918,92 @@ fn write_dashboard(
 // Résultats RH
 // ---------------------------------------------------------------------------
 
-const RESULTATS_HEADERS: &[&str] = &[
-    // BLOC 1 — IDENTITÉ
-    "Matricule",
-    "Nom complet",
-    "Date d’embauche",
-    "Type de contrat",
-    "Statut",
-    // BLOC 2 — POSITIONNEMENT INITIAL
-    "Famille d’emploi",
-    "Grade",
-    "Salaire de base décembre N-1",
-    "Salaire de référence",
-    "Position salariale",
-    "Positionnement par rapport à S0 (%)",
-    // BLOC 3 — ÉLIGIBILITÉ
-    "Éligible au complément",
-    "Motif d’inéligibilité",
-    "Population minimum",
-    "Sous-performance confirmée",
+/// Bloc 3 (colonnes 9-Box) — libellés historiques (schema < 5).
+const RESULTATS_NINE_BOX_HEADERS_LEGACY: [&str; 4] = [
     "Effet 9-Box neutralisé",
     "Code 9-Box source",
     "Facteur 9-Box effectif",
     "Traitement 9-Box appliqué",
-    // BLOC 4 — PROMOTION
-    "Date de promotion",
-    "Grade après promotion",
-    "Salaire avant promotion",
-    "Salaire après promotion",
-    "Montant mensuel de promotion",
-    "Taux de promotion (%)",
-    "Promotion incluse",
-    "Coût des promotions sur la période",
-    // BLOC 5 — MINIMUM ET COMPLÉMENT
-    "Minimum garanti mensuel",
-    "Complément au-dessus du minimum",
-    "Complément mensuel total",
-    "Taux de complément (%)",
-    // BLOC 6 — RÉSULTAT FINAL
-    "Augmentation mensuelle totale",
-    "Taux total d’augmentation de base (%)",
-    "Salaire mensuel final",
-    "Coût compensatoire sur la période",
-    "Coût total sur la période",
-    // BLOC 7 — PAIEMENT
-    "Rappel total",
-    "Paiement direct total",
-    // BLOC 8 — ANCIENNETÉ
-    "Incidence ancienneté promotion",
-    "Incidence ancienneté complément",
-    "Incidence ancienneté totale sur la période",
-    // BLOC 9 — PLEIN EFFET
-    "Promotion plein effet 12 mois",
-    "Complément plein effet 12 mois",
-    "Mesure totale plein effet 12 mois",
-    "Ancienneté plein effet 12 mois",
-    // Techniques (fin de feuille)
-    "Facteur de position",
-    "Taux théorique (num)",
-    "Taux théorique (den)",
 ];
+
+/// Bloc 3 (colonnes 9-Box) — sémantique v5 (Lot 2B-RC1-H2 : coefficient
+/// provisoire « Performance à confirmer »).
+const RESULTATS_NINE_BOX_HEADERS_V5: [&str; 4] = [
+    "Performance à confirmer",
+    "Code 9-Box source",
+    "Coefficient 9-Box appliqué",
+    "Traitement",
+];
+
+/// En-têtes `Resultats_RH`. Le bloc 3 (9-Box) varie selon le schema du
+/// snapshot : les libellés historiques sont conservés pour schema < 5.
+fn resultats_headers(result_schema_version: i64) -> Vec<&'static str> {
+    let nine_box_headers = if result_schema_version >= 5 {
+        RESULTATS_NINE_BOX_HEADERS_V5
+    } else {
+        RESULTATS_NINE_BOX_HEADERS_LEGACY
+    };
+    let mut headers: Vec<&'static str> = vec![
+        // BLOC 1 — IDENTITÉ
+        "Matricule",
+        "Nom complet",
+        "Date d’embauche",
+        "Type de contrat",
+        "Statut",
+        // BLOC 2 — POSITIONNEMENT INITIAL
+        "Famille d’emploi",
+        "Grade",
+        "Salaire de base décembre N-1",
+        "Salaire de référence",
+        "Position salariale",
+        "Positionnement par rapport à S0 (%)",
+        // BLOC 3 — ÉLIGIBILITÉ
+        "Éligible au complément",
+        "Motif d’inéligibilité",
+        "Population minimum",
+        "Sous-performance confirmée",
+    ];
+    headers.extend_from_slice(&nine_box_headers);
+    headers.extend_from_slice(&[
+        // BLOC 4 — PROMOTION
+        "Date de promotion",
+        "Grade après promotion",
+        "Salaire avant promotion",
+        "Salaire après promotion",
+        "Montant mensuel de promotion",
+        "Taux de promotion (%)",
+        "Promotion incluse",
+        "Coût des promotions sur la période",
+        // BLOC 5 — MINIMUM ET COMPLÉMENT
+        "Minimum garanti mensuel",
+        "Complément au-dessus du minimum",
+        "Complément mensuel total",
+        "Taux de complément (%)",
+        // BLOC 6 — RÉSULTAT FINAL
+        "Augmentation mensuelle totale",
+        "Taux total d’augmentation de base (%)",
+        "Salaire mensuel final",
+        "Coût compensatoire sur la période",
+        "Coût total sur la période",
+        // BLOC 7 — PAIEMENT
+        "Rappel total",
+        "Paiement direct total",
+        // BLOC 8 — ANCIENNETÉ
+        "Incidence ancienneté promotion",
+        "Incidence ancienneté complément",
+        "Incidence ancienneté totale sur la période",
+        // BLOC 9 — PLEIN EFFET
+        "Promotion plein effet 12 mois",
+        "Complément plein effet 12 mois",
+        "Mesure totale plein effet 12 mois",
+        "Ancienneté plein effet 12 mois",
+        // Techniques (fin de feuille)
+        "Facteur de position",
+        "Taux théorique (num)",
+        "Taux théorique (den)",
+    ]);
+    headers
+}
 
 fn write_resultats(
     sheet: &mut Worksheet,
@@ -981,8 +1013,9 @@ fn write_resultats(
     sheet.write_string_with_format(0, 0, "Résultats RH par salarié", &formats.title)?;
     sheet.write_string_with_format(1, 0, CONFIDENTIAL, &formats.confidential)?;
 
+    let headers = resultats_headers(snapshot.run.result_schema_version);
     let header_row = 3u32;
-    for (col, header) in RESULTATS_HEADERS.iter().enumerate() {
+    for (col, header) in headers.iter().enumerate() {
         sheet.write_string_with_format(header_row, col as u16, *header, &formats.header)?;
     }
     sheet.set_row_height(header_row, 36)?;
@@ -993,14 +1026,14 @@ fn write_resultats(
     }
 
     let last_row = header_row + snapshot.employees.len() as u32;
-    let last_col = (RESULTATS_HEADERS.len() - 1) as u16;
+    let last_col = (headers.len() - 1) as u16;
     if !snapshot.employees.is_empty() {
         sheet.autofilter(header_row, 0, last_row, last_col)?;
     }
     sheet.set_freeze_panes(header_row + 1, 2)?;
 
     // Largeurs plafonnées
-    let widths: Vec<(u16, f64)> = (0..RESULTATS_HEADERS.len() as u16)
+    let widths: Vec<(u16, f64)> = (0..headers.len() as u16)
         .map(|c| {
             let w = match c {
                 0 => 14.0,
@@ -1686,10 +1719,15 @@ fn write_synthese(
             None
         }
     });
+    let neutralized_label_synth = if run.result_schema_version >= 5 {
+        "Salariés avec performance en cours de confirmation"
+    } else {
+        "Salariés avec effet 9-Box neutralisé"
+    };
     label_opt_int(
         sheet,
         row,
-        "Salariés avec effet 9-Box neutralisé",
+        neutralized_label_synth,
         &formats.label,
         neutralized_count,
     )?;
@@ -1926,6 +1964,17 @@ fn write_parametres(
         "Version du contrat de minimum garanti",
         &formats.label,
         run.minimum_increase_contract_version,
+    )?;
+    row += 1;
+    let confirmation_factor_text = run
+        .nine_box_confirmation_factor_milli
+        .map(|milli| format!("{:.3}", milli as f64 / 1000.0).replace('.', ","));
+    label_opt_text_na(
+        sheet,
+        row,
+        "Coefficient provisoire 9-Box (« Performance à confirmer »)",
+        &formats.label,
+        confirmation_factor_text.as_deref(),
     )?;
     row += 1;
     label_opt_int(

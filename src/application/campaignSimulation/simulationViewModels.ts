@@ -48,6 +48,13 @@ export interface SimulationSummaryViewModel {
   confirmedUnderperformerCount: number;
   /** Schema v4 — null/undefined sur anciens snapshots. */
   neutralizeNineBoxEffectEmployeeCount?: number | null;
+  /**
+   * Coefficient provisoire global « Performance à confirmer » (Lot 2B-RC1-H2).
+   * `null` pour un snapshot v4 et antérieur (jamais de 0,900 reconstruit).
+   */
+  nineBoxConfirmationFactorMilli?: number | null;
+  /** Libellé conforme (« 0,900 » ou « Non disponible »). */
+  nineBoxConfirmationFactorLabel?: string | null;
   budgetTargetLabel: string;
   theoreticalAllocatedTotalLabel: string;
   actualOperationAmountLabel: string;

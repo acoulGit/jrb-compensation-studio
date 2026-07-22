@@ -290,7 +290,7 @@ export function mapImportedEmployeeToPreparedInput(
           field: "nineBoxCode",
           severity: "warning",
           message:
-            "Le code 9-Box est ignoré pour le calcul : l’effet 9-Box est neutralisé pour ce salarié.",
+            "Le code 9-Box source a été conservé mais n’a pas été appliqué, car la performance est indiquée comme étant en cours de confirmation.",
           details: { nineBoxCode: employee.nineBoxCode },
         });
       }
@@ -307,7 +307,7 @@ export function mapImportedEmployeeToPreparedInput(
       field: "nineBoxCode",
       severity: "warning",
       message:
-        "Le code 9-Box est ignoré pour le calcul : l’effet 9-Box est neutralisé pour ce salarié.",
+        "Le code 9-Box source a été conservé mais n’a pas été appliqué, car la performance est indiquée comme étant en cours de confirmation.",
       details: { nineBoxCode: employee.nineBoxCode },
     });
   }

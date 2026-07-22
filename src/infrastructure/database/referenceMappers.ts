@@ -40,6 +40,7 @@ export function mapReferenceConfig(
     campaignId: row.campaign_id,
     nineBoxMode: row.nine_box_mode,
     nineBoxOrientation: row.nine_box_orientation,
+    nineBoxConfirmationFactorMilli: Number(row.nine_box_confirmation_factor_milli),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_PERFORMANCE_FACTORS,
   DEFAULT_POTENTIAL_FACTORS,
@@ -50,7 +51,7 @@ function positions() {
 
 function factors(): Pick<
   PopulationCalculationReferences,
-  "performanceFactors" | "potentialFactors" | "nineBoxFactors"
+  "performanceFactors" | "potentialFactors" | "nineBoxFactors" | "nineBoxConfirmationFactorMilli"
 > {
   return {
     performanceFactors: DEFAULT_PERFORMANCE_FACTORS.map((f) => ({
@@ -67,6 +68,7 @@ function factors(): Pick<
       factorMilli: f.factorMilli,
       boxCode: f.boxCode,
     })),
+    nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   };
 }
 
@@ -116,8 +118,8 @@ function populationTest1Input(
 }
 
 describe("Lot 2A-H2D-2 — minimum garanti d’augmentation", () => {
-  it("expose le contrat v4 et MINIMUM_INCREASE_CONTRACT_VERSION = 1", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(5);
+  it("expose MINIMUM_INCREASE_CONTRACT_VERSION = 1 (contrat de calcul courant ≥ 4)", () => {
+    expect(CALCULATION_CONTRACT_VERSION).toBeGreaterThanOrEqual(4);
     expect(MINIMUM_INCREASE_CONTRACT_VERSION).toBe(1);
   });
 

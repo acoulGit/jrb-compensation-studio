@@ -380,6 +380,7 @@ Le préchargement est déclaré dans `tauri.conf.json` (`plugins.sql.preload`).
 | 6 | `0006_employee_promotions.sql` | colonnes promotion optionnelles sur `hr_import_employees` |
 | 7 | `0007_simulation_contract_v4_results.sql` | consolidation snapshot schema v3 (contrat v4 + trajectoire mensuelle) |
 | 8 | `0008_nine_box_neutralization.sql` | import + snapshot schema v4 (contrat v5) — neutralisation 9-Box |
+| 9 | `0009_nine_box_confirmation_factor.sql` | référentiel + snapshot schema v5 (contrat v6) — coefficient provisoire 9-Box |
 
 ### Neutralisation 9-Box (migration `0008`, schema v4 / contrat v5)
 
@@ -392,7 +393,28 @@ Additive, non destructive. Colonnes NULL sur les anciens snapshots v3
   `neutralize_nine_box_effect`, `source_nine_box_code`,
   `nine_box_treatment_kind`
 
-Évolution : ajouter un fichier `0009_....sql`, une constante associée et une
+### Coefficient provisoire 9-Box (migration `0009`, schema v5 / contrat v6)
+
+Additive, non destructive. Ne modifie ni la colonne d’import
+`neutralize_nine_box_effect`, ni son libellé : le déclencheur reste
+inchangé, seul le traitement du calcul évolue (le facteur neutre 1 du
+Lot H1 est remplacé par un coefficient provisoire paramétrable).
+
+- `campaign_reference_config.nine_box_confirmation_factor_milli` INTEGER
+  NOT NULL DEFAULT 900, CHECK 500–1000 (référentiel par campagne, éditable
+  depuis la page Références).
+- `compensation_simulation_runs.nine_box_confirmation_factor_milli` INTEGER
+  NULL, CHECK 500–1000 ou NULL (coefficient effectivement utilisé au
+  calcul ; NULL pour les runs antérieurs au schema v5 — jamais de 900
+  reconstruit à la lecture).
+- `compensation_simulation_employee_results.nine_box_treatment_kind` : jeu
+  de valeurs étendu avec `performance_pending_confirmation` (recréation de
+  colonne SQLite via `ADD COLUMN` + `UPDATE` + `DROP COLUMN` + `RENAME COLUMN`,
+  car SQLite ne permet pas d’altérer une contrainte `CHECK` existante). La
+  valeur historique `nine_box_effect_neutralized` reste acceptée pour les
+  snapshots v4.
+
+Évolution : ajouter un fichier `0010_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.
 
 ## Export Excel RH et mot de passe (Lot 2B-E1)

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_PERFORMANCE_FACTORS,
   DEFAULT_POTENTIAL_FACTORS,
@@ -43,7 +44,7 @@ function defaultPositions() {
 
 function defaultFactors(): Pick<
   PopulationCalculationReferences,
-  "performanceFactors" | "potentialFactors" | "nineBoxFactors"
+  "performanceFactors" | "potentialFactors" | "nineBoxFactors" | "nineBoxConfirmationFactorMilli"
 > {
   return {
     performanceFactors: DEFAULT_PERFORMANCE_FACTORS.map((f) => ({
@@ -60,6 +61,7 @@ function defaultFactors(): Pick<
       factorMilli: f.factorMilli,
       boxCode: f.boxCode,
     })),
+    nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   };
 }
 

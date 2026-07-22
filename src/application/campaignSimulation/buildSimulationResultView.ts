@@ -689,6 +689,7 @@ export function buildSimulationResultView(input: {
     confirmedUnderperformerCount: summary.confirmedUnderperformerCount,
     neutralizeNineBoxEffectEmployeeCount:
       summary.neutralizeNineBoxEffectEmployeeCount,
+    nineBoxConfirmationFactorMilli: summary.nineBoxConfirmationFactorMilli,
     annualTheoreticalAllocatedTotal: summary.annualTheoreticalAllocatedTotal,
     annualActualOperationCostFcfa: summary.annualActualOperationCostFcfa,
     annualTotalRoundingDelta: summary.annualTotalRoundingDelta,

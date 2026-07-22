@@ -124,6 +124,7 @@ export function buildSimulationSourceFingerprint(
         `${factor.performanceLevel}/${factor.potentialLevel}:${factor.factorMilli}:${factor.boxCode ?? ""}`,
     )
     .sort();
+  const nineBoxConfirmationFactorMilli = refs?.nineBoxConfirmationFactorMilli ?? "";
 
   const configFingerprint = buildConfigurationFingerprint({
     campaignId: input.campaignId,
@@ -172,6 +173,7 @@ export function buildSimulationSourceFingerprint(
     perf.join(","),
     pot.join(","),
     nine.join(","),
+    String(nineBoxConfirmationFactorMilli),
     configFingerprint,
   ].join("\n");
 

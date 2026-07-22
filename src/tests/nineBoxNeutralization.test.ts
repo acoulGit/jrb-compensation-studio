@@ -5,12 +5,11 @@
 import { describe, expect, it } from "vitest";
 import {
   CALCULATION_CONTRACT_VERSION,
-  RESULT_SCHEMA_VERSION,
   RESULT_SCHEMA_VERSION_V3,
+  RESULT_SCHEMA_VERSION_V4,
   calculateIndividualMatrixWeight,
   resolveEvaluationFactor,
   resolveNineBoxTreatmentKind,
-  NEUTRAL_EVALUATION_FACTOR_SCALED,
 } from "../domain/compensationCalculation";
 import { readBooleanFlag } from "../infrastructure/imports/cellReaders";
 import { OPTIONAL_IMPORT_COLUMNS } from "../domain/hrImport/models";
@@ -20,9 +19,9 @@ import type { EmployeeSnapshot } from "../domain/hrImport/models";
 import type { NineBoxFactor } from "../domain/compensationReference/models";
 
 describe("Lot 2B-RC1-H1 — versions", () => {
-  it("bumpe contrat 5 et schema 4", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(5);
-    expect(RESULT_SCHEMA_VERSION).toBe(4);
+  it("expose le contrat v5/schema v4 historiques (Lot 2B-RC1-H2 : contrat courant = 6)", () => {
+    expect(CALCULATION_CONTRACT_VERSION).toBe(6);
+    expect(RESULT_SCHEMA_VERSION_V4).toBe(4);
     expect(RESULT_SCHEMA_VERSION_V3).toBe(3);
   });
 
@@ -67,7 +66,7 @@ describe("Lot 2B-RC1-H1 — moteur", () => {
     },
   ];
 
-  it("neutralisation Oui → facteur d’évaluation = 1 même avec niveaux", () => {
+  it("neutralisation Oui → facteur d’évaluation = coefficient provisoire (contrat 6)", () => {
     const result = resolveEvaluationFactor({
       mode: "full_nine_box",
       performanceLevel: "medium",
@@ -76,8 +75,9 @@ describe("Lot 2B-RC1-H1 — moteur", () => {
       potentialFactors: [],
       nineBoxFactors,
       neutralizeNineBoxEffect: true,
+      nineBoxConfirmationFactorMilli: 900,
     });
-    expect(result.exactFactorNumerator).toBe(NEUTRAL_EVALUATION_FACTOR_SCALED);
+    expect(result.exactFactorNumerator).toBe(900_000);
   });
 
   it("neutralisation Oui + sous-performance confirmée → poids effectif 0", () => {
@@ -111,11 +111,10 @@ describe("Lot 2B-RC1-H1 — moteur", () => {
       potentialFactors: [],
       nineBoxFactors,
       neutralizeNineBoxEffect: true,
+      nineBoxConfirmationFactorMilli: 900,
       confirmedUnderperformer: true,
     });
-    expect(result.evaluationFactor.exactFactorNumerator).toBe(
-      NEUTRAL_EVALUATION_FACTOR_SCALED,
-    );
+    expect(result.evaluationFactor.exactFactorNumerator).toBe(900_000);
     expect(result.exactWeightNumerator).toBe(0n);
     expect(result.blockingReason).toBe("CONFIRMED_UNDERPERFORMER");
   });
@@ -137,11 +136,18 @@ describe("Lot 2B-RC1-H1 — moteur", () => {
     })).toBe("nine_box_code_applied");
   });
 
-  it("traitement neutralisé vs manquant", () => {
+  it("traitement confirmation (contrat 6) vs neutralisé (sémantique v4) vs manquant", () => {
     expect(
       resolveNineBoxTreatmentKind({
         neutralizeNineBoxEffect: true,
         sourceNineBoxCode: null,
+      }),
+    ).toBe("performance_pending_confirmation");
+    expect(
+      resolveNineBoxTreatmentKind({
+        neutralizeNineBoxEffect: true,
+        sourceNineBoxCode: null,
+        usePendingConfirmationSemantics: false,
       }),
     ).toBe("nine_box_effect_neutralized");
     expect(

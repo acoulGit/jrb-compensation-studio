@@ -46,5 +46,9 @@ export interface CompensationReferenceRepository {
     campaignId: number,
     orientation: NineBoxOrientation,
   ): Promise<CompensationReferenceSet>;
+  updateNineBoxConfirmationFactorMilli(
+    campaignId: number,
+    factorMilli: number,
+  ): Promise<CompensationReferenceSet>;
   getCompleteness(campaignId: number): Promise<ReferenceCompleteness | null>;
 }

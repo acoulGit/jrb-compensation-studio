@@ -1221,3 +1221,41 @@ ignorait la propriété camelCase : SQLite appliquait alors le défaut `0`
   et écrit explicitement dans l’`INSERT`.
 - Pas de migration supplémentaire (colonne déjà fournie par `0008`).
 - Tests : conservation 3 Oui / 5 Non (TS + Rust).
+
+## 2026-07-22 — Lot 2B-RC1-H2 : coefficient provisoire 9-Box (« Performance à confirmer »)
+
+### Objectif
+
+Remplacer la neutralisation « facteur 9-Box = 1 » du Lot H1 par un
+coefficient provisoire paramétrable (défaut **0,900**), appliqué lorsque
+`neutralizeNineBoxEffect = Oui` (performance en cours de confirmation),
+sans introduire de nouvelle colonne d’import ni renommer les champs
+existants.
+
+### Choix
+
+- Nouveau paramètre de référence par campagne :
+  `CompensationReferenceConfig.nineBoxConfirmationFactorMilli` (millièmes,
+  bornes 500–1000, défaut 900), éditable depuis la page Références.
+- `resolveEvaluationFactor` applique ce coefficient (au lieu du facteur
+  neutre 1) quand `neutralizeNineBoxEffect` est actif ; la sous-performance
+  confirmée reste prioritaire (poids effectif 0), inchangée depuis H1.
+- Nouveau statut de traitement `performance_pending_confirmation`
+  (remplace `nine_box_effect_neutralized` par défaut ; l’ancienne valeur
+  reste disponible pour la relecture de snapshots historiques schema v4).
+- Versionnement explicite : `CALCULATION_CONTRACT_VERSION` 5→**6**,
+  `RESULT_SCHEMA_VERSION` 4→**5** ; migration additive `0009`
+  (`campaign_reference_config.nine_box_confirmation_factor_milli`,
+  `compensation_simulation_runs.nine_box_confirmation_factor_milli`).
+- Aucune colonne d’import supplémentaire : la colonne facultative
+  « Neutraliser effet 9-Box » (Lot H1) reste le seul déclencheur ; seul le
+  libellé affiché à l’écran évolue (« Performance à confirmer »).
+- Compatibilité descendante : snapshots schema v3/v4 toujours consultables
+  (coefficient provisoire = Non disponible, jamais de valeur 900 fabriquée) ;
+  export Excel conserve les libellés historiques pour schema < 5.
+
+### Validations
+
+- `pnpm test` (incl. `src/tests/nineBoxConfirmationFactor.test.ts`) /
+  `pnpm build` / `cargo fmt --check` / `cargo check` / `cargo test`
+- Aucun commit ; branche `feature/lot-2b-rc1-h2-nine-box-confirmation`.

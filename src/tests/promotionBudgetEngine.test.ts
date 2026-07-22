@@ -6,6 +6,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import {
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_PERFORMANCE_FACTORS,
   DEFAULT_POTENTIAL_FACTORS,
@@ -42,7 +43,7 @@ function positions() {
 
 function factors(): Pick<
   PopulationCalculationReferences,
-  "performanceFactors" | "potentialFactors" | "nineBoxFactors"
+  "performanceFactors" | "potentialFactors" | "nineBoxFactors" | "nineBoxConfirmationFactorMilli"
 > {
   return {
     performanceFactors: DEFAULT_PERFORMANCE_FACTORS.map((f) => ({
@@ -59,6 +60,7 @@ function factors(): Pick<
       factorMilli: f.factorMilli,
       boxCode: f.boxCode,
     })),
+    nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   };
 }
 

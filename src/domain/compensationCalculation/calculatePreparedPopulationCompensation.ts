@@ -310,6 +310,8 @@ export function calculatePreparedPopulationCompensation(
         performanceLevel: raw.performanceLevel,
         potentialLevel: raw.potentialLevel,
         neutralizeNineBoxEffect: raw.neutralizeNineBoxEffect === true,
+        nineBoxConfirmationFactorMilli:
+          input.references.nineBoxConfirmationFactorMilli,
         campaignYear: input.campaignYear,
         technicalApplicationMonth: input.technicalApplicationMonth,
         retroactivityStartMonth,
@@ -752,6 +754,7 @@ export function calculatePreparedPopulationCompensation(
       nineBoxTreatmentKind: resolveNineBoxTreatmentKind({
         neutralizeNineBoxEffect: raw.neutralizeNineBoxEffect === true,
         sourceNineBoxCode: raw.sourceNineBoxCode,
+        usePendingConfirmationSemantics: true,
       }),
       theoreticalMatrixWeight: prepared.theoreticalMatrixWeight,
       effectiveMatrixWeight: prepared.effectiveMatrixWeight,
@@ -1048,6 +1051,8 @@ export function calculatePreparedPopulationCompensation(
     zeroWeightEmployeeCount,
     confirmedUnderperformerCount,
     neutralizeNineBoxEffectEmployeeCount,
+    nineBoxConfirmationFactorMilli:
+      input.references.nineBoxConfirmationFactorMilli,
     annualBudgetTarget,
     totalAllocationWeight,
     calibrationCoefficient,

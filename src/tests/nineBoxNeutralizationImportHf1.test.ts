@@ -14,10 +14,7 @@ import { CompensationReferenceService } from "../services/compensationReferenceS
 import { HrImportService } from "../services/hrImportService";
 import { OrganizationService } from "../services/organizationService";
 import { mapImportedEmployeeToPreparedInput } from "../application/campaignSimulation/mapImportedEmployeeToPreparedInput";
-import {
-  NEUTRAL_EVALUATION_FACTOR_SCALED,
-  resolveEvaluationFactor,
-} from "../domain/compensationCalculation";
+import { resolveEvaluationFactor } from "../domain/compensationCalculation";
 import type { EmployeeSnapshot } from "../domain/hrImport/models";
 import { readBooleanFlag } from "../infrastructure/imports/cellReaders";
 
@@ -400,10 +397,9 @@ describe("Lot 2B-RC1-H1-HF1 — conservation après validation import", () => {
           },
         ],
         neutralizeNineBoxEffect: mappedNeutralized.prepared.neutralizeNineBoxEffect,
+        nineBoxConfirmationFactorMilli: 900,
       });
-      expect(factorNeutralized.exactFactorNumerator).toBe(
-        NEUTRAL_EVALUATION_FACTOR_SCALED,
-      );
+      expect(factorNeutralized.exactFactorNumerator).toBe(900_000);
 
       const factorHistorical = resolveEvaluationFactor({
         mode: "full_nine_box",

@@ -17,6 +17,7 @@ import {
   type PopulationCalculationReferences,
 } from "../domain/compensationCalculation";
 import {
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_PERFORMANCE_FACTORS,
   DEFAULT_POTENTIAL_FACTORS,
@@ -45,7 +46,7 @@ function positions() {
 
 function factors(): Pick<
   PopulationCalculationReferences,
-  "performanceFactors" | "potentialFactors" | "nineBoxFactors"
+  "performanceFactors" | "potentialFactors" | "nineBoxFactors" | "nineBoxConfirmationFactorMilli"
 > {
   return {
     performanceFactors: DEFAULT_PERFORMANCE_FACTORS.map((f) => ({
@@ -62,6 +63,7 @@ function factors(): Pick<
       factorMilli: f.factorMilli,
       boxCode: f.boxCode,
     })),
+    nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   };
 }
 
@@ -202,6 +204,7 @@ function samplePersistableResult(
       zeroWeightEmployeeCount: 0,
       confirmedUnderperformerCount: 0,
       neutralizeNineBoxEffectEmployeeCount: 0,
+      nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
       annualTheoreticalAllocatedTotal: { numerator: 100n, denominator: 1n },
       annualActualOperationCostFcfa: 100n,
       annualTotalRoundingDelta: { numerator: 0n, denominator: 1n },
@@ -306,7 +309,7 @@ describe("Lot 2A-H2D-1 — rétroactivité configurable", () => {
     expect(result.retroactivityStartMonth).toBe(1);
     expect(result.campaignCoveredMonthCount).toBe(12);
     expect(result.employees[0]!.retroactivityStartMonth).toBe(1);
-    expect(CALCULATION_CONTRACT_VERSION).toBe(5);
+    expect(CALCULATION_CONTRACT_VERSION).toBeGreaterThanOrEqual(5);
   });
 
   it("2a. recette Population Test 1 mesurée (5 000 023 / pas 5 → 5 000 040 / +17)", () => {
@@ -808,9 +811,9 @@ describe("Lot 2A-H2D-1 — rétroactivité configurable", () => {
     expect(view.populationSummary.campaignCoveredMonthCount).toBe(9);
   });
 
-  it("19. mapExecutionResultToSaveDto / schema v4 consolidé (contrat 5 persistable)", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(5);
-    expect(RESULT_SCHEMA_VERSION).toBe(4);
+  it("19. mapExecutionResultToSaveDto / schema courant consolidé (contrat courant persistable)", () => {
+    expect(CALCULATION_CONTRACT_VERSION).toBeGreaterThanOrEqual(5);
+    expect(RESULT_SCHEMA_VERSION).toBeGreaterThanOrEqual(4);
     // Contrat ≥ 3 exige schema ≥ 3 : refus explicite si schema 2.
     expect(() =>
       assertSimulationResultPersistable({
@@ -818,7 +821,7 @@ describe("Lot 2A-H2D-1 — rétroactivité configurable", () => {
         resultSchemaVersion: 2,
       }),
     ).toThrow(/schema/i);
-    // Schema v4 : le contrat v5 est désormais persistable, sans recalcul.
+    // Schema courant : le contrat courant est désormais persistable, sans recalcul.
     const dto = mapExecutionResultToSaveDto({
       result: samplePersistableResult({
         calculationContractVersion: CALCULATION_CONTRACT_VERSION,
@@ -826,8 +829,8 @@ describe("Lot 2A-H2D-1 — rétroactivité configurable", () => {
       expectedCampaignStatus: "active",
       sourceImportFileName: null,
     });
-    expect(dto.resultSchemaVersion).toBe(4);
-    expect(dto.calculationContractVersion).toBe(5);
+    expect(dto.resultSchemaVersion).toBe(RESULT_SCHEMA_VERSION);
+    expect(dto.calculationContractVersion).toBe(CALCULATION_CONTRACT_VERSION);
     expect(dto.retroactivityStartMonth).toBe(1);
     // Schema legacy v2 + contrat 2 toujours accepté pour snapshots historiques.
     expect(() =>

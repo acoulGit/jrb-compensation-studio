@@ -195,6 +195,8 @@ export interface SimulationPopulationSummaryView {
   confirmedUnderperformerCount: number;
   /** Nombre de salariés avec effet 9-Box neutralisé (Lot 2B-RC1-H1). */
   neutralizeNineBoxEffectEmployeeCount: number;
+  /** Coefficient provisoire global « Performance à confirmer » (millièmes, Lot 2B-RC1-H2). */
+  nineBoxConfirmationFactorMilli: number;
   annualTheoreticalAllocatedTotal: ExactAmount;
   annualActualOperationCostFcfa: bigint;
   annualTotalRoundingDelta: ExactAmount;

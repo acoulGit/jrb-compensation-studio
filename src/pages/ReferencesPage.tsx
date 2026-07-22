@@ -76,6 +76,7 @@ export function ReferencesPage() {
     updateNineBoxFactors,
     updateNineBoxMode,
     updateNineBoxOrientation,
+    updateNineBoxConfirmationFactorMilli,
   } = useCompensationReference();
 
   const definition = pageDefinitions.references;
@@ -100,6 +101,8 @@ export function ReferencesPage() {
   const [modeDraft, setModeDraft] = useState<NineBoxMode>("none");
   const [orientationDraft, setOrientationDraft] =
     useState<NineBoxOrientation>("performance_rows_potential_columns");
+  const [confirmationFactorDraft, setConfirmationFactorDraft] =
+    useState<string>("");
 
   useEffect(() => {
     if (!referenceSet) return;
@@ -145,6 +148,9 @@ export function ReferencesPage() {
     setNineBoxDraft(boxes);
     setModeDraft(referenceSet.config.nineBoxMode);
     setOrientationDraft(referenceSet.config.nineBoxOrientation);
+    setConfirmationFactorDraft(
+      formatFactorDisplay(referenceSet.config.nineBoxConfirmationFactorMilli),
+    );
   }, [referenceSet]);
 
   const nineBoxAxes = useMemo(
@@ -262,6 +268,9 @@ export function ReferencesPage() {
       try {
         await updateNineBoxMode(modeDraft);
         await updateNineBoxOrientation(orientationDraft);
+        await updateNineBoxConfirmationFactorMilli(
+          parseFactorDisplayInput(confirmationFactorDraft),
+        );
         await updatePerformanceFactors(
           (["low", "medium", "high"] as const).map((level) => ({
             level,
@@ -740,6 +749,27 @@ export function ReferencesPage() {
                 <p className="references-help">
                   L’orientation change uniquement la présentation. Le facteur
                   d’un couple Performance / Potentiel reste identique.
+                </p>
+
+                <label className="field">
+                  <span>Coefficient provisoire 9-Box (« Performance à confirmer »)</span>
+                  <input
+                    type="text"
+                    data-testid="nine-box-confirmation-factor-input"
+                    value={confirmationFactorDraft}
+                    disabled={isReadOnly || busy}
+                    onChange={(event) =>
+                      setConfirmationFactorDraft(event.target.value)
+                    }
+                  />
+                </label>
+                <p className="references-help">
+                  Coefficient global appliqué, indépendamment du code 9-Box
+                  source, lorsqu’un salarié est importé avec « Neutraliser
+                  effet 9-Box » activé : sa performance est en cours de
+                  confirmation et son coefficient d’évaluation devient ce
+                  taux provisoire (ex. 0,900) plutôt que le facteur 9-Box
+                  habituel. Plage autorisée : 0,500 à 1,000.
                 </p>
 
                 <FactorGroup

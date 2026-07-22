@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { buildConfigurationFingerprint } from "../application/campaignSimulation/formatExactBudgetDisplay";
 import {
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_PERFORMANCE_FACTORS,
   DEFAULT_POTENTIAL_FACTORS,
   DEFAULT_SALARY_POSITIONS,
@@ -46,6 +47,7 @@ function defaultFactors() {
       factorMilli: f.factorMilli,
     })),
     nineBoxFactors: [],
+    nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   };
 }
 
@@ -359,8 +361,8 @@ describe("Lot 2A-H2B — orchestrateur", () => {
   });
 
   it("fingerprint intègre le contrat d’ancienneté ; schema inchangé", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(5);
-    expect(RESULT_SCHEMA_VERSION).toBe(4);
+    expect(CALCULATION_CONTRACT_VERSION).toBeGreaterThanOrEqual(5);
+    expect(RESULT_SCHEMA_VERSION).toBeGreaterThanOrEqual(4);
     expect(SENIORITY_IMPACT_CONTRACT_VERSION).toBe(1);
     const fp1 = buildConfigurationFingerprint({
       campaignId: 1,

@@ -45,6 +45,9 @@ export interface DefaultNineBoxSeed {
 
 export const DEFAULT_NINE_BOX_MODE: NineBoxMode = "none";
 
+/** Coefficient provisoire 9-Box (millièmes) — Lot 2B-RC1-H2 ; 900 = 0,900. */
+export const DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI = 900;
+
 export const DEFAULT_JOB_FAMILIES: readonly DefaultJobFamilySeed[] = [
   { code: "F1", label: "Famille 1", sortOrder: 1 },
   { code: "F2", label: "Famille 2", sortOrder: 2 },

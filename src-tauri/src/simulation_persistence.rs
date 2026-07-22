@@ -395,6 +395,10 @@ pub struct SaveSimulationRunInput {
     #[serde(default)]
     pub neutralize_nine_box_effect_employee_count: Option<i64>,
 
+    // ---- Coefficient provisoire global schema v5 (Lot 2B-RC1-H2) ----
+    #[serde(default)]
+    pub nine_box_confirmation_factor_milli: Option<i64>,
+
     pub employees: Vec<SaveSimulationEmployeeDto>,
 }
 
@@ -917,6 +921,14 @@ fn validate_input(input: &SaveSimulationRunInput) -> Result<(), SaveSimulationRu
         }
     }
 
+    if let Some(factor) = input.nine_box_confirmation_factor_milli {
+        if !(500..=1000).contains(&factor) {
+            return Err(SaveSimulationRunError::Validation(
+                "Le coefficient provisoire 9-Box doit être compris entre 0,500 et 1,000.".into(),
+            ));
+        }
+    }
+
     Ok(())
 }
 
@@ -1387,8 +1399,9 @@ async fn save_simulation_run_in_tx(
             minimum_remaining_year_direct_cost_text = ?51,
             above_minimum_remaining_year_direct_cost_text = ?52,
             total_remaining_year_direct_compensatory_cost_text = ?53,
-            neutralize_nine_box_effect_employee_count = ?54
-        WHERE id = ?55
+            neutralize_nine_box_effect_employee_count = ?54,
+            nine_box_confirmation_factor_milli = ?55
+        WHERE id = ?56
         "#,
     )
     .bind(input.result_schema_version.unwrap_or(4))
@@ -1445,6 +1458,7 @@ async fn save_simulation_run_in_tx(
     .bind(&input.above_minimum_remaining_year_direct_cost_text)
     .bind(&input.total_remaining_year_direct_compensatory_cost_text)
     .bind(input.neutralize_nine_box_effect_employee_count)
+    .bind(input.nine_box_confirmation_factor_milli)
     .bind(simulation_run_id)
     .execute(&mut **tx)
     .await?;
@@ -1686,6 +1700,15 @@ mod tests {
     "#;
     const SIMULATION_SCHEMA_V4_ALTS: &str =
         include_str!("../migrations/0008_nine_box_neutralization.sql");
+    const SIMULATION_SCHEMA_V5_ALTS: &str =
+        include_str!("../migrations/0009_nine_box_confirmation_factor.sql");
+    // Stub minimal : la migration 0009 modifie aussi campaign_reference_config,
+    // absente du schéma minimal de ces tests d’intégration ciblés simulation.
+    const CAMPAIGN_REFERENCE_CONFIG_STUB: &str = r#"
+        CREATE TABLE IF NOT EXISTS campaign_reference_config (
+            campaign_id INTEGER PRIMARY KEY
+        );
+    "#;
 
     async fn apply_sql(conn: &mut sqlx::SqliteConnection, sql: &str) {
         for statement in sql.split(';') {
@@ -1715,6 +1738,8 @@ mod tests {
             apply_sql(&mut conn, SIMULATION_SCHEMA_V3).await;
             apply_sql(&mut conn, SIMULATION_SCHEMA_V4).await;
             apply_sql(&mut conn, SIMULATION_SCHEMA_V4_ALTS).await;
+            apply_sql(&mut conn, CAMPAIGN_REFERENCE_CONFIG_STUB).await;
+            apply_sql(&mut conn, SIMULATION_SCHEMA_V5_ALTS).await;
         }
 
         (dir, url)

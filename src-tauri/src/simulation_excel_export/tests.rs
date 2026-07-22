@@ -88,6 +88,15 @@ const HR_EMPLOYEES_STUB: &str = r#"
 "#;
 const SIMULATION_SCHEMA_V4: &str =
     include_str!("../../migrations/0008_nine_box_neutralization.sql");
+const SIMULATION_SCHEMA_V5: &str =
+    include_str!("../../migrations/0009_nine_box_confirmation_factor.sql");
+// Stub minimal : la migration 0009 modifie aussi campaign_reference_config,
+// absente du schéma minimal de ces tests d’intégration ciblés export.
+const CAMPAIGN_REFERENCE_CONFIG_STUB: &str = r#"
+    CREATE TABLE IF NOT EXISTS campaign_reference_config (
+        campaign_id INTEGER PRIMARY KEY
+    );
+"#;
 
 async fn apply_sql(conn: &mut sqlx::SqliteConnection, sql: &str) {
     for statement in sql.split(';') {
@@ -118,6 +127,8 @@ async fn setup_temp_db() -> (tempfile::TempDir, String) {
         apply_sql(&mut conn, SIMULATION_SCHEMA_V3).await;
         apply_sql(&mut conn, HR_EMPLOYEES_STUB).await;
         apply_sql(&mut conn, SIMULATION_SCHEMA_V4).await;
+        apply_sql(&mut conn, CAMPAIGN_REFERENCE_CONFIG_STUB).await;
+        apply_sql(&mut conn, SIMULATION_SCHEMA_V5).await;
     }
 
     (dir, url)
@@ -1154,4 +1165,87 @@ async fn schema_v4_export_includes_nine_box_headers_and_dashboard_counter() {
     assert!(xml.contains("Traitement 9-Box appliqué"));
     assert!(xml.contains("Salariés avec effet 9-Box neutralisé"));
     assert!(xml.contains("Effet 9-Box neutralisé") && xml.contains("Code 9-Box appliqué"));
+}
+
+fn input_with_months_v5(campaign_id: i64, batch_id: Option<i64>) -> SaveSimulationRunInput {
+    let mut input = input_with_months_v4(campaign_id, batch_id);
+    input.result_schema_version = Some(5);
+    input.calculation_contract_version = Some(6);
+    input.nine_box_confirmation_factor_milli = Some(900);
+    if let Some(employee) = input.employees.get_mut(0) {
+        employee.neutralize_nine_box_effect = Some(true);
+        employee.source_nine_box_code = Some(5);
+        employee.nine_box_treatment_kind = Some("performance_pending_confirmation".into());
+        employee.evaluation_factor_numerator_text = "900000".into();
+        employee.evaluation_factor_denominator_text = "1000000".into();
+    }
+    input
+}
+
+#[tokio::test]
+async fn schema_v5_export_includes_confirmation_factor_headers_and_dashboard_counter() {
+    let (dir, url) = setup_temp_db().await;
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect(&url)
+        .await
+        .unwrap();
+    let campaign_id = seed_campaign(&pool, "draft").await;
+    let batch_id = seed_current_batch(&pool, campaign_id).await;
+    pool.close().await;
+
+    let input = input_with_months_v5(campaign_id, Some(batch_id));
+    let saved = save_simulation_run_on_url(&url, &input, None)
+        .await
+        .expect("save v5 run");
+    let path = out_path(&dir, "export-v5.xlsx");
+    export_simulation_run_excel_on_url(
+        &url,
+        &export_input(saved.simulation_run_id, &path, None, true),
+    )
+    .await
+    .expect("export v5");
+
+    let bytes = std::fs::read(&path).unwrap();
+    let xml = read_all_xml(&bytes);
+    assert!(xml.contains("Performance à confirmer"));
+    assert!(xml.contains("Code 9-Box source"));
+    assert!(xml.contains("Coefficient 9-Box appliqué"));
+    assert!(xml.contains("Traitement"));
+    assert!(xml.contains("Salariés avec performance en cours de confirmation"));
+    assert!(xml.contains("Coefficient provisoire 9-Box"));
+    assert!(xml.contains("0,900") || xml.contains("0.9"));
+    assert!(!xml.contains("Effet 9-Box neutralisé"));
+    assert!(!xml.contains("Facteur 9-Box effectif"));
+}
+
+#[tokio::test]
+async fn schema_v4_confirmation_factor_is_non_disponible() {
+    let (dir, url) = setup_temp_db().await;
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect(&url)
+        .await
+        .unwrap();
+    let campaign_id = seed_campaign(&pool, "draft").await;
+    let batch_id = seed_current_batch(&pool, campaign_id).await;
+    pool.close().await;
+
+    let input = input_with_months_v4(campaign_id, Some(batch_id));
+    let saved = save_simulation_run_on_url(&url, &input, None)
+        .await
+        .expect("save v4 run");
+    let path = out_path(&dir, "export-v4-na.xlsx");
+    export_simulation_run_excel_on_url(
+        &url,
+        &export_input(saved.simulation_run_id, &path, None, true),
+    )
+    .await
+    .expect("export v4");
+
+    let bytes = std::fs::read(&path).unwrap();
+    let xml = read_all_xml(&bytes);
+    assert!(xml.contains("Coefficient provisoire 9-Box"));
+    assert!(!xml.contains("0,900"));
+    assert!(xml.contains("Non disponible") || xml.contains("Non renseign"));
 }

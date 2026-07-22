@@ -42,6 +42,8 @@ export interface SimulationRunRow {
   confirmed_underperformer_count: number;
   /** Schema v4 (migration 0008) — null sur snapshots v3 et antérieurs. */
   neutralize_nine_box_effect_employee_count?: number | null;
+  /** Schema v5 (migration 0009) — null sur snapshots v4 et antérieurs. */
+  nine_box_confirmation_factor_milli?: number | null;
   theoretical_total_numerator_text: string;
   theoretical_total_denominator_text: string;
   actual_operation_amount_fcfa_text: string;
@@ -368,6 +370,8 @@ export function mapSimulationRunSummary(
     confirmedUnderperformerCount: row.confirmed_underperformer_count,
     neutralizeNineBoxEffectEmployeeCount:
       row.neutralize_nine_box_effect_employee_count ?? null,
+    nineBoxConfirmationFactorMilli:
+      row.nine_box_confirmation_factor_milli ?? null,
     theoreticalAllocatedTotal: parseCanonicalExactAmount({
       numeratorText: row.theoretical_total_numerator_text,
       denominatorText: row.theoretical_total_denominator_text,

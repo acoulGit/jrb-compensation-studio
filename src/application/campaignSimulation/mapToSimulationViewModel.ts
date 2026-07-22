@@ -18,6 +18,7 @@ import {
   formatExactAmountAsFcfa,
   formatExactRateAsPercent,
   formatExactWeight,
+  formatFactorMilli,
   formatFcfaInteger,
   formatSeniorityRatePercent,
 } from "./formatExactBudgetDisplay";
@@ -64,6 +65,15 @@ function monthLabelFr(month: number): string {
 
 function nullableFcfaLabel(value: bigint | null | undefined): string | null {
   return value === null || value === undefined ? null : formatFcfaInteger(value);
+}
+
+/** « Non disponible » pour un snapshot v4 et antérieur (jamais de 0,900 reconstruit). */
+function nineBoxConfirmationFactorLabel(
+  value: number | null | undefined,
+): string | null {
+  return value === null || value === undefined
+    ? "Non disponible"
+    : formatFactorMilli(value);
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +177,10 @@ export function mapExecutionResultToViewModel(
     confirmedUnderperformerCount: population.confirmedUnderperformerCount,
     neutralizeNineBoxEffectEmployeeCount:
       population.neutralizeNineBoxEffectEmployeeCount,
+    nineBoxConfirmationFactorMilli: population.nineBoxConfirmationFactorMilli,
+    nineBoxConfirmationFactorLabel: nineBoxConfirmationFactorLabel(
+      population.nineBoxConfirmationFactorMilli,
+    ),
     budgetTargetLabel: budget.exactBudgetTargetLabel,
     theoreticalAllocatedTotalLabel: budget.annualTheoreticalAllocatedTotalLabel,
     actualOperationAmountLabel: budget.annualActualOperationCostLabel,
@@ -328,6 +342,11 @@ export function mapPersistedDetailToViewModel(
     confirmedUnderperformerCount: summaryRow.confirmedUnderperformerCount,
     neutralizeNineBoxEffectEmployeeCount:
       summaryRow.neutralizeNineBoxEffectEmployeeCount ?? null,
+    nineBoxConfirmationFactorMilli:
+      summaryRow.nineBoxConfirmationFactorMilli ?? null,
+    nineBoxConfirmationFactorLabel: nineBoxConfirmationFactorLabel(
+      summaryRow.nineBoxConfirmationFactorMilli,
+    ),
     budgetTargetLabel: formatExactAmountAsFcfa(summaryRow.exactBudgetTarget),
     theoreticalAllocatedTotalLabel: formatExactAmountAsFcfa(
       summaryRow.theoreticalAllocatedTotal,

@@ -2,8 +2,8 @@
 
 ## Objectif
 
-Produire, à partir d’un **snapshot de simulation persisté** (schema v3 ou v4,
-contrats v4/v5), un classeur Excel `.xlsx` destiné aux équipes RH, avec
+Produire, à partir d’un **snapshot de simulation persisté** (schema v3, v4 ou
+v5, contrats v4/v5/v6), un classeur Excel `.xlsx` destiné aux équipes RH, avec
 **protection par mot de passe optionnelle** et **écriture atomique**.
 
 L’export reste une **lecture fidèle** du snapshot immutable : aucun recalcul
@@ -18,6 +18,21 @@ Depuis le Lot **2B-RC1-H1** (schema v4) :
 - `Tableau_de_bord_RH` : Salariés avec effet 9-Box neutralisé.
 - Snapshots v3 : ces cellules restent vides / « Non disponible »
   (aucune invention historique).
+
+Depuis le Lot **2B-RC1-H2** (schema v5, contrat v6) — le libellé et le
+traitement 9-Box évoluent, sans nouvelle colonne d’import :
+
+- `Resultats_RH` (bloc 3) : libellés remplacés par **Performance à
+  confirmer**, Code 9-Box source, **Coefficient 9-Box appliqué**,
+  **Traitement**.
+- `Tableau_de_bord_RH` / `Synthese_Simulation` : compteur renommé
+  **Salariés avec performance en cours de confirmation**.
+- Feuille `Parametres` : nouvelle ligne **Coefficient provisoire 9-Box
+  (« Performance à confirmer »)** — affiche la valeur en millièmes (ex.
+  `0,900`) pour un run schema v5, ou **Non disponible** pour un run
+  antérieur (jamais de `0,900` fabriqué pour un snapshot v3/v4).
+- Snapshots v4 : les libellés historiques du Lot H1 sont conservés à
+  l’export (le bloc 3 varie selon `result_schema_version`).
 
 ## Feuilles produites (ordre)
 

@@ -97,6 +97,11 @@ export interface PopulationCalculationReferences {
   performanceFactors: readonly LevelFactorRef[];
   potentialFactors: readonly LevelFactorRef[];
   nineBoxFactors: readonly NineBoxFactorRef[];
+  /**
+   * Coefficient provisoire 9-Box (millièmes, 500–1000).
+   * Appliqué aux salariés avec neutralizeNineBoxEffect (contrat ≥ 6).
+   */
+  nineBoxConfirmationFactorMilli: number;
 }
 
 export interface PreparedPopulationCalculationInput {
@@ -397,6 +402,8 @@ export interface PopulationCalculationSummary {
   confirmedUnderperformerCount: number;
   /** Nombre de salariés avec effet 9-Box neutralisé (Lot 2B-RC1-H1). */
   neutralizeNineBoxEffectEmployeeCount: number;
+  /** Coefficient provisoire global utilisé pour ce run (millièmes). */
+  nineBoxConfirmationFactorMilli: number;
   /** Budget annuel cible exact. */
   annualBudgetTarget: ExactAmount;
   totalAllocationWeight: ExactAmount;

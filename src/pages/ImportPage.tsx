@@ -464,7 +464,9 @@ export function ImportPage() {
                       <th>Promo</th>
                       <th>Δ promo</th>
                       <th>9-Box</th>
-                      <th>Effet 9-Box neutralisé</th>
+                      <th title="Renseigné via la colonne d’import « Neutraliser effet 9-Box » : la performance de ce salarié est en cours de confirmation.">
+                        Performance à confirmer
+                      </th>
                       <th>Validation</th>
                     </tr>
                   </thead>
@@ -592,7 +594,9 @@ export function ImportPage() {
                       <th>Embauche</th>
                       <th>Salaire déc. N-1</th>
                       <th>9-Box</th>
-                      <th>Effet 9-Box neutralisé</th>
+                      <th title="Renseigné via la colonne d’import « Neutraliser effet 9-Box » : la performance de ce salarié est en cours de confirmation.">
+                        Performance à confirmer
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

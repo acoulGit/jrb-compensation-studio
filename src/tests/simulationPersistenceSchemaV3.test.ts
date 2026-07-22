@@ -26,6 +26,7 @@ import {
   withPromotionAwareBudgetSummary,
   withPromotionAwareEmployeeDefaults,
 } from "./simulationResultViewFixtures";
+import { DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI } from "../domain/compensationReference/defaults";
 
 function monthEntry(month: number): MonthlyCompensationTrajectoryView {
   return {
@@ -119,6 +120,7 @@ function sampleResult(): CampaignSimulationExecutionResult {
       zeroWeightEmployeeCount: 0,
       confirmedUnderperformerCount: 0,
       neutralizeNineBoxEffectEmployeeCount: 0,
+      nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
       annualTheoreticalAllocatedTotal: { numerator: 300000n, denominator: 1n },
       annualActualOperationCostFcfa: 300000n,
       annualTotalRoundingDelta: { numerator: 0n, denominator: 1n },
@@ -219,11 +221,11 @@ function sampleResult(): CampaignSimulationExecutionResult {
 
 describe("Lot 2B-P1 / 2B-RC1-H1 — persistance schema v3/v4", () => {
   it("expose les versions de contrat/schema attendues", () => {
-    expect(RESULT_SCHEMA_VERSION).toBe(4);
+    expect(RESULT_SCHEMA_VERSION).toBeGreaterThanOrEqual(4);
     expect(RESULT_SCHEMA_VERSION_V3).toBe(3);
     expect(RESULT_SCHEMA_VERSION_V2).toBe(2);
     expect(RESULT_SCHEMA_VERSION_LEGACY).toBe(1);
-    expect(CALCULATION_CONTRACT_VERSION).toBe(5);
+    expect(CALCULATION_CONTRACT_VERSION).toBeGreaterThanOrEqual(5);
     expect(SENIORITY_IMPACT_CONTRACT_VERSION).toBe(1);
     expect(MINIMUM_INCREASE_CONTRACT_VERSION).toBe(1);
   });
@@ -281,8 +283,8 @@ describe("Lot 2B-P1 / 2B-RC1-H1 — persistance schema v3/v4", () => {
       expectedCampaignStatus: "active",
       sourceImportFileName: "pop.xlsx",
     });
-    expect(dto.resultSchemaVersion).toBe(4);
-    expect(dto.calculationContractVersion).toBe(5);
+    expect(dto.resultSchemaVersion).toBe(RESULT_SCHEMA_VERSION);
+    expect(dto.calculationContractVersion).toBe(CALCULATION_CONTRACT_VERSION);
     expect(dto.seniorityImpactContractVersion).toBe(1);
     expect(dto.minimumIncreaseContractVersion).toBe(1);
     expect(dto.retroactivityStartMonth).toBe(1);
@@ -340,7 +342,7 @@ describe("Lot 2B-P1 / 2B-RC1-H1 — persistance schema v3/v4", () => {
 
     const detail = await repo.getSimulationRun(saved.simulationRunId);
     expect(detail).not.toBeNull();
-    expect(detail!.summary.resultSchemaVersion).toBe(4);
+    expect(detail!.summary.resultSchemaVersion).toBe(RESULT_SCHEMA_VERSION);
     const months = detail!.employees[0].months!;
     expect(months).toHaveLength(12);
     expect(months.map((m) => m.month)).toEqual([

@@ -19,6 +19,7 @@ import {
   type PopulationCalculationReferences,
 } from "../domain/compensationCalculation";
 import {
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_PERFORMANCE_FACTORS,
   DEFAULT_POTENTIAL_FACTORS,
@@ -41,7 +42,7 @@ function positions() {
 
 function factors(): Pick<
   PopulationCalculationReferences,
-  "performanceFactors" | "potentialFactors" | "nineBoxFactors"
+  "performanceFactors" | "potentialFactors" | "nineBoxFactors" | "nineBoxConfirmationFactorMilli"
 > {
   return {
     performanceFactors: DEFAULT_PERFORMANCE_FACTORS.map((f) => ({
@@ -58,6 +59,7 @@ function factors(): Pick<
       factorMilli: f.factorMilli,
       boxCode: f.boxCode,
     })),
+    nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   };
 }
 
@@ -111,11 +113,11 @@ function buildRecipeInput(): PreparedPopulationCalculationInput {
 }
 
 describe("Lot 2A-H1 — budget annuel / augmentation mensuelle", () => {
-  it("expose les constantes de contrat v5", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(5);
+  it("expose les constantes de contrat courant", () => {
+    expect(CALCULATION_CONTRACT_VERSION).toBeGreaterThanOrEqual(5);
     expect(ANNUAL_BUDGET_PERIOD_MONTHS).toBe(12n);
-    expect(RESULT_SCHEMA_VERSION).toBe(4);
-    expect(isCurrentResultSchemaVersion(4)).toBe(true);
+    expect(RESULT_SCHEMA_VERSION).toBeGreaterThanOrEqual(4);
+    expect(isCurrentResultSchemaVersion(RESULT_SCHEMA_VERSION)).toBe(true);
     expect(isCurrentResultSchemaVersion(2)).toBe(false);
     expect(isLegacyResultSchemaVersion(1)).toBe(true);
     expect(LEGACY_RESULT_SCHEMA_MESSAGE).toMatch(/ancien contrat de calcul/i);

@@ -110,6 +110,7 @@ export function calculatePreparedEmployeeCompensation(
     nineBoxFactors: references.nineBoxFactors,
     confirmedUnderperformer: employee.confirmedUnderperformer,
     neutralizeNineBoxEffect: employee.neutralizeNineBoxEffect === true,
+    nineBoxConfirmationFactorMilli: references.nineBoxConfirmationFactorMilli,
   });
 
   const salaryPositionResult = individualMatrixWeightResult.salaryPosition;

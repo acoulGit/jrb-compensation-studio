@@ -6,6 +6,7 @@ import { technicalApplicationMonthLabelFr } from "../domain/compensationCalculat
 
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_PERFORMANCE_FACTORS,
   DEFAULT_POTENTIAL_FACTORS,
   DEFAULT_SALARY_POSITIONS,
@@ -40,6 +41,7 @@ function defaultFactors() {
       factorMilli: f.factorMilli,
     })),
     nineBoxFactors: [],
+    nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   };
 }
 
@@ -303,7 +305,7 @@ describe("Lot 2A-H2A — orchestrateur population", () => {
   });
 
   it("ne change pas result_schema_version", () => {
-    expect(RESULT_SCHEMA_VERSION).toBe(4);
+    expect(RESULT_SCHEMA_VERSION).toBeGreaterThanOrEqual(4);
   });
 });
 

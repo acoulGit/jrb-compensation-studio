@@ -273,6 +273,9 @@ export class MemorySimulationHistoryRepository
       fullYearRunRateCombinedBaseMeasureCostFcfa: nullableIntegerText(
         dto.fullYearRunRateCombinedBaseMeasureCostText,
       ),
+      neutralizeNineBoxEffectEmployeeCount:
+        dto.neutralizeNineBoxEffectEmployeeCount ?? null,
+      nineBoxConfirmationFactorMilli: dto.nineBoxConfirmationFactorMilli ?? null,
     };
 
     const employees: PersistedSimulationEmployeeResult[] = dto.employees

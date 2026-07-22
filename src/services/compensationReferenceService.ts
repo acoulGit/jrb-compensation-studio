@@ -22,7 +22,10 @@ import {
   type StructureItemInput,
 } from "../domain/compensationReference/models";
 import { NINE_BOX_ORIENTATIONS } from "../domain/compensationReference/nineBoxOrientation";
-import { isValidFactorMilli } from "../domain/compensationReference/validationHelpers";
+import {
+  isValidFactorMilli,
+  isValidNineBoxConfirmationFactorMilli,
+} from "../domain/compensationReference/validationHelpers";
 import type { CampaignRepository } from "../infrastructure/database/repositories/campaignRepository";
 import type { CompensationReferenceRepository } from "../infrastructure/database/repositories/compensationReferenceRepository";
 import type { Campaign } from "../infrastructure/database/types";
@@ -221,6 +224,24 @@ export class CompensationReferenceService {
     return this.referenceRepository.updateNineBoxOrientation(
       campaignId,
       orientation,
+    );
+  }
+
+  async updateNineBoxConfirmationFactorMilli(
+    campaignId: number,
+    factorMilli: number,
+  ): Promise<CompensationReferenceSet> {
+    const campaign = await this.requireEditableCampaign(campaignId);
+    await this.ensureInitialized(campaign.id);
+    if (!isValidNineBoxConfirmationFactorMilli(factorMilli)) {
+      throw new AppError(
+        "VALIDATION",
+        "Le coefficient provisoire 9-Box doit être compris entre 0,500 et 1,000.",
+      );
+    }
+    return this.referenceRepository.updateNineBoxConfirmationFactorMilli(
+      campaignId,
+      factorMilli,
     );
   }
 

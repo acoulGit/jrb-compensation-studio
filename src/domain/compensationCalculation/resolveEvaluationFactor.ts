@@ -132,21 +132,38 @@ export function resolveEvaluationFactor(
   let potentialLevel = input.potentialLevel;
 
   if (input.neutralizeNineBoxEffect === true) {
-    exactFactorNumerator = NEUTRAL_EVALUATION_FACTOR_SCALED;
-    selectedFactors = { kind: "neutral" };
+    const confirmationMilli = input.nineBoxConfirmationFactorMilli;
+    if (
+      confirmationMilli === undefined ||
+      !Number.isInteger(confirmationMilli) ||
+      confirmationMilli < 500 ||
+      confirmationMilli > 1000
+    ) {
+      throw new CompensationCalculationError(
+        "INVALID_NINE_BOX_CONFIRMATION_FACTOR",
+        "Le coefficient provisoire 9-Box doit être compris entre 0,500 et 1,000.",
+      );
+    }
+    // milli → échelle 1e6 : 900 → 900_000 (= 0,900)
+    exactFactorNumerator = confirmationMilli * 1_000;
+    selectedFactors = {
+      kind: "pending_confirmation",
+      nineBoxConfirmationFactorMilli: confirmationMilli,
+    };
     explanation.push({
-      code: "EVALUATION_NINE_BOX_NEUTRALIZED",
-      label: "Effet 9-Box neutralisé",
+      code: "EVALUATION_PERFORMANCE_PENDING_CONFIRMATION",
+      label: "Performance en cours de confirmation",
       inputValues: {
         neutralizeNineBoxEffect: true,
+        nineBoxConfirmationFactorMilli: confirmationMilli,
         mode,
         performanceLevel: performanceLevel ?? null,
         potentialLevel: potentialLevel ?? null,
       },
       outputValue: exactFactorNumerator,
-      formula: "1_000_000 (= 1,000)",
+      formula: `${confirmationMilli} * 1000 (= ${(confirmationMilli / 1000).toFixed(3).replace(".", ",")})`,
       reason:
-        "Neutralisation individuelle : facteur d’évaluation effectif = 1, indépendamment du mode et du code 9-Box.",
+        "Mesure provisoire : coefficient global « Performance à confirmer », indépendamment du code 9-Box source.",
     });
   } else {
     switch (mode) {

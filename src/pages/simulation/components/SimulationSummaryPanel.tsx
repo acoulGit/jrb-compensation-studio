@@ -2,6 +2,7 @@
 
 import { campaignStatusLabel, formatDateTime } from "../../../app/formatters";
 import { nineBoxModeLabel } from "../../../domain/compensationReference/conversions";
+import { RESULT_SCHEMA_VERSION_V4 } from "../../../domain/compensationCalculation";
 import type { SimulationSummaryViewModel } from "../../../application/campaignSimulation/simulationViewModels";
 
 interface SimulationSummaryPanelProps {
@@ -24,6 +25,11 @@ export function SimulationSummaryPanel({
   testIdPrefix = "simulation",
 }: SimulationSummaryPanelProps) {
   const showSchemaV3Section = summary.mode === "persisted-readonly";
+  // Sémantique historique v4 (Lot 2B-RC1-H1) : « neutralisé » plutôt que
+  // « en cours de confirmation » (aucun coefficient provisoire à l’époque).
+  const isLegacyNineBoxNeutralizationSchema =
+    summary.mode === "persisted-readonly" &&
+    summary.resultSchemaVersion === RESULT_SCHEMA_VERSION_V4;
   return (
     <>
       {summary.schemaCompatibilityMessage ? (
@@ -151,9 +157,24 @@ export function SimulationSummaryPanel({
       {summary.neutralizeNineBoxEffectEmployeeCount !== undefined &&
       summary.neutralizeNineBoxEffectEmployeeCount !== null ? (
         <div>
-          <dt>Salariés avec effet 9-Box neutralisé</dt>
+          <dt>
+            {isLegacyNineBoxNeutralizationSchema
+              ? "Salariés avec effet 9-Box neutralisé"
+              : "Salariés avec performance en cours de confirmation"}
+          </dt>
           <dd data-testid={`${testIdPrefix}-summary-nine-box-neutralized`}>
             {summary.neutralizeNineBoxEffectEmployeeCount}
+          </dd>
+        </div>
+      ) : null}
+      {!isLegacyNineBoxNeutralizationSchema &&
+      summary.neutralizeNineBoxEffectEmployeeCount !== undefined &&
+      summary.neutralizeNineBoxEffectEmployeeCount !== null &&
+      summary.neutralizeNineBoxEffectEmployeeCount > 0 ? (
+        <div>
+          <dt>Coefficient provisoire 9-Box</dt>
+          <dd data-testid={`${testIdPrefix}-summary-nine-box-confirmation-factor`}>
+            {summary.nineBoxConfirmationFactorLabel ?? UNAVAILABLE_LABEL}
           </dd>
         </div>
       ) : null}
