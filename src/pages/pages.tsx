@@ -10,6 +10,7 @@ import { ImportPage } from "./ImportPage";
 import { ReferencesPage } from "./ReferencesPage";
 import { SettingsPage } from "./SettingsPage";
 import { SimulationPage } from "./SimulationPage";
+import { SimulationHistoryPage } from "./SimulationHistoryPage";
 
 export { pageDefinitions };
 
@@ -25,6 +26,7 @@ function FeaturePage({
     | "references"
     | "imports"
     | "simulations"
+    | "simulation-history"
   >;
 }) {
   const definition = pageDefinitions[page];
@@ -49,6 +51,7 @@ export function PageContent({ page }: { page: PageId }) {
   if (page === "references") return <ReferencesPage />;
   if (page === "imports") return <ImportPage />;
   if (page === "simulations") return <SimulationPage />;
+  if (page === "simulation-history") return <SimulationHistoryPage />;
   if (page === "settings") return <SettingsPage />;
   if (page === "about") return <AboutPage />;
   return <FeaturePage page={page} />;

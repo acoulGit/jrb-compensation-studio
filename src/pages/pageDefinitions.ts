@@ -67,9 +67,22 @@ export const pageDefinitions: Record<PageId, FeatureDefinition> = {
     emptyDescription:
       "Sélectionnez une campagne pour consulter la préparation et valider une configuration en mémoire.",
     plannedFeatures: [
-      "Exécution du calcul de simulation (Lot 2B-3)",
-      "Persistance et historique (Lot 2B-4)",
       "Comparaison de scénarios",
+      "Export des résultats",
+      "Validation managériale",
+    ],
+  },
+  "simulation-history": {
+    title: "Historique des simulations",
+    description:
+      "Consultez en lecture seule les snapshots de simulations enregistrés par campagne.",
+    emptyTitle: "Aucune campagne",
+    emptyDescription:
+      "Sélectionnez une campagne pour afficher les simulations enregistrées.",
+    plannedFeatures: [
+      "Comparaison de deux simulations",
+      "Export CSV ou PDF",
+      "Suppression d’un historique",
     ],
   },
   "individual-review": {

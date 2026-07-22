@@ -150,7 +150,14 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
 - Service `saveCurrentCampaignSimulation` + DTO chaînes canoniques (run /
   salarié / mensuel).
 - `SimulationHistoryRepository` (memory / sqlite) — lecture paginée et
-  mensuelle prête pour 2B-4B ; **aucune UI Historique** dans ce périmètre.
+  mensuelle.
+- **2B-4B** : `SimulationSaveProvider`, `AppNavigationProvider`,
+  `SimulationHistoryRefreshProvider`, `SimulationHistoryPage` et composants
+  partagés courant / historique (`SimulationSummaryPanel`,
+  `SimulationEmployeeTable`, `SimulationEmployeeDetailDrawer`) — enregistrement
+  explicite et consultation en lecture seule, compatibles schema v3 (période
+  configurable, promotions, minimum garanti, ancienneté, trajectoire mensuelle)
+  avec dégradation explicite pour les snapshots v1/v2.
 - Voir `docs/SIMULATION_PERSISTENCE.md`.
 
 Voir `docs/CAMPAIGN_SIMULATION.md`.

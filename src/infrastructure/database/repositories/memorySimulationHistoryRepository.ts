@@ -63,6 +63,13 @@ function compareEmployeeId(left: string, right: string): number {
   return 0;
 }
 
+function nullableIntegerText(value: string | null | undefined): bigint | null {
+  if (value === null || value === undefined || value.trim() === "") {
+    return null;
+  }
+  return parseCanonicalIntegerText(value, { allowNegative: true });
+}
+
 function mapMonthDto(
   month: SaveSimulationEmployeeMonthDto,
   id: number,
@@ -248,6 +255,24 @@ export class MemorySimulationHistoryRepository
         allowNegativeNumerator: true,
       }),
       createdAt,
+      retroactivityStartMonth: dto.retroactivityStartMonth ?? null,
+      technicalApplicationMonth: dto.technicalApplicationMonth ?? null,
+      campaignCoveredMonthCount: dto.campaignCoveredMonthCount ?? null,
+      promotionCampaignPeriodBudgetCostFcfa: nullableIntegerText(
+        dto.promotionCampaignPeriodBudgetCostText,
+      ),
+      totalMinimumComplementFloorCostFcfa: nullableIntegerText(
+        dto.totalMinimumComplementFloorCostText,
+      ),
+      actualCompensationAboveMinimumCostFcfa: nullableIntegerText(
+        dto.actualCompensationAboveMinimumCostText,
+      ),
+      actualCombinedCampaignPeriodCostFcfa: nullableIntegerText(
+        dto.actualCombinedCampaignPeriodCostText,
+      ),
+      fullYearRunRateCombinedBaseMeasureCostFcfa: nullableIntegerText(
+        dto.fullYearRunRateCombinedBaseMeasureCostText,
+      ),
     };
 
     const employees: PersistedSimulationEmployeeResult[] = dto.employees

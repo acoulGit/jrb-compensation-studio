@@ -1,7 +1,8 @@
 /**
  * Synthèse, calendrier, ancienneté, tableau et détail des résultats
- * (Lot 2B-3 / Lot 2A-H2C-2B).
- * Aucune logique métier de calcul : affichage des vues formatées uniquement.
+ * (Lot 2B-3 / Lot 2A-H2C-2B) + actions d'enregistrement explicite (Lot 2B-4B).
+ * Aucune logique métier de calcul : affichage des vues formatées uniquement ;
+ * la sauvegarde est déléguée à `SimulationSaveActions`.
  */
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
@@ -21,6 +22,7 @@ import { nineBoxModeLabel } from "../../domain/compensationReference/conversions
 import { SectionCard } from "../../components/ui/SectionCard";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import type { CampaignSimulationExecutionState } from "../../app/SimulationExecutionProvider";
+import { SimulationSaveActions } from "./SimulationSaveActions";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
@@ -215,6 +217,8 @@ export function SimulationResultsPanel({
           Résultat obsolète — les données ou la configuration ont changé.
         </p>
       ) : null}
+
+      {!showStaleBanner && !isArchived ? <SimulationSaveActions /> : null}
 
       <SectionCard title="Synthèse de l’enveloppe">
         {isArchived ? (

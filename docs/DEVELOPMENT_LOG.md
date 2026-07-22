@@ -970,3 +970,44 @@ simulations contrat ≥ 3 refusées jusqu'ici.
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked` (47) : OK
 - `git diff --check` propre ; `git diff -- migrations 0001..0006` vide
 - stash `wip/lot-2b-4b-before-annual-budget-fix` intact ; aucun commit
+
+## 2026-07-21 — Lot 2B-4B : enregistrement UI et historique (schema v3)
+
+### Objectif
+
+Greffer l’enregistrement explicite depuis la page Simulation et la consultation
+en lecture seule de l’historique SQLite par campagne, en réconciliant l’UI issue
+du stash `wip/lot-2b-4b-before-annual-budget-fix` avec le moteur / schema v3
+(contrat v4) livré à HEAD.
+
+### Livrables
+
+- `SimulationSaveActions` greffée dans `SimulationResultsPanel`
+  (visible hors résultat obsolète et hors lecture seule ; métriques H2A–H2D
+  intactes).
+- `SimulationSaveProvider`, `AppNavigationProvider`,
+  `SimulationHistoryRefreshProvider` déjà câblés dans `App.tsx` ; navigation
+  `simulation-history` branchée dans l’`AppShell`.
+- Vue partagée `SimulationResultViewModel` étendue schema v3 (période d’effet,
+  promotions, minimum garanti, au-dessus du minimum, combiné, delta, plein
+  effet, trajectoire mensuelle) avec `ResultSchemaCompatibility` ; dégradation
+  explicite pour v1 (incompatible) / v2 (incomplète) — aucun faux zéro, aucun
+  détail mensuel inventé.
+- `getPersistedSimulationRun` branché sur `classifyResultSchemaVersion`
+  (unknown ⇒ échec explicite ; v1/v2 ⇒ ok + drapeaux + message ; v3 ⇒ vue
+  complète).
+- `buildSimulationResultIdentity` documentée (empreintes source/config encodant
+  rétro/tech/minimum) et enrichie de champs de configuration validée optionnels.
+- `PersistedSimulationRunSummary` étendue de champs v3 optionnels (NULL pour
+  v1/v2), alignée memory repo + mappers SQLite **en lecture seule** (aucune
+  migration).
+- Historique n’utilise pas l’import RH courant pour reconstruire une simulation.
+- Tests : `buildSimulationResultIdentity`, `simulationHistoryServices`,
+  `simulationSaveAndHistory`.
+
+### Validations
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check` ; migrations 0001–0007 inchangées ; stash intact ; aucun
+  commit

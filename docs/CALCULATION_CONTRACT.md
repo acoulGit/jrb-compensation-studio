@@ -552,6 +552,12 @@ Le service `saveCurrentCampaignSimulation` mappe le résultat mémoire vers
 La commande **ne recalcule pas** les formules : elle valide la cohérence du
 snapshot et l’inscrit transactionnellement.
 
+## Lot 2B-4B — consultation historique (sans recalcul)
+
+La page Historique lit `PersistedSimulationRunDetail` via le repository et
+mappe vers les mêmes vues que le résultat courant (`mapPersistedDetailToViewModel`).
+**Aucun appel** à `calculatePreparedPopulationCompensation` pendant la consultation.
+
 ## Sorties attendues
 
 Le futur résultat devra distinguer proposition matricielle, complément de

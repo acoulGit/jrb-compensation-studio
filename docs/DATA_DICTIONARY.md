@@ -430,6 +430,16 @@ mensuelle, calibrage compensatoire) est intégrée au moteur depuis les Lots
 | Colonnes contrat v4 (runs / employee_results) | Config période, enveloppe promotion-aware, ancienneté, minimum garanti, plein effet — NULL sur snapshots v1/v2 |
 | `listSimulationEmployeeMonthResults` | Port de lecture mensuelle (tri `month` 1→12) |
 
+### Lot 2B-4B (UI session save / historique)
+
+| Concept | Nature |
+| --- | --- |
+| `CampaignSimulationSaveState` | État sauvegarde session (non persisté) |
+| `buildSimulationResultIdentity` | Clé anti double-enregistrement (`campaignId` + `runSequence` + empreintes source/config) |
+| `SimulationResultViewModel` | Vue partagée courant / historique (schema v3, dégradation v1/v2) |
+| `ResultSchemaCompatibility` | `current` / `incomplete` / `incompatible` / `unknown` |
+| `simulation-history` | Page navigation Historique (lecture seule) |
+
 Voir `docs/SIMULATION_PERSISTENCE.md` et `docs/CAMPAIGN_SIMULATION.md`.
 
 ## Décisions RH

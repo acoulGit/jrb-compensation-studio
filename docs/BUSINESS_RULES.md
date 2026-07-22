@@ -254,7 +254,8 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
 - Isolation mémoire par campagne ; rien après redémarrage.
 - `monthlyFinalSalaryFcfa` = salaire mensuel + augmentation mensuelle finale
   (produit du moteur H1, pas un recalcul UI).
-- Persistance / historique UI / export reportés au Lot 2B-4B.
+- Enregistrement explicite et historique UI livrés au Lot 2B-4B ; export
+  toujours reporté.
 
 ## Budget annuel et salaires mensuels (2A-H1)
 
@@ -348,17 +349,24 @@ Détails : `docs/CAMPAIGN_SIMULATION.md`.
 - Hors périmètre H2C-2 : correction Sout- distincte, mesures RH/sociales,
   TPA, CNSS, charges patronales.
 
-## Persistance de simulation (Lot 2B-4A)
+## Persistance de simulation (Lots 2B-4A / 2B-4B)
 
 - Enregistrement **explicite** d’un snapshot immuable (append-only).
 - Pas d’enregistrement automatique après calcul.
 - Vérification fingerprints / lot courant / statut avant sauvegarde.
 - Grands entiers et fractions en TEXT canonique (pas de REAL / Number).
 - Aucune mise à jour ni suppression métier des runs enregistrés.
-- **Schema v2 (H1)** : budget/theoretical_total/actual = annuels ;
-  rate/amount/final_increase/delta/salary salariés = mensuels ;
-  valeurs annuelles individuelles dérivables × 12.
-- Snapshots `result_schema_version = 1` : sémantique obsolète, non convertis.
+- **Schema v3 (contrat v4)** : enveloppe/théorique/effectif de la **période
+  d’effet** (rétroactivité → décembre), trajectoire mensuelle persistée
+  (12 mois), minimum garanti, promotions et incidences d’ancienneté.
+- **Schema v2** : annuel/mensuel sans mois ni ancienneté/minimum persistés —
+  présenté en lecture seule **incomplète** (aucun faux zéro, aucun détail
+  mensuel inventé).
+- Snapshots `result_schema_version = 1` : sémantique obsolète, non convertis
+  ni recalculés (incompatibles) ; schéma inconnu refusé par prudence.
+- **2B-4B** : une exécution courante = une sauvegarde max par session
+  (identité `runSequence` + empreintes source/config) ; historique consultable
+  même si campagne archivée, sans réutiliser l’import RH courant.
 
 ## Autres règles
 

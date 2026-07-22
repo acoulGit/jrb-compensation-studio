@@ -46,6 +46,19 @@ export interface SimulationRunRow {
   total_rounding_delta_numerator_text: string;
   total_rounding_delta_denominator_text: string;
   created_at: string;
+
+  /**
+   * Colonnes schema v3 (migration 0007). Optionnelles / nullables : absentes ou
+   * NULL pour les snapshots v1/v2 — lues sans faux zéro.
+   */
+  retroactivity_start_month?: number | null;
+  technical_application_month?: number | null;
+  campaign_covered_month_count?: number | null;
+  promotion_campaign_period_budget_cost_text?: string | null;
+  total_minimum_complement_floor_cost_text?: string | null;
+  actual_compensation_above_minimum_cost_text?: string | null;
+  actual_combined_campaign_period_cost_text?: string | null;
+  full_year_run_rate_combined_base_measure_cost_text?: string | null;
 }
 
 export interface SimulationEmployeeResultRow {
@@ -170,6 +183,13 @@ function asNineBoxMode(value: string): NineBoxMode {
     return value;
   }
   throw new Error(`Mode d’évaluation persisté invalide: ${value}`);
+}
+
+function nullableIntegerText(value: string | null | undefined): bigint | null {
+  if (value === null || value === undefined || value.trim() === "") {
+    return null;
+  }
+  return parseCanonicalIntegerText(value, { allowNegative: true });
 }
 
 function parseExplanationSteps(
@@ -355,6 +375,24 @@ export function mapSimulationRunSummary(
       allowNegativeNumerator: true,
     }),
     createdAt: row.created_at,
+    retroactivityStartMonth: row.retroactivity_start_month ?? null,
+    technicalApplicationMonth: row.technical_application_month ?? null,
+    campaignCoveredMonthCount: row.campaign_covered_month_count ?? null,
+    promotionCampaignPeriodBudgetCostFcfa: nullableIntegerText(
+      row.promotion_campaign_period_budget_cost_text,
+    ),
+    totalMinimumComplementFloorCostFcfa: nullableIntegerText(
+      row.total_minimum_complement_floor_cost_text,
+    ),
+    actualCompensationAboveMinimumCostFcfa: nullableIntegerText(
+      row.actual_compensation_above_minimum_cost_text,
+    ),
+    actualCombinedCampaignPeriodCostFcfa: nullableIntegerText(
+      row.actual_combined_campaign_period_cost_text,
+    ),
+    fullYearRunRateCombinedBaseMeasureCostFcfa: nullableIntegerText(
+      row.full_year_run_rate_combined_base_measure_cost_text,
+    ),
   };
 }
 

@@ -13,7 +13,7 @@ d’augmentation.
 | **2B-3** | Exécution en mémoire + consultation des résultats |
 | **2B-4A** | Persistance transactionnelle immuable (sans UI Historique) |
 | **2B-P1** | Consolidation snapshot schema v3 (contrat v4 + trajectoire mensuelle, migration `0007`) |
-| **2B-4B** (prévu) | Interface Historique / bouton Enregistrer |
+| **2B-4B** | Bouton Enregistrer + page Historique (lecture seule, compatible schema v3 / dégradation v1-v2) |
 
 ## Séparation import / préparation / configuration / calcul
 
@@ -227,10 +227,14 @@ E. Promotion août N / application juillet — statut « Exclue après applicati
 F. Promu non éligible — coût promo imputé, complément nul, motif visible.
 G. Promotions > budget — erreur métier dédiée.
 
-## Reporté au Lot 2B-4B
+## Interface Historique (Lot 2B-4B)
 
-- bouton « Enregistrer la simulation » ;
-- page / liste Historique ;
+- Page `simulation-history` : liste paginée par campagne, détail snapshot.
+- Composants partagés avec la page Simulation (formatage exact identique).
+- Campagnes archivées : historique consultable, aucune nouvelle sauvegarde.
+- Voir `docs/SIMULATION_PERSISTENCE.md`.
+
+## Reporté (post 2B-4B)
 - comparaison, export ;
 - workflow de validation métier ;
 - édition manuelle salarié par salarié.

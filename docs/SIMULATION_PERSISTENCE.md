@@ -1,4 +1,4 @@
-# Persistance des simulations — Lot 2B-4A
+# Persistance des simulations — Lots 2B-4A / 2B-4B
 
 ## Rôle
 
@@ -7,8 +7,8 @@ et **courante** produite par le Lot 2B-3. L’enregistrement est **explicite**
 (service applicatif) ; il n’est **pas** déclenché automatiquement après le
 calcul.
 
-Le Lot **2B-4B** (ultérieur) branchera l’interface Historique sur les
-repositories créés ici.
+Le Lot **2B-4B** ajoute le **bouton Enregistrer** sur la page Simulation et la
+page **Historique des simulations** (consultation en lecture seule).
 
 ## Sémantique result_schema_version (Lot 2B-P1)
 
@@ -129,8 +129,43 @@ un nouveau `run_number`.
 - `listSimulationEmployeeResults(runId)` — tri `employee_id`
 - `listSimulationEmployeeMonthResults(employeeResultId)` — tri `month` (1→12)
 
-## Hors périmètre 2B-4A
+## Lot 2B-4B — UI et session
 
-- bouton « Enregistrer » ;
-- page / onglet Historique ;
-- comparaison, export, suppression.
+### Bouton « Enregistrer la simulation »
+
+Visible uniquement lorsque le service `saveCurrentCampaignSimulation`
+accepterait l’appel (résultat courant `success`, non stale, configuration
+validée, campagne draft/active). Les gardes métier restent **dans le service** ;
+les composants React ne les dupliquent pas.
+
+### État de sauvegarde session (`SimulationSaveProvider`)
+
+- Statuts : `idle` | `saving` | `success` | `error` | `stale`
+- Isolé par `campaignId`
+- **Non restauré** au redémarrage (contrairement à l’historique SQLite)
+- Identité de résultat : `campaignId|runSequence|sourceFingerprint|configurationFingerprint`
+- Une même identité ne peut être enregistrée qu’**une fois par session** (prévention double clic)
+
+### Historique
+
+- Page `simulation-history` — sélection campagne (y compris archivée)
+- Services : `listCampaignSimulationHistory`, `getPersistedSimulationRun`
+- Pagination repository : 20 / 50 / 100, tri `run_number` DESC
+- Détail : synthèse + tableau salariés + drawer (mode `persisted-readonly`)
+- Invalidation cache : `SimulationHistoryRefreshProvider.bumpRevision` après sauvegarde
+
+### Distinction courant / historique
+
+| | Courant (2B-3) | Historique (2B-4B) |
+|---|---|---|
+| Stockage | Mémoire session | SQLite |
+| Recalcul | Oui (relance) | Non |
+| Modification | Config + relance | Interdit |
+| Badge UI | « Résultat courant en mémoire » | « Snapshot enregistré — non recalculé » |
+
+## Hors périmètre 2B-4B
+
+- modification / suppression d’un historique ;
+- comparaison de deux simulations ;
+- export CSV / Excel / PDF ;
+- validation managériale / approbation budget.

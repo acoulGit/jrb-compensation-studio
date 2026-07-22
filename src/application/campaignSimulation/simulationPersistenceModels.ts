@@ -297,6 +297,19 @@ export interface PersistedSimulationRunSummary {
   actualOperationAmountFcfa: bigint;
   totalRoundingDelta: ExactAmount;
   createdAt: string;
+
+  /**
+   * Champs schema v3 (migration 0007) relus en lecture seule. `null` /
+   * `undefined` pour les snapshots v1/v2 (colonnes NULL) — jamais de faux zéro.
+   */
+  retroactivityStartMonth?: number | null;
+  technicalApplicationMonth?: number | null;
+  campaignCoveredMonthCount?: number | null;
+  promotionCampaignPeriodBudgetCostFcfa?: bigint | null;
+  totalMinimumComplementFloorCostFcfa?: bigint | null;
+  actualCompensationAboveMinimumCostFcfa?: bigint | null;
+  actualCombinedCampaignPeriodCostFcfa?: bigint | null;
+  fullYearRunRateCombinedBaseMeasureCostFcfa?: bigint | null;
 }
 
 export interface PersistedSimulationEmployeeResult {
