@@ -24,9 +24,16 @@ export {
   EMPLOYER_CHARGES_INCLUDED,
   FULL_YEAR_MONTH_COUNT,
   RESULT_SCHEMA_VERSION,
+  RESULT_SCHEMA_VERSION_V3,
   RESULT_SCHEMA_VERSION_V2,
   RESULT_SCHEMA_VERSION_LEGACY,
 } from "./calculationContract";
+export {
+  NINE_BOX_TREATMENT_LABELS,
+  formatNineBoxTreatmentLabel,
+  resolveNineBoxTreatmentKind,
+  type NineBoxTreatmentKind,
+} from "./nineBoxTreatment";
 export { calculatePreparedPopulationCompensation } from "./calculatePreparedPopulationCompensation";
 export {
   CAMPAIGN_YEAR_MAX,

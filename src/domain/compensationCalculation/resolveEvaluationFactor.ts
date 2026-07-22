@@ -131,7 +131,25 @@ export function resolveEvaluationFactor(
   let performanceLevel = input.performanceLevel;
   let potentialLevel = input.potentialLevel;
 
-  switch (mode) {
+  if (input.neutralizeNineBoxEffect === true) {
+    exactFactorNumerator = NEUTRAL_EVALUATION_FACTOR_SCALED;
+    selectedFactors = { kind: "neutral" };
+    explanation.push({
+      code: "EVALUATION_NINE_BOX_NEUTRALIZED",
+      label: "Effet 9-Box neutralisé",
+      inputValues: {
+        neutralizeNineBoxEffect: true,
+        mode,
+        performanceLevel: performanceLevel ?? null,
+        potentialLevel: potentialLevel ?? null,
+      },
+      outputValue: exactFactorNumerator,
+      formula: "1_000_000 (= 1,000)",
+      reason:
+        "Neutralisation individuelle : facteur d’évaluation effectif = 1, indépendamment du mode et du code 9-Box.",
+    });
+  } else {
+    switch (mode) {
     case "none": {
       exactFactorNumerator = NEUTRAL_EVALUATION_FACTOR_SCALED;
       selectedFactors = { kind: "neutral" };
@@ -267,6 +285,7 @@ export function resolveEvaluationFactor(
         `Mode d’évaluation non supporté : ${String(mode)}.`,
       );
     }
+  }
   }
 
   if (

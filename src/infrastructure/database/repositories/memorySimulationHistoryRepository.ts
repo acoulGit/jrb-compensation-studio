@@ -340,6 +340,18 @@ export class MemorySimulationHistoryRepository
             { allowNegative: false },
           ),
           explanationSteps: parseExplanationSteps(employee.explanationStepsJson),
+          neutralizeNineBoxEffect:
+            employee.neutralizeNineBoxEffect === undefined
+              ? null
+              : employee.neutralizeNineBoxEffect,
+          sourceNineBoxCode:
+            employee.sourceNineBoxCode === undefined
+              ? null
+              : employee.sourceNineBoxCode,
+          nineBoxTreatmentKind:
+            employee.nineBoxTreatmentKind === undefined
+              ? null
+              : employee.nineBoxTreatmentKind,
           months: (employee.months ?? [])
             .slice()
             .sort((a, b) => a.month - b.month)

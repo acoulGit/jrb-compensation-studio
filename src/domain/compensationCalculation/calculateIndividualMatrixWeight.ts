@@ -31,6 +31,7 @@ export function calculateIndividualMatrixWeight(
     performanceFactors: input.performanceFactors,
     potentialFactors: input.potentialFactors,
     nineBoxFactors: input.nineBoxFactors,
+    neutralizeNineBoxEffect: input.neutralizeNineBoxEffect,
   });
 
   if (!Number.isInteger(salaryPosition.positionFactorMilli)) {

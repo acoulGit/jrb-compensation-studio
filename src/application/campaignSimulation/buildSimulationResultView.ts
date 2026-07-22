@@ -7,6 +7,7 @@
 import {
   CALCULATION_CONTRACT_VERSION,
   formatExactAmount,
+  formatNineBoxTreatmentLabel,
   technicalApplicationMonthLabelFr,
   type CalculationExplanationStep,
   type EmployeeCompensationCalculationResult,
@@ -225,6 +226,12 @@ function mapEmployee(
     ),
     effectiveMatrixWeightLabel: formatExactWeight(employee.effectiveMatrixWeight),
     allocationWeightLabel: formatExactWeight(employee.allocationWeight),
+    neutralizeNineBoxEffect: employee.neutralizeNineBoxEffect,
+    sourceNineBoxCode: employee.sourceNineBoxCode,
+    nineBoxTreatmentKind: employee.nineBoxTreatmentKind,
+    nineBoxTreatmentLabel:
+      formatNineBoxTreatmentLabel(employee.nineBoxTreatmentKind) ??
+      employee.nineBoxTreatmentKind,
     blockingReason: employee.blockingReason ?? null,
     annualTheoreticalAllocation: employee.annualTheoreticalAllocation,
     annualTheoreticalAllocationLabel: formatExactAmountAsFcfa(
@@ -680,6 +687,8 @@ export function buildSimulationResultView(input: {
     positiveWeightEmployeeCount: summary.positiveWeightEmployeeCount,
     zeroWeightEmployeeCount: summary.zeroWeightEmployeeCount,
     confirmedUnderperformerCount: summary.confirmedUnderperformerCount,
+    neutralizeNineBoxEffectEmployeeCount:
+      summary.neutralizeNineBoxEffectEmployeeCount,
     annualTheoreticalAllocatedTotal: summary.annualTheoreticalAllocatedTotal,
     annualActualOperationCostFcfa: summary.annualActualOperationCostFcfa,
     annualTotalRoundingDelta: summary.annualTotalRoundingDelta,

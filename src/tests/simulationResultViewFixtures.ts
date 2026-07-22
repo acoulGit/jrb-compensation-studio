@@ -257,10 +257,18 @@ export function withPromotionAwareEmployeeDefaults(
     | "fullYearRunRateCombinedBaseMeasureCostLabel"
     | "fullYearRunRateSeniorityImpactFcfa"
     | "fullYearRunRateSeniorityImpactLabel"
+    | "neutralizeNineBoxEffect"
+    | "sourceNineBoxCode"
+    | "nineBoxTreatmentKind"
+    | "nineBoxTreatmentLabel"
   > &
     Partial<EmployeeSimulationResultView>,
 ): EmployeeSimulationResultView {
   return {
+    neutralizeNineBoxEffect: false,
+    sourceNineBoxCode: null,
+    nineBoxTreatmentKind: "missing_nine_box_data_treatment",
+    nineBoxTreatmentLabel: "Traitement des données 9-Box manquantes",
     compensatoryMeasureEligible: true,
     isPromotionBudgetPopulationEmployee: true,
     employmentStatus: "active",

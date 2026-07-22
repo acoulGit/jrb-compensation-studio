@@ -22,6 +22,10 @@ import {
   formatSeniorityRatePercent,
 } from "./formatExactBudgetDisplay";
 import {
+  formatNineBoxTreatmentLabel,
+  type NineBoxTreatmentKind,
+} from "../../domain/compensationCalculation";
+import {
   classifyResultSchemaVersion,
   resultSchemaCompatibilityMessage,
   type ResultSchemaCompatibility,
@@ -116,6 +120,10 @@ function mapExecutionEmployee(
     theoreticalMatrixWeightLabel: employee.theoreticalMatrixWeightLabel,
     effectiveMatrixWeightLabel: employee.effectiveMatrixWeightLabel,
     allocationWeightLabel: employee.allocationWeightLabel,
+    neutralizeNineBoxEffect: employee.neutralizeNineBoxEffect,
+    sourceNineBoxCode: employee.sourceNineBoxCode,
+    nineBoxTreatmentKind: employee.nineBoxTreatmentKind,
+    nineBoxTreatmentLabel: employee.nineBoxTreatmentLabel,
     blockingReason: employee.blockingReason,
     // Libellés HEAD : valeurs mensuelles individuelles (schema v3).
     theoreticalIncreaseRateLabel: employee.monthlyTheoreticalIncreaseRateLabel,
@@ -157,6 +165,8 @@ export function mapExecutionResultToViewModel(
     positiveWeightEmployeeCount: population.positiveWeightEmployeeCount,
     zeroWeightEmployeeCount: population.zeroWeightEmployeeCount,
     confirmedUnderperformerCount: population.confirmedUnderperformerCount,
+    neutralizeNineBoxEffectEmployeeCount:
+      population.neutralizeNineBoxEffectEmployeeCount,
     budgetTargetLabel: budget.exactBudgetTargetLabel,
     theoreticalAllocatedTotalLabel: budget.annualTheoreticalAllocatedTotalLabel,
     actualOperationAmountLabel: budget.annualActualOperationCostLabel,
@@ -270,6 +280,12 @@ function mapPersistedEmployee(
     ),
     effectiveMatrixWeightLabel: formatExactWeight(employee.effectiveMatrixWeight),
     allocationWeightLabel: formatExactWeight(employee.allocationWeight),
+    neutralizeNineBoxEffect: employee.neutralizeNineBoxEffect ?? null,
+    sourceNineBoxCode: employee.sourceNineBoxCode ?? null,
+    nineBoxTreatmentKind: employee.nineBoxTreatmentKind ?? null,
+    nineBoxTreatmentLabel: formatNineBoxTreatmentLabel(
+      employee.nineBoxTreatmentKind as NineBoxTreatmentKind | null | undefined,
+    ),
     blockingReason: employee.blockingReason,
     theoreticalIncreaseRateLabel: formatExactRateAsPercent(
       employee.theoreticalIncreaseRate,
@@ -310,6 +326,8 @@ export function mapPersistedDetailToViewModel(
     positiveWeightEmployeeCount: summaryRow.positiveWeightEmployeeCount,
     zeroWeightEmployeeCount: summaryRow.zeroWeightEmployeeCount,
     confirmedUnderperformerCount: summaryRow.confirmedUnderperformerCount,
+    neutralizeNineBoxEffectEmployeeCount:
+      summaryRow.neutralizeNineBoxEffectEmployeeCount ?? null,
     budgetTargetLabel: formatExactAmountAsFcfa(summaryRow.exactBudgetTarget),
     theoreticalAllocatedTotalLabel: formatExactAmountAsFcfa(
       summaryRow.theoreticalAllocatedTotal,

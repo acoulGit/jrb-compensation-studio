@@ -241,6 +241,14 @@ pub struct SaveSimulationEmployeeDto {
     pub full_year_run_rate_compensation_above_minimum_cost_fcfa_text: Option<String>,
     #[serde(default)]
     pub months: Option<Vec<SaveSimulationEmployeeMonthDto>>,
+
+    // ---- Champs schema v4 (Lot 2B-RC1-H1) — optionnels (NULL pour DTO v3) ----
+    #[serde(default)]
+    pub neutralize_nine_box_effect: Option<bool>,
+    #[serde(default)]
+    pub source_nine_box_code: Option<i64>,
+    #[serde(default)]
+    pub nine_box_treatment_kind: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -382,6 +390,10 @@ pub struct SaveSimulationRunInput {
     pub above_minimum_remaining_year_direct_cost_text: Option<String>,
     #[serde(default)]
     pub total_remaining_year_direct_compensatory_cost_text: Option<String>,
+
+    // ---- Compteur schema v4 (Lot 2B-RC1-H1) ----
+    #[serde(default)]
+    pub neutralize_nine_box_effect_employee_count: Option<i64>,
 
     pub employees: Vec<SaveSimulationEmployeeDto>,
 }
@@ -1012,8 +1024,11 @@ async fn update_employee_v3_columns(
             minimum_remaining_year_direct_cost_text = ?59,
             above_minimum_remaining_year_direct_cost_text = ?60,
             full_year_run_rate_minimum_complement_cost_text = ?61,
-            full_year_run_rate_compensation_above_minimum_cost_text = ?62
-        WHERE id = ?63
+            full_year_run_rate_compensation_above_minimum_cost_text = ?62,
+            neutralize_nine_box_effect = ?63,
+            source_nine_box_code = ?64,
+            nine_box_treatment_kind = ?65
+        WHERE id = ?66
         "#,
     )
     .bind(&employee.annual_theoretical_allocation_numerator_text)
@@ -1078,6 +1093,9 @@ async fn update_employee_v3_columns(
     .bind(&employee.above_minimum_remaining_year_direct_cost_fcfa_text)
     .bind(&employee.full_year_run_rate_minimum_complement_cost_fcfa_text)
     .bind(&employee.full_year_run_rate_compensation_above_minimum_cost_fcfa_text)
+    .bind(employee.neutralize_nine_box_effect)
+    .bind(employee.source_nine_box_code)
+    .bind(&employee.nine_box_treatment_kind)
     .bind(employee_result_id)
     .execute(&mut **tx)
     .await?;
@@ -1368,11 +1386,12 @@ async fn save_simulation_run_in_tx(
             total_compensatory_reminder_text = ?50,
             minimum_remaining_year_direct_cost_text = ?51,
             above_minimum_remaining_year_direct_cost_text = ?52,
-            total_remaining_year_direct_compensatory_cost_text = ?53
-        WHERE id = ?54
+            total_remaining_year_direct_compensatory_cost_text = ?53,
+            neutralize_nine_box_effect_employee_count = ?54
+        WHERE id = ?55
         "#,
     )
-    .bind(input.result_schema_version.unwrap_or(3))
+    .bind(input.result_schema_version.unwrap_or(4))
     .bind(input.retroactivity_start_month)
     .bind(input.technical_application_month)
     .bind(input.campaign_covered_month_count)
@@ -1425,6 +1444,7 @@ async fn save_simulation_run_in_tx(
     .bind(&input.minimum_remaining_year_direct_cost_text)
     .bind(&input.above_minimum_remaining_year_direct_cost_text)
     .bind(&input.total_remaining_year_direct_compensatory_cost_text)
+    .bind(input.neutralize_nine_box_effect_employee_count)
     .bind(simulation_run_id)
     .execute(&mut **tx)
     .await?;
@@ -1659,6 +1679,13 @@ mod tests {
     const SIMULATION_SCHEMA: &str = include_str!("../migrations/0005_campaign_simulations.sql");
     const SIMULATION_SCHEMA_V3: &str =
         include_str!("../migrations/0007_simulation_contract_v4_results.sql");
+    const SIMULATION_SCHEMA_V4: &str = r#"
+        CREATE TABLE IF NOT EXISTS hr_import_employees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT
+        );
+    "#;
+    const SIMULATION_SCHEMA_V4_ALTS: &str =
+        include_str!("../migrations/0008_nine_box_neutralization.sql");
 
     async fn apply_sql(conn: &mut sqlx::SqliteConnection, sql: &str) {
         for statement in sql.split(';') {
@@ -1686,6 +1713,8 @@ mod tests {
             apply_sql(&mut conn, MINIMAL_SCHEMA).await;
             apply_sql(&mut conn, SIMULATION_SCHEMA).await;
             apply_sql(&mut conn, SIMULATION_SCHEMA_V3).await;
+            apply_sql(&mut conn, SIMULATION_SCHEMA_V4).await;
+            apply_sql(&mut conn, SIMULATION_SCHEMA_V4_ALTS).await;
         }
 
         (dir, url)

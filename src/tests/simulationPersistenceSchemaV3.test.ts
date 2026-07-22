@@ -5,6 +5,7 @@ import {
   RESULT_SCHEMA_VERSION,
   RESULT_SCHEMA_VERSION_LEGACY,
   RESULT_SCHEMA_VERSION_V2,
+  RESULT_SCHEMA_VERSION_V3,
   SENIORITY_IMPACT_CONTRACT_VERSION,
 } from "../domain/compensationCalculation";
 import {
@@ -117,6 +118,7 @@ function sampleResult(): CampaignSimulationExecutionResult {
       positiveWeightEmployeeCount: 1,
       zeroWeightEmployeeCount: 0,
       confirmedUnderperformerCount: 0,
+      neutralizeNineBoxEffectEmployeeCount: 0,
       annualTheoreticalAllocatedTotal: { numerator: 300000n, denominator: 1n },
       annualActualOperationCostFcfa: 300000n,
       annualTotalRoundingDelta: { numerator: 0n, denominator: 1n },
@@ -177,6 +179,9 @@ function sampleResult(): CampaignSimulationExecutionResult {
         theoreticalMatrixWeightLabel: "1",
         effectiveMatrixWeightLabel: "1",
         allocationWeightLabel: "1000000",
+        neutralizeNineBoxEffect: false,
+        sourceNineBoxCode: null,
+        nineBoxTreatmentKind: 'nine_box_code_applied',
         blockingReason: null,
         annualTheoreticalAllocation: { numerator: 300000n, denominator: 1n },
         annualTheoreticalAllocationLabel: "x",
@@ -212,24 +217,27 @@ function sampleResult(): CampaignSimulationExecutionResult {
   };
 }
 
-describe("Lot 2B-P1 — persistance schema v3", () => {
+describe("Lot 2B-P1 / 2B-RC1-H1 — persistance schema v3/v4", () => {
   it("expose les versions de contrat/schema attendues", () => {
-    expect(RESULT_SCHEMA_VERSION).toBe(3);
+    expect(RESULT_SCHEMA_VERSION).toBe(4);
+    expect(RESULT_SCHEMA_VERSION_V3).toBe(3);
     expect(RESULT_SCHEMA_VERSION_V2).toBe(2);
     expect(RESULT_SCHEMA_VERSION_LEGACY).toBe(1);
-    expect(CALCULATION_CONTRACT_VERSION).toBe(4);
+    expect(CALCULATION_CONTRACT_VERSION).toBe(5);
     expect(SENIORITY_IMPACT_CONTRACT_VERSION).toBe(1);
     expect(MINIMUM_INCREASE_CONTRACT_VERSION).toBe(1);
   });
 
   it("classe la compatibilité des schémas", () => {
-    // cas 65 / 64 / 63 / 66
+    expect(classifyResultSchemaVersion(4)).toBe("current");
     expect(classifyResultSchemaVersion(3)).toBe("current");
     expect(classifyResultSchemaVersion(2)).toBe("incomplete");
     expect(classifyResultSchemaVersion(1)).toBe("incompatible");
     expect(classifyResultSchemaVersion(99)).toBe("unknown");
+    expect(canPresentResultSchemaVersion(4)).toBe(true);
     expect(canPresentResultSchemaVersion(3)).toBe(true);
     expect(canPresentResultSchemaVersion(2)).toBe(false);
+    expect(resultSchemaCompatibilityMessage(4)).toBeNull();
     expect(resultSchemaCompatibilityMessage(3)).toBeNull();
     expect(resultSchemaCompatibilityMessage(2)).toMatch(
       /période configurable.*historique complet/is,
@@ -240,7 +248,13 @@ describe("Lot 2B-P1 — persistance schema v3", () => {
     expect(resultSchemaCompatibilityMessage(42)).toMatch(/non reconnu/i);
   });
 
-  it("autorise contrat 4 + schema 3 et refuse contrat ≥ 3 + schema < 3", () => {
+  it("autorise contrat 5 + schema 4, contrat 4 + schema 3, et refuse les schemas trop anciens", () => {
+    expect(() =>
+      assertSimulationResultPersistable({
+        calculationContractVersion: 5,
+        resultSchemaVersion: 4,
+      }),
+    ).not.toThrow();
     expect(() =>
       assertSimulationResultPersistable({
         calculationContractVersion: 4,
@@ -249,20 +263,26 @@ describe("Lot 2B-P1 — persistance schema v3", () => {
     ).not.toThrow();
     expect(() =>
       assertSimulationResultPersistable({
+        calculationContractVersion: 5,
+        resultSchemaVersion: 3,
+      }),
+    ).toThrow(/schema/i);
+    expect(() =>
+      assertSimulationResultPersistable({
         calculationContractVersion: 3,
         resultSchemaVersion: 2,
       }),
     ).toThrow(/schema/i);
   });
 
-  it("mappe le résultat en DTO schema v3 avec 12 mois (aucun recalcul)", () => {
+  it("mappe le résultat en DTO schema v4 avec 12 mois (aucun recalcul)", () => {
     const dto = mapExecutionResultToSaveDto({
       result: sampleResult(),
       expectedCampaignStatus: "active",
       sourceImportFileName: "pop.xlsx",
     });
-    expect(dto.resultSchemaVersion).toBe(3);
-    expect(dto.calculationContractVersion).toBe(4);
+    expect(dto.resultSchemaVersion).toBe(4);
+    expect(dto.calculationContractVersion).toBe(5);
     expect(dto.seniorityImpactContractVersion).toBe(1);
     expect(dto.minimumIncreaseContractVersion).toBe(1);
     expect(dto.retroactivityStartMonth).toBe(1);
@@ -272,6 +292,7 @@ describe("Lot 2B-P1 — persistance schema v3", () => {
     expect(dto.minimumIncreaseMode).toBe("none");
     expect(dto.actualCombinedCampaignPeriodCostText).toBe("300000");
     expect(dto.totalBaseSalaryReminderText).toBe("75000");
+    expect(dto.neutralizeNineBoxEffectEmployeeCount).toBe(0);
 
     const employee = dto.employees[0];
     expect(employee.months).toHaveLength(12);
@@ -283,6 +304,7 @@ describe("Lot 2B-P1 — persistance schema v3", () => {
     expect(employee.months![0].finalSalaryFcfaText).toBe("1025000");
     expect(employee.annualActualCostFcfaText).toBe("300000");
     expect(employee.hireDate).toBe("2020-07-15");
+    expect(employee.neutralizeNineBoxEffect).toBe(false);
   });
 
   it("dérive promotion_payment_timing depuis le domaine sans recalcul", () => {
@@ -318,7 +340,7 @@ describe("Lot 2B-P1 — persistance schema v3", () => {
 
     const detail = await repo.getSimulationRun(saved.simulationRunId);
     expect(detail).not.toBeNull();
-    expect(detail!.summary.resultSchemaVersion).toBe(3);
+    expect(detail!.summary.resultSchemaVersion).toBe(4);
     const months = detail!.employees[0].months!;
     expect(months).toHaveLength(12);
     expect(months.map((m) => m.month)).toEqual([

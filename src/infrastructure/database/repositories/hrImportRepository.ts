@@ -24,6 +24,7 @@ export interface InsertableEmployeeRow {
   decemberBaseSalary: number;
   nineBoxCode: number | null;
   confirmedUnderperformer: boolean;
+  neutralizeNineBoxEffect: boolean;
   promotionAmount: number;
   correctionAmount: number;
   socialMeasureAmount: number;

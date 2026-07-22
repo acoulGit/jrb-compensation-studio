@@ -193,6 +193,8 @@ export interface SimulationPopulationSummaryView {
   positiveWeightEmployeeCount: number;
   zeroWeightEmployeeCount: number;
   confirmedUnderperformerCount: number;
+  /** Nombre de salariés avec effet 9-Box neutralisé (Lot 2B-RC1-H1). */
+  neutralizeNineBoxEffectEmployeeCount: number;
   annualTheoreticalAllocatedTotal: ExactAmount;
   annualActualOperationCostFcfa: bigint;
   annualTotalRoundingDelta: ExactAmount;
@@ -255,6 +257,14 @@ export interface EmployeeSimulationResultView {
   theoreticalMatrixWeightLabel: string;
   effectiveMatrixWeightLabel: string;
   allocationWeightLabel: string;
+  /** Neutralisation individuelle de l’effet 9-Box (Lot 2B-RC1-H1). */
+  neutralizeNineBoxEffect: boolean;
+  /** Code 9-Box source (import) — null si absent. */
+  sourceNineBoxCode: number | null;
+  /** Traitement d’évaluation 9-Box retenu (code machine). */
+  nineBoxTreatmentKind: string;
+  /** Libellé français du traitement 9-Box. */
+  nineBoxTreatmentLabel: string;
   blockingReason: string | null;
   /** Allocation théorique annuelle. */
   annualTheoreticalAllocation: ExactAmount;

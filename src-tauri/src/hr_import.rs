@@ -41,6 +41,9 @@ pub struct ReplacePopulationEmployeeInput {
     pub december_base_salary: i64,
     pub nine_box_code: Option<i64>,
     pub confirmed_underperformer: bool,
+    /// Lot 2B-RC1-H1 — défaut `false` si absent (imports anciens / clients sans champ).
+    #[serde(default)]
+    pub neutralize_nine_box_effect: bool,
     pub promotion_amount: i64,
     pub correction_amount: i64,
     pub social_measure_amount: i64,
@@ -471,6 +474,7 @@ async fn replace_current_population_in_tx(
                 import_batch_id, campaign_id, employee_number, employee_label,
                 job_family_id, grade_id, contract_type, employment_status, hire_date,
                 december_base_salary, nine_box_code, confirmed_underperformer,
+                neutralize_nine_box_effect,
                 promotion_amount, correction_amount, social_measure_amount,
                 promotion_date, salary_before_promotion, salary_after_promotion,
                 previous_grade_id, promoted_grade_id,
@@ -478,7 +482,7 @@ async fn replace_current_population_in_tx(
                 source_row_number, created_at
             ) VALUES (
                 ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-                ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24
+                ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25
             )
             "#,
         )
@@ -494,6 +498,11 @@ async fn replace_current_population_in_tx(
         .bind(employee.december_base_salary)
         .bind(employee.nine_box_code)
         .bind(if employee.confirmed_underperformer {
+            1
+        } else {
+            0
+        })
+        .bind(if employee.neutralize_nine_box_effect {
             1
         } else {
             0
@@ -669,6 +678,8 @@ mod tests {
             december_base_salary INTEGER NOT NULL CHECK (december_base_salary > 0),
             nine_box_code INTEGER NULL,
             confirmed_underperformer INTEGER NOT NULL DEFAULT 0,
+            neutralize_nine_box_effect INTEGER NOT NULL DEFAULT 0
+                CHECK (neutralize_nine_box_effect IN (0, 1)),
             promotion_amount INTEGER NOT NULL DEFAULT 0,
             correction_amount INTEGER NOT NULL DEFAULT 0,
             social_measure_amount INTEGER NOT NULL DEFAULT 0,
@@ -778,6 +789,7 @@ mod tests {
                 december_base_salary: 450_000,
                 nine_box_code: Some(5),
                 confirmed_underperformer: false,
+                neutralize_nine_box_effect: false,
                 promotion_amount: 0,
                 correction_amount: 0,
                 social_measure_amount: 0,
@@ -1215,6 +1227,47 @@ mod tests {
         assert_eq!(previous_family, Some(family_id));
         assert_eq!(promoted_family, Some(family_id));
         assert_eq!(amount, 50_000);
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    async fn neutralize_nine_box_effect_is_persisted_exactly() {
+        let (_dir, url, campaign_id, family_id, grade_id) = setup_temp_db().await;
+        let mut input = sample_input(campaign_id, family_id, grade_id, "neutralize-mix.xlsx", 8);
+        for (index, employee) in input.employees.iter_mut().enumerate() {
+            employee.employee_number = format!("EMP-P{:03}", index + 1);
+            // Trois premiers = Oui, cinq suivants = Non
+            employee.neutralize_nine_box_effect = index < 3;
+        }
+
+        replace_current_population_on_url(&url, &input, None)
+            .await
+            .expect("import with neutralize flags");
+
+        let pool = SqlitePool::connect(&url).await.unwrap();
+        let rows: Vec<(String, i64)> = sqlx::query_as(
+            r#"
+            SELECT e.employee_number, e.neutralize_nine_box_effect
+            FROM hr_import_employees e
+            INNER JOIN hr_import_batches b ON b.id = e.import_batch_id
+            WHERE b.campaign_id = ?1 AND b.status = 'current'
+            ORDER BY e.employee_number
+            "#,
+        )
+        .bind(campaign_id)
+        .fetch_all(&pool)
+        .await
+        .expect("read neutralize flags");
+
+        assert_eq!(rows.len(), 8);
+        let true_count = rows.iter().filter(|(_, flag)| *flag == 1).count();
+        let false_count = rows.iter().filter(|(_, flag)| *flag == 0).count();
+        assert_eq!(true_count, 3);
+        assert_eq!(false_count, 5);
+        assert_eq!(rows[0], ("EMP-P001".into(), 1));
+        assert_eq!(rows[1], ("EMP-P002".into(), 1));
+        assert_eq!(rows[2], ("EMP-P003".into(), 1));
+        assert_eq!(rows[3], ("EMP-P004".into(), 0));
         pool.close().await;
     }
 

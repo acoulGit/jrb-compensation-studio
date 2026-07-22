@@ -46,6 +46,8 @@ export interface SimulationSummaryViewModel {
   positiveWeightEmployeeCount: number;
   zeroWeightEmployeeCount: number;
   confirmedUnderperformerCount: number;
+  /** Schema v4 — null/undefined sur anciens snapshots. */
+  neutralizeNineBoxEffectEmployeeCount?: number | null;
   budgetTargetLabel: string;
   theoreticalAllocatedTotalLabel: string;
   actualOperationAmountLabel: string;
@@ -111,6 +113,14 @@ export interface SimulationEmployeeViewModel {
   effectiveMatrixWeightLabel: string;
   allocationWeightLabel: string;
   blockingReason: string | null;
+  /**
+   * Champs schema v4 (Lot 2B-RC1-H1). Optionnels : absents / null pour
+   * snapshots v3 — jamais de faux Non.
+   */
+  neutralizeNineBoxEffect?: boolean | null;
+  sourceNineBoxCode?: number | null;
+  nineBoxTreatmentKind?: string | null;
+  nineBoxTreatmentLabel?: string | null;
   theoreticalIncreaseRateLabel: string;
   theoreticalIncreaseAmountLabel: string;
   finalRoundedIncreaseAmountFcfa: bigint;

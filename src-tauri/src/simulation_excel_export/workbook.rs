@@ -113,6 +113,21 @@ fn ineligibility_reason_fr(code: &str) -> String {
     }
 }
 
+fn nine_box_treatment_fr(kind: &str) -> String {
+    match kind {
+        "nine_box_code_applied" => "Code 9-Box appliqué".into(),
+        "nine_box_effect_neutralized" => "Effet 9-Box neutralisé".into(),
+        "missing_nine_box_data_treatment" => "Traitement des données 9-Box manquantes".into(),
+        other => other.into(),
+    }
+}
+
+/// Facteur d’évaluation (num/den) → décimal style position (1,000).
+fn evaluation_factor_decimal(num_text: &str, den_text: &str) -> Option<f64> {
+    let rate = ExactRate::from_texts(num_text, den_text)?;
+    rate.to_excel_ratio()
+}
+
 fn format_date_fr(iso: &str) -> String {
     // Attend YYYY-MM-DD… → jj/mm/aaaa
     let date = iso.get(..10).unwrap_or(iso);
@@ -574,6 +589,30 @@ fn write_dashboard(
         &formats.label,
         metrics.minimum_beneficiaries as i64,
     )?;
+    row += 1;
+    let neutralized_count = run.neutralize_nine_box_effect_employee_count.or_else(|| {
+        let any_v4 = snapshot
+            .employees
+            .iter()
+            .any(|e| e.employee.neutralize_nine_box_effect.is_some());
+        if !any_v4 {
+            return None;
+        }
+        Some(
+            snapshot
+                .employees
+                .iter()
+                .filter(|e| e.employee.neutralize_nine_box_effect == Some(true))
+                .count() as i64,
+        )
+    });
+    label_opt_int(
+        sheet,
+        row,
+        "Salariés avec effet 9-Box neutralisé",
+        &formats.label,
+        neutralized_count,
+    )?;
     row += 2;
 
     // ---- Taux ----
@@ -892,6 +931,10 @@ const RESULTATS_HEADERS: &[&str] = &[
     "Motif d’inéligibilité",
     "Population minimum",
     "Sous-performance confirmée",
+    "Effet 9-Box neutralisé",
+    "Code 9-Box source",
+    "Facteur 9-Box effectif",
+    "Traitement 9-Box appliqué",
     // BLOC 4 — PROMOTION
     "Date de promotion",
     "Grade après promotion",
@@ -1047,6 +1090,33 @@ fn write_employee_row(
         || e.compensatory_ineligibility_reason_code.as_deref() == Some("confirmed_underperformer")
         || e.compensatory_eligibility_kind.as_deref() == Some("confirmed_underperformer");
     write_bool(sheet, row, c, underperformer)?;
+    c += 1;
+
+    // 9-Box / neutralisation (schema v4 — NULL historiques = vide, jamais faux Non)
+    match e.neutralize_nine_box_effect {
+        Some(v) => write_bool(sheet, row, c, v)?,
+        None => {}
+    }
+    c += 1;
+    match e.source_nine_box_code {
+        Some(code) => write_int(sheet, row, c, code)?,
+        None => {}
+    }
+    c += 1;
+    match evaluation_factor_decimal(
+        &e.evaluation_factor_numerator_text,
+        &e.evaluation_factor_denominator_text,
+    ) {
+        Some(factor) => {
+            sheet.write_number_with_format(row, c, factor, &formats.decimal3)?;
+        }
+        None => {}
+    }
+    c += 1;
+    match e.nine_box_treatment_kind.as_deref() {
+        Some(kind) => write_text(sheet, row, c, &nine_box_treatment_fr(kind))?,
+        None => {}
+    }
     c += 1;
 
     // Promotion
@@ -1597,6 +1667,31 @@ fn write_synthese(
         "Sous-performeurs confirmés",
         &formats.label,
         run.confirmed_underperformer_count,
+    )?;
+    row += 1;
+    let neutralized_count = run.neutralize_nine_box_effect_employee_count.or_else(|| {
+        let count = snapshot
+            .employees
+            .iter()
+            .filter(|e| e.employee.neutralize_nine_box_effect == Some(true))
+            .count() as i64;
+        // Ne reconstruire un compteur que si au moins un salarié a l’info v4.
+        let any_v4 = snapshot
+            .employees
+            .iter()
+            .any(|e| e.employee.neutralize_nine_box_effect.is_some());
+        if any_v4 {
+            Some(count)
+        } else {
+            None
+        }
+    });
+    label_opt_int(
+        sheet,
+        row,
+        "Salariés avec effet 9-Box neutralisé",
+        &formats.label,
+        neutralized_count,
     )?;
     row += 1;
     label_opt_int(

@@ -338,6 +338,7 @@ function toInsertableRows(
       decemberBaseSalary: row.decemberBaseSalary,
       nineBoxCode: row.nineBoxCode,
       confirmedUnderperformer: row.confirmedUnderperformer,
+      neutralizeNineBoxEffect: row.neutralizeNineBoxEffect,
       promotionAmount: row.promotionAmount,
       correctionAmount: row.correctionAmount,
       socialMeasureAmount: row.socialMeasureAmount,

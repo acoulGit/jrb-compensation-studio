@@ -93,6 +93,7 @@ export class MemoryHrImportRepository implements HrImportRepository {
       decemberBaseSalary: employee.decemberBaseSalary,
       nineBoxCode: employee.nineBoxCode,
       confirmedUnderperformer: employee.confirmedUnderperformer,
+      neutralizeNineBoxEffect: employee.neutralizeNineBoxEffect,
       promotionAmount: employee.promotionAmount,
       correctionAmount: employee.correctionAmount,
       socialMeasureAmount: employee.socialMeasureAmount,

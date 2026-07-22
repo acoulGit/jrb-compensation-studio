@@ -44,6 +44,7 @@ interface DraftRow {
   decemberBaseSalary: number | null;
   nineBoxCode: number | null;
   confirmedUnderperformer: boolean;
+  neutralizeNineBoxEffect: boolean;
   promotionAmount: number;
   correctionAmount: number;
   socialMeasureAmount: number;
@@ -351,6 +352,25 @@ export function normalizeImportRows(input: {
       confirmedUnderperformer = confirmedResult;
     }
 
+    const neutralizeRaw = readCell(
+      row,
+      mappingByField,
+      "neutralizeNineBoxEffect",
+    );
+    const neutralizeResult = readBooleanFlag(neutralizeRaw);
+    let neutralizeNineBoxEffect = false;
+    if (neutralizeResult === "invalid") {
+      pushError(
+        rowIssues,
+        "invalid_neutralize_nine_box_effect",
+        sourceRowNumber,
+        "neutralizeNineBoxEffect",
+        "La valeur de « Neutraliser effet 9-Box » est invalide. Utilisez Oui, Non, true, false, 1 ou 0.",
+      );
+    } else {
+      neutralizeNineBoxEffect = neutralizeResult;
+    }
+
     const historicalPromotionAmount = readOptionalAmountWithPresence(
       row,
       mappingByField,
@@ -440,6 +460,7 @@ export function normalizeImportRows(input: {
       decemberBaseSalary,
       nineBoxCode,
       confirmedUnderperformer,
+      neutralizeNineBoxEffect,
       promotionAmount,
       correctionAmount,
       socialMeasureAmount,
@@ -506,6 +527,7 @@ export function normalizeImportRows(input: {
       decemberBaseSalary: draft.decemberBaseSalary,
       nineBoxCode: draft.nineBoxCode,
       confirmedUnderperformer: draft.confirmedUnderperformer,
+      neutralizeNineBoxEffect: draft.neutralizeNineBoxEffect,
       promotionAmount: draft.promotionAmount,
       correctionAmount: draft.correctionAmount,
       socialMeasureAmount: draft.socialMeasureAmount,

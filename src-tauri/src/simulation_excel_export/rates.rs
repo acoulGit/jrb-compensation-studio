@@ -363,6 +363,8 @@ mod tests {
             evaluation_mode: "none".into(),
             performance_level: None,
             potential_level: None,
+            evaluation_factor_numerator_text: "1".into(),
+            evaluation_factor_denominator_text: "1".into(),
             blocking_reason: None,
             theoretical_increase_rate_numerator_text: "0".into(),
             theoretical_increase_rate_denominator_text: "1".into(),
@@ -407,6 +409,9 @@ mod tests {
             technical_application_month_seniority_rate_percent: None,
             minimum_compensatory_reminder_text: None,
             above_minimum_compensatory_reminder_text: None,
+            neutralize_nine_box_effect: None,
+            source_nine_box_code: None,
+            nine_box_treatment_kind: None,
         }
     }
 

@@ -83,6 +83,7 @@ Si la colonne est absente du mapping, des valeurs par défaut s’appliquent.
 | --- | --- | --- |
 | `nineBoxCode` | Code 9-Box | `null` |
 | `confirmedUnderperformer` | Sous-performant confirmé | `false` |
+| `neutralizeNineBoxEffect` | Neutraliser effet 9-Box | `false` |
 | `promotionAmount` | Montant de promotion | `0` ; si promo structurée → delta dérivé (canonique) |
 | `correctionAmount` | Montant de correction | `0` |
 | `socialMeasureAmount` | Montant mesure RH / sociale | `0` |
@@ -132,6 +133,7 @@ Exemples d’alias reconnus (liste non exhaustive) :
 | `decemberBaseSalary` | Salaire de base décembre, december base salary |
 | `nineBoxCode` | 9-Box, Code 9-Box, nine box code |
 | `confirmedUnderperformer` | Sous-performant confirmé, underperformer |
+| `neutralizeNineBoxEffect` | Neutraliser effet 9-Box, neutralize nine box |
 | `promotionAmount` | Montant promotion, promotion amount |
 | `correctionAmount` | Montant correction, correction amount |
 | `socialMeasureAmount` | Mesure RH, mesure sociale, social measure |

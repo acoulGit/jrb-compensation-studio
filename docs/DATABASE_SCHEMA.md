@@ -379,8 +379,20 @@ Le préchargement est déclaré dans `tauri.conf.json` (`plugins.sql.preload`).
 | 5 | `0005_campaign_simulations.sql` | snapshots de simulations immuables |
 | 6 | `0006_employee_promotions.sql` | colonnes promotion optionnelles sur `hr_import_employees` |
 | 7 | `0007_simulation_contract_v4_results.sql` | consolidation snapshot schema v3 (contrat v4 + trajectoire mensuelle) |
+| 8 | `0008_nine_box_neutralization.sql` | import + snapshot schema v4 (contrat v5) — neutralisation 9-Box |
 
-Évolution : ajouter un fichier `0008_....sql`, une constante associée et une
+### Neutralisation 9-Box (migration `0008`, schema v4 / contrat v5)
+
+Additive, non destructive. Colonnes NULL sur les anciens snapshots v3
+(jamais de faux « Non » reconstruit).
+
+- `hr_import_employees.neutralize_nine_box_effect` INTEGER NOT NULL DEFAULT 0
+- `compensation_simulation_runs.neutralize_nine_box_effect_employee_count`
+- `compensation_simulation_employee_results` :
+  `neutralize_nine_box_effect`, `source_nine_box_code`,
+  `nine_box_treatment_kind`
+
+Évolution : ajouter un fichier `0009_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.
 
 ## Export Excel RH et mot de passe (Lot 2B-E1)

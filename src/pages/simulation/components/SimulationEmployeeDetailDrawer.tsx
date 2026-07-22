@@ -155,6 +155,38 @@ export function SimulationEmployeeDetailDrawer({
               </dd>
             </div>
             <div>
+              <dt>Effet 9-Box neutralisé</dt>
+              <dd data-testid={`${testIdPrefix}-detail-nine-box-neutralized`}>
+                {employee.neutralizeNineBoxEffect === null ||
+                employee.neutralizeNineBoxEffect === undefined
+                  ? "Non disponible"
+                  : employee.neutralizeNineBoxEffect
+                    ? "Oui"
+                    : "Non"}
+              </dd>
+            </div>
+            <div>
+              <dt>Code 9-Box source</dt>
+              <dd data-testid={`${testIdPrefix}-detail-source-nine-box`}>
+                {employee.sourceNineBoxCode == null
+                  ? employee.neutralizeNineBoxEffect === null ||
+                    employee.neutralizeNineBoxEffect === undefined
+                    ? "Non disponible"
+                    : "—"
+                  : String(employee.sourceNineBoxCode)}
+              </dd>
+            </div>
+            <div>
+              <dt>Traitement 9-Box appliqué</dt>
+              <dd data-testid={`${testIdPrefix}-detail-nine-box-treatment`}>
+                {employee.nineBoxTreatmentLabel ??
+                  (employee.neutralizeNineBoxEffect === null ||
+                  employee.neutralizeNineBoxEffect === undefined
+                    ? "Non disponible"
+                    : "—")}
+              </dd>
+            </div>
+            <div>
               <dt>Poids théorique</dt>
               <dd data-testid={`${testIdPrefix}-detail-theo-weight`}>
                 {employee.theoreticalMatrixWeightLabel}

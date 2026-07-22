@@ -49,6 +49,7 @@ import {
   NO_MINIMUM_INCREASE_POLICY,
   validateMinimumIncreasePolicy,
 } from "./minimumIncrease";
+import { resolveNineBoxTreatmentKind } from "./nineBoxTreatment";
 import {
   buildEmployeePromotionAwareExposures,
   finalizeEmployeePromotionAwareCompensation,
@@ -308,6 +309,7 @@ export function calculatePreparedPopulationCompensation(
         confirmedUnderperformer: raw.confirmedUnderperformer,
         performanceLevel: raw.performanceLevel,
         potentialLevel: raw.potentialLevel,
+        neutralizeNineBoxEffect: raw.neutralizeNineBoxEffect === true,
         campaignYear: input.campaignYear,
         technicalApplicationMonth: input.technicalApplicationMonth,
         retroactivityStartMonth,
@@ -744,6 +746,13 @@ export function calculatePreparedPopulationCompensation(
       potentialLevel: prepared.evaluationFactorResult.potentialLevel,
       evaluationFactorNumerator: prepared.evaluationFactorResult.exactFactorNumerator,
       evaluationFactorScale: prepared.evaluationFactorResult.exactFactorScale,
+      neutralizeNineBoxEffect: raw.neutralizeNineBoxEffect === true,
+      sourceNineBoxCode:
+        raw.sourceNineBoxCode === undefined ? null : raw.sourceNineBoxCode,
+      nineBoxTreatmentKind: resolveNineBoxTreatmentKind({
+        neutralizeNineBoxEffect: raw.neutralizeNineBoxEffect === true,
+        sourceNineBoxCode: raw.sourceNineBoxCode,
+      }),
       theoreticalMatrixWeight: prepared.theoreticalMatrixWeight,
       effectiveMatrixWeight: prepared.effectiveMatrixWeight,
       allocationWeight: prepared.allocationWeight,
@@ -866,6 +875,7 @@ export function calculatePreparedPopulationCompensation(
   let positiveWeightEmployeeCount = 0;
   let zeroWeightEmployeeCount = 0;
   let confirmedUnderperformerCount = 0;
+  let neutralizeNineBoxEffectEmployeeCount = 0;
   let totalBaseSalaryReminderFcfa = 0n;
   let totalRemainingYearDirectIncreaseCostFcfa = 0n;
   let totalAnnualActualBaseIncreaseCostFcfa = 0n;
@@ -962,6 +972,9 @@ export function calculatePreparedPopulationCompensation(
     if (employee.blockingReason === "CONFIRMED_UNDERPERFORMER") {
       confirmedUnderperformerCount += 1;
     }
+    if (employee.neutralizeNineBoxEffect) {
+      neutralizeNineBoxEffectEmployeeCount += 1;
+    }
   }
 
   if (
@@ -1034,6 +1047,7 @@ export function calculatePreparedPopulationCompensation(
     positiveWeightEmployeeCount,
     zeroWeightEmployeeCount,
     confirmedUnderperformerCount,
+    neutralizeNineBoxEffectEmployeeCount,
     annualBudgetTarget,
     totalAllocationWeight,
     calibrationCoefficient,

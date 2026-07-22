@@ -1,6 +1,7 @@
 /**
- * Compatibilité des snapshots persistés (result_schema_version) — Lot 2B-P1.
- * v3 = courant (contrat v4 consolidé, mois persistés).
+ * Compatibilité des snapshots persistés (result_schema_version) — Lot 2B-P1 / 2B-RC1-H1.
+ * v4 = courant (contrat v5, neutralisation 9-Box).
+ * v3 = présentable (contrat v4 consolidé, mois persistés — sans champs 9-Box v4).
  * v2 = incomplet (annuel/mensuel sans mois ni ancienneté/minimum persistés).
  * v1 = incompatible (sémantique obsolète — ne pas recalculer).
  * autre = inconnu (refus par prudence).
@@ -10,6 +11,7 @@ import {
   RESULT_SCHEMA_VERSION,
   RESULT_SCHEMA_VERSION_LEGACY,
   RESULT_SCHEMA_VERSION_V2,
+  RESULT_SCHEMA_VERSION_V3,
 } from "../../domain/compensationCalculation";
 
 export type ResultSchemaCompatibility =
@@ -21,7 +23,12 @@ export type ResultSchemaCompatibility =
 export function classifyResultSchemaVersion(
   version: number,
 ): ResultSchemaCompatibility {
-  if (version === RESULT_SCHEMA_VERSION) return "current";
+  if (
+    version === RESULT_SCHEMA_VERSION ||
+    version === RESULT_SCHEMA_VERSION_V3
+  ) {
+    return "current";
+  }
   if (version === RESULT_SCHEMA_VERSION_V2) return "incomplete";
   if (version === RESULT_SCHEMA_VERSION_LEGACY) return "incompatible";
   return "unknown";
@@ -35,16 +42,18 @@ export function isLegacyResultSchemaVersion(version: number): boolean {
   return version === RESULT_SCHEMA_VERSION_LEGACY;
 }
 
-/** Un snapshot peut-il être présenté avec le modèle v3 courant ? */
+/** Un snapshot peut-il être présenté (v3 et v4) ? */
 export function canPresentResultSchemaVersion(version: number): boolean {
-  return classifyResultSchemaVersion(version) === "current";
+  return (
+    version === RESULT_SCHEMA_VERSION || version === RESULT_SCHEMA_VERSION_V3
+  );
 }
 
 /** Message utilisateur pour un snapshot version 1 (ancien contrat). */
 export const LEGACY_RESULT_SCHEMA_MESSAGE =
   "Snapshot créé avec un ancien contrat de calcul. Relancez la simulation pour produire un résultat actuel.";
 
-/** Message utilisateur pour un snapshot version 2 (incomplet vs v3). */
+/** Message utilisateur pour un snapshot version 2 (incomplet vs v3/v4). */
 export const INCOMPLETE_RESULT_SCHEMA_MESSAGE =
   "Snapshot créé avant la persistance complète de la période configurable, des promotions, du minimum garanti et des incidences d’ancienneté. Relancez la simulation pour produire un historique complet.";
 
@@ -52,7 +61,7 @@ export const INCOMPLETE_RESULT_SCHEMA_MESSAGE =
 export const UNKNOWN_RESULT_SCHEMA_MESSAGE =
   "Cette simulation enregistrée utilise un schéma non reconnu. Elle ne peut pas être affichée en toute sécurité.";
 
-/** Message associé au statut de compatibilité (null si courant). */
+/** Message associé au statut de compatibilité (null si présentable courant). */
 export function resultSchemaCompatibilityMessage(
   version: number,
 ): string | null {

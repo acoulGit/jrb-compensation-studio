@@ -12,6 +12,7 @@ import type {
   SalaryPositionInputRow,
   SalaryPositionResult,
 } from "./models";
+import type { NineBoxTreatmentKind } from "./nineBoxTreatment";
 import type { NineBoxMode, PerformanceLevel, PotentialLevel } from "../compensationReference/models";
 import type {
   PromotionCampaignCostPreview,
@@ -58,6 +59,15 @@ export interface PreparedEmployeeCalculationInput {
   performanceLevel?: PerformanceLevel;
   potentialLevel?: PotentialLevel;
   confirmedUnderperformer: boolean;
+  /**
+   * Neutralisation individuelle de l’effet 9-Box (Lot 2B-RC1-H1).
+   * Défaut métier = false. Si true, le facteur d’évaluation effectif vaut 1.
+   */
+  neutralizeNineBoxEffect?: boolean;
+  /**
+   * Code 9-Box source (import), conservé pour traçabilité même si neutralisé.
+   */
+  sourceNineBoxCode?: number | null;
   /** Promotion structurée importée (Lot 2A-H2C-1) — null si absent. */
   promotion?: PromotionEvent | null;
   /**
@@ -168,6 +178,12 @@ export interface EmployeeCompensationCalculationResult {
   potentialLevel?: PotentialLevel;
   evaluationFactorNumerator: number;
   evaluationFactorScale: number;
+  /** Neutralisation individuelle de l’effet 9-Box (Lot 2B-RC1-H1). */
+  neutralizeNineBoxEffect: boolean;
+  /** Code 9-Box source (import) — null si absent. */
+  sourceNineBoxCode: number | null;
+  /** Traitement d’évaluation 9-Box retenu. */
+  nineBoxTreatmentKind: NineBoxTreatmentKind;
   theoreticalMatrixWeight: ExactAmount;
   effectiveMatrixWeight: ExactAmount;
   allocationWeight: ExactAmount;
@@ -379,6 +395,8 @@ export interface PopulationCalculationSummary {
   positiveWeightEmployeeCount: number;
   zeroWeightEmployeeCount: number;
   confirmedUnderperformerCount: number;
+  /** Nombre de salariés avec effet 9-Box neutralisé (Lot 2B-RC1-H1). */
+  neutralizeNineBoxEffectEmployeeCount: number;
   /** Budget annuel cible exact. */
   annualBudgetTarget: ExactAmount;
   totalAllocationWeight: ExactAmount;

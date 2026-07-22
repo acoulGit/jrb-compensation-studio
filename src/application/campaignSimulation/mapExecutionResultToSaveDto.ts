@@ -74,13 +74,20 @@ function mapMinimumPolicyTexts(policy: MinimumIncreasePolicy | undefined): {
 
 /**
  * Interdit la sauvegarde silencieuse d'un résultat contrat ≥ 3 dans un snapshot
- * schema < 3 (incomplet). N'affecte ni le calcul ni l'affichage.
+ * schema < 3 (incomplet), et contrat ≥ 5 dans un schema < 4 (sans 9-Box v4).
+ * N'affecte ni le calcul ni l'affichage.
  */
 export function assertSimulationResultPersistable(input: {
   calculationContractVersion: number;
   resultSchemaVersion?: number;
 }): void {
   const schemaVersion = input.resultSchemaVersion ?? RESULT_SCHEMA_VERSION;
+  if (input.calculationContractVersion >= 5 && schemaVersion < 4) {
+    throw new CompensationCalculationError(
+      "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION",
+      "Cette simulation utilise le contrat de neutralisation 9-Box et ne peut pas être enregistrée dans l’ancien format d’historique (schema < 4). Finalisez la consolidation en schema v4 avant l’enregistrement.",
+    );
+  }
   if (input.calculationContractVersion >= 3 && schemaVersion < 3) {
     throw new CompensationCalculationError(
       "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION",
@@ -350,6 +357,10 @@ function mapEmployee(
     fullYearRunRateCompensationAboveMinimumCostFcfaText: bi(
       employee.fullYearRunRateCompensationAboveMinimumCostFcfa,
     ),
+    // ---- Champs schema v4 (Lot 2B-RC1-H1) ----
+    neutralizeNineBoxEffect: employee.neutralizeNineBoxEffect,
+    sourceNineBoxCode: employee.sourceNineBoxCode,
+    nineBoxTreatmentKind: employee.nineBoxTreatmentKind,
     months: employee.monthlyCompensationTrajectory.map(mapMonth),
   };
 }
@@ -582,6 +593,8 @@ export function mapExecutionResultToSaveDto(input: {
     totalRemainingYearDirectCompensatoryCostText: bi(
       paymentCalendar.totalRemainingYearDirectCompensatoryCostFcfa,
     ),
+    neutralizeNineBoxEffectEmployeeCount:
+      population.neutralizeNineBoxEffectEmployeeCount,
     employees: result.employees.map(mapEmployee),
   };
 }

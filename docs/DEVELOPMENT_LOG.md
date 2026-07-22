@@ -1180,3 +1180,44 @@ pré-recette `0.9.0-prerecette-1`, sans changement fonctionnel.
   `cargo test` (+ `--locked` après mise à jour du lock)
 - Zones métier (moteur, import, snapshot, export Excel) inchangées ; aucun
   commit / tag / push
+
+## 2026-07-22 — Lot 2B-RC1-H1 : neutralisation individuelle effet 9-Box
+
+### Objectif
+
+Permettre, à l’import, de neutraliser l’effet 9-Box pour certains salariés
+non encore évalués (`Neutraliser effet 9-Box = Oui` → facteur effectif = 1),
+sans toucher à la sous-performance confirmée ni aux autres facteurs.
+
+### Choix
+
+- Colonne d’import facultative ; absente/vide → Non ; invalide → erreur FR.
+- Priorité : la neutralisation impose le facteur 1 même si un code 9-Box est
+  présent (avertissement non bloquant ; code source conservé).
+- Sous-performance confirmée : toujours applicable (poids effectif 0).
+- Versionnement explicite : `CALCULATION_CONTRACT_VERSION` 4→**5**,
+  `RESULT_SCHEMA_VERSION` 3→**4** ; migration additive `0008`.
+- Anciens imports sans colonne : bit-for-bit identiques ; snapshots v3
+  consultables (champs v4 = Non disponible / vide, jamais de faux Non).
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
+- Aucun commit ; branche `release/0.9.0-prerecette-1` non modifiée
+
+## 2026-07-22 — Lot 2B-RC1-H1-HF1 : conservation après validation import
+
+### Cause
+
+La prévisualisation TS lisait correctement `neutralizeNineBoxEffect`, mais la
+commande Rust `replace_current_population` (`hr_import.rs`) n’avait pas le
+champ dans `ReplacePopulationEmployeeInput` ni dans l’`INSERT`. Serde
+ignorait la propriété camelCase : SQLite appliquait alors le défaut `0`
+(Non) pour toutes les lignes.
+
+### Correction
+
+- Champ `neutralize_nine_box_effect` ajouté au DTO Rust (`#[serde(default)]`)
+  et écrit explicitement dans l’`INSERT`.
+- Pas de migration supplémentaire (colonne déjà fournie par `0008`).
+- Tests : conservation 3 Oui / 5 Non (TS + Rust).

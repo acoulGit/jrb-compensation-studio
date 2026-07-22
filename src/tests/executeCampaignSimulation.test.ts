@@ -169,6 +169,7 @@ function makePorts(options: {
             : employee.salaryFcfa,
         nineBoxCode: 5,
         confirmedUnderperformer: employee.confirmedUnderperformer,
+        neutralizeNineBoxEffect: employee.neutralizeNineBoxEffect === true,
         promotionAmount: 0,
         correctionAmount: 0,
         socialMeasureAmount: 0,

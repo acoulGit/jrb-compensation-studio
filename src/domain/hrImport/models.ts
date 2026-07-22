@@ -84,6 +84,7 @@ export type RequiredHrImportColumnKey =
 export type OptionalHrImportColumnKey =
   | "nineBoxCode"
   | "confirmedUnderperformer"
+  | "neutralizeNineBoxEffect"
   | "promotionAmount"
   | "correctionAmount"
   | "socialMeasureAmount"
@@ -125,6 +126,11 @@ export const OPTIONAL_IMPORT_COLUMNS: readonly HrImportColumn[] = [
   {
     key: "confirmedUnderperformer",
     label: "Sous-performant confirmé",
+    required: false,
+  },
+  {
+    key: "neutralizeNineBoxEffect",
+    label: "Neutraliser effet 9-Box",
     required: false,
   },
   { key: "promotionAmount", label: "Montant de promotion", required: false },
@@ -207,6 +213,8 @@ export interface NormalizedImportRow {
   decemberBaseSalary: number | null;
   nineBoxCode: number | null;
   confirmedUnderperformer: boolean;
+  /** Défaut métier = false (Non) si colonne absente ou vide. */
+  neutralizeNineBoxEffect: boolean;
   promotionAmount: number;
   correctionAmount: number;
   socialMeasureAmount: number;
@@ -239,6 +247,8 @@ export interface EmployeeSnapshot {
   decemberBaseSalary: number;
   nineBoxCode: number | null;
   confirmedUnderperformer: boolean;
+  /** Défaut métier = false (Non). */
+  neutralizeNineBoxEffect: boolean;
   promotionAmount: number;
   correctionAmount: number;
   socialMeasureAmount: number;

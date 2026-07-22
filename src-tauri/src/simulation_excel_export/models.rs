@@ -70,6 +70,9 @@ pub struct RunRow {
     pub full_year_run_rate_seniority_impact_text: Option<String>,
     pub total_base_salary_reminder_text: Option<String>,
     pub total_compensatory_reminder_text: Option<String>,
+
+    // ---- Champs schema v4 (nullable pour anciens snapshots) ----
+    pub neutralize_nine_box_effect_employee_count: Option<i64>,
 }
 
 /// Ligne `compensation_simulation_employee_results` (champs majeurs + v3 RH).
@@ -92,6 +95,8 @@ pub struct EmployeeRow {
     pub evaluation_mode: String,
     pub performance_level: Option<String>,
     pub potential_level: Option<String>,
+    pub evaluation_factor_numerator_text: String,
+    pub evaluation_factor_denominator_text: String,
     pub blocking_reason: Option<String>,
     pub theoretical_increase_rate_numerator_text: String,
     pub theoretical_increase_rate_denominator_text: String,
@@ -140,6 +145,11 @@ pub struct EmployeeRow {
     pub technical_application_month_seniority_rate_percent: Option<i64>,
     pub minimum_compensatory_reminder_text: Option<String>,
     pub above_minimum_compensatory_reminder_text: Option<String>,
+
+    // ---- Champs schema v4 (Lot 2B-RC1-H1) — nullable pour snapshots v3 ----
+    pub neutralize_nine_box_effect: Option<bool>,
+    pub source_nine_box_code: Option<i64>,
+    pub nine_box_treatment_kind: Option<String>,
 }
 
 /// Ligne `compensation_simulation_employee_month_results` (champs majeurs).

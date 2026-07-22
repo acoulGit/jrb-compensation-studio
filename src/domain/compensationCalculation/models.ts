@@ -82,6 +82,11 @@ export interface EvaluationFactorInput {
   performanceFactors: readonly LevelFactorRef[];
   potentialFactors: readonly LevelFactorRef[];
   nineBoxFactors: readonly NineBoxFactorRef[];
+  /**
+   * Neutralisation individuelle de l’effet 9-Box (Lot 2B-RC1-H1).
+   * Si true, le facteur exact vaut 1,000 indépendamment du mode.
+   */
+  neutralizeNineBoxEffect?: boolean;
 }
 
 export interface EvaluationFactorSelection {
@@ -117,6 +122,8 @@ export interface IndividualWeightInput extends SalaryPositionInput {
   potentialFactors: readonly LevelFactorRef[];
   nineBoxFactors: readonly NineBoxFactorRef[];
   confirmedUnderperformer?: boolean;
+  /** Neutralisation individuelle de l’effet 9-Box (Lot 2B-RC1-H1). */
+  neutralizeNineBoxEffect?: boolean;
 }
 
 export interface IndividualWeightResult {

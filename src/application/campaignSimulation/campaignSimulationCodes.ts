@@ -30,7 +30,8 @@ export type CampaignSimulationReadinessCode =
   | "MISSING_ROUNDING_POLICY"
   | "SIMULATION_NOT_READY"
   | "INVALID_NINE_BOX_CODE"
-  | "DUPLICATE_NINE_BOX_CODE";
+  | "DUPLICATE_NINE_BOX_CODE"
+  | "NINE_BOX_CODE_IGNORED_NEUTRALIZED";
 
 export type ReadinessSeverity = "blocking" | "warning";
 

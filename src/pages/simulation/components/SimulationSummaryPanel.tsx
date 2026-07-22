@@ -148,6 +148,15 @@ export function SimulationSummaryPanel({
           {summary.confirmedUnderperformerCount}
         </dd>
       </div>
+      {summary.neutralizeNineBoxEffectEmployeeCount !== undefined &&
+      summary.neutralizeNineBoxEffectEmployeeCount !== null ? (
+        <div>
+          <dt>Salariés avec effet 9-Box neutralisé</dt>
+          <dd data-testid={`${testIdPrefix}-summary-nine-box-neutralized`}>
+            {summary.neutralizeNineBoxEffectEmployeeCount}
+          </dd>
+        </div>
+      ) : null}
       {summary.runSequence !== undefined ? (
         <div>
           <dt>Séquence d’exécution</dt>

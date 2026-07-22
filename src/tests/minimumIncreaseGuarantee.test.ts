@@ -117,7 +117,7 @@ function populationTest1Input(
 
 describe("Lot 2A-H2D-2 — minimum garanti d’augmentation", () => {
   it("expose le contrat v4 et MINIMUM_INCREASE_CONTRACT_VERSION = 1", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(4);
+    expect(CALCULATION_CONTRACT_VERSION).toBe(5);
     expect(MINIMUM_INCREASE_CONTRACT_VERSION).toBe(1);
   });
 

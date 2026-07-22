@@ -145,7 +145,10 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
 
 - Migrations `0005_campaign_simulations.sql` puis
   `0007_simulation_contract_v4_results.sql` (consolidation schema v3 : colonnes
-  contrat v4 + table `compensation_simulation_employee_month_results`).
+  contrat v4 + table `compensation_simulation_employee_month_results`),
+  `0008_nine_box_neutralization.sql` (schema v4 / contrat v5 : colonnes
+  `neutralize_nine_box_effect`, `source_nine_box_code`,
+  `nine_box_treatment_kind` + compteur run).
 - Commande Rust `save_simulation_run` (transaction SQLx dédiée) : écrit le run
   (`result_schema_version = 3`), les salariés et **12 mois** par salarié en une
   seule transaction, sans recalcul.

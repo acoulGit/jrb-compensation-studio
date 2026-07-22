@@ -235,8 +235,8 @@ describe("Lot 2A-H2C-2B — mapping vue sans promotion", () => {
       .join(" ");
     expect(rateLabels).not.toMatch(/\//);
     expect(rateLabels).not.toMatch(/numerator/);
-    expect(CALCULATION_CONTRACT_VERSION).toBe(4);
-    expect(RESULT_SCHEMA_VERSION).toBe(3);
+    expect(CALCULATION_CONTRACT_VERSION).toBe(5);
+    expect(RESULT_SCHEMA_VERSION).toBe(4);
     expect(SENIORITY_IMPACT_CONTRACT_VERSION).toBe(1);
   });
 });

@@ -11,6 +11,8 @@
  * | performanceLevel   | nineBoxCode → facteurs 9-Box   | si mode l’exige ; sinon omis            |
  * | potentialLevel     | nineBoxCode → facteurs 9-Box   | si mode l’exige ; sinon omis            |
  * | confirmedUnderperformer | confirmedUnderperformer   | booléen explicite (Lot 1C post-import)  |
+ * | neutralizeNineBoxEffect | neutralizeNineBoxEffect | booléen ; défaut false (Lot 2B-RC1-H1) |
+ * | sourceNineBoxCode  | nineBoxCode                    | conservé pour traçabilité               |
  * | hireDate           | hireDate                   | ISO YYYY-MM-DD (Lot 2A-H2B)             |
  * | employmentStatus   | employmentStatus           | propagé (Lot 2A-H2C-2)                  |
  * | contractType       | contractType               | propagé ; éligibilité mesure (H2C-2A)   |
@@ -197,78 +199,117 @@ export function mapImportedEmployeeToPreparedInput(
   let performanceLevel: PreparedEmployeeCalculationInput["performanceLevel"];
   let potentialLevel: PreparedEmployeeCalculationInput["potentialLevel"];
 
+  const neutralizeNineBoxEffect = employee.neutralizeNineBoxEffect === true;
+  const sourceNineBoxCode =
+    employee.nineBoxCode === undefined ? null : employee.nineBoxCode;
+
   const needsPerformance = modeRequiresPerformance(context.evaluationMode);
   const needsPotential = modeRequiresPotential(context.evaluationMode);
 
   if (needsPerformance || needsPotential) {
     if (employee.nineBoxCode === null || employee.nineBoxCode === undefined) {
-      if (needsPerformance) {
-        issues.push({
-          scope: "employee",
-          employeeId: employeeId || undefined,
-          code: "MISSING_EMPLOYEE_PERFORMANCE",
-          field: "performanceLevel",
-          severity: "blocking",
-          message:
-            "Niveau Performance requis : nineBoxCode absent sur le salarié importé.",
-        });
-      }
-      if (needsPotential) {
-        issues.push({
-          scope: "employee",
-          employeeId: employeeId || undefined,
-          code: "MISSING_EMPLOYEE_POTENTIAL",
-          field: "potentialLevel",
-          severity: "blocking",
-          message:
-            "Niveau Potentiel requis : nineBoxCode absent sur le salarié importé.",
-        });
+      if (!neutralizeNineBoxEffect) {
+        if (needsPerformance) {
+          issues.push({
+            scope: "employee",
+            employeeId: employeeId || undefined,
+            code: "MISSING_EMPLOYEE_PERFORMANCE",
+            field: "performanceLevel",
+            severity: "blocking",
+            message:
+              "Niveau Performance requis : nineBoxCode absent sur le salarié importé.",
+          });
+        }
+        if (needsPotential) {
+          issues.push({
+            scope: "employee",
+            employeeId: employeeId || undefined,
+            code: "MISSING_EMPLOYEE_POTENTIAL",
+            field: "potentialLevel",
+            severity: "blocking",
+            message:
+              "Niveau Potentiel requis : nineBoxCode absent sur le salarié importé.",
+          });
+        }
       }
     } else {
       const nineBox = context.nineBoxFactorsByCode.get(employee.nineBoxCode);
       if (!nineBox) {
-        issues.push({
-          scope: "employee",
-          employeeId: employeeId || undefined,
-          code: "INVALID_NINE_BOX_CODE",
-          field: "nineBoxCode",
-          severity: "blocking",
-          message: `Code 9-Box ${employee.nineBoxCode} absent du référentiel campagne.`,
-          details: { nineBoxCode: employee.nineBoxCode },
-        });
+        if (!neutralizeNineBoxEffect) {
+          issues.push({
+            scope: "employee",
+            employeeId: employeeId || undefined,
+            code: "INVALID_NINE_BOX_CODE",
+            field: "nineBoxCode",
+            severity: "blocking",
+            message: `Code 9-Box ${employee.nineBoxCode} absent du référentiel campagne.`,
+            details: { nineBoxCode: employee.nineBoxCode },
+          });
+        }
       } else {
         const perf = normalizePerformanceLevel(nineBox.performanceLevel);
         const pot = normalizePotentialLevel(nineBox.potentialLevel);
         if (needsPerformance) {
           if (!perf) {
-            issues.push({
-              scope: "employee",
-              employeeId: employeeId || undefined,
-              code: "UNKNOWN_FACTOR_LEVEL",
-              field: "performanceLevel",
-              severity: "blocking",
-              message: `Niveau Performance non canonique : ${nineBox.performanceLevel}.`,
-            });
+            if (!neutralizeNineBoxEffect) {
+              issues.push({
+                scope: "employee",
+                employeeId: employeeId || undefined,
+                code: "UNKNOWN_FACTOR_LEVEL",
+                field: "performanceLevel",
+                severity: "blocking",
+                message: `Niveau Performance non canonique : ${nineBox.performanceLevel}.`,
+              });
+            }
           } else {
             performanceLevel = perf;
           }
         }
         if (needsPotential) {
           if (!pot) {
-            issues.push({
-              scope: "employee",
-              employeeId: employeeId || undefined,
-              code: "UNKNOWN_FACTOR_LEVEL",
-              field: "potentialLevel",
-              severity: "blocking",
-              message: `Niveau Potentiel non canonique : ${nineBox.potentialLevel}.`,
-            });
+            if (!neutralizeNineBoxEffect) {
+              issues.push({
+                scope: "employee",
+                employeeId: employeeId || undefined,
+                code: "UNKNOWN_FACTOR_LEVEL",
+                field: "potentialLevel",
+                severity: "blocking",
+                message: `Niveau Potentiel non canonique : ${nineBox.potentialLevel}.`,
+              });
+            }
           } else {
             potentialLevel = pot;
           }
         }
       }
+      if (neutralizeNineBoxEffect) {
+        warnings.push({
+          scope: "employee",
+          employeeId: employeeId || undefined,
+          code: "NINE_BOX_CODE_IGNORED_NEUTRALIZED",
+          field: "nineBoxCode",
+          severity: "warning",
+          message:
+            "Le code 9-Box est ignoré pour le calcul : l’effet 9-Box est neutralisé pour ce salarié.",
+          details: { nineBoxCode: employee.nineBoxCode },
+        });
+      }
     }
+  } else if (
+    neutralizeNineBoxEffect &&
+    employee.nineBoxCode !== null &&
+    employee.nineBoxCode !== undefined
+  ) {
+    warnings.push({
+      scope: "employee",
+      employeeId: employeeId || undefined,
+      code: "NINE_BOX_CODE_IGNORED_NEUTRALIZED",
+      field: "nineBoxCode",
+      severity: "warning",
+      message:
+        "Le code 9-Box est ignoré pour le calcul : l’effet 9-Box est neutralisé pour ce salarié.",
+      details: { nineBoxCode: employee.nineBoxCode },
+    });
   }
 
   if (issues.length > 0) {
@@ -353,6 +394,8 @@ export function mapImportedEmployeeToPreparedInput(
     salaryFcfa: salary,
     hireDate: hireDateRaw,
     confirmedUnderperformer: employee.confirmedUnderperformer,
+    neutralizeNineBoxEffect,
+    sourceNineBoxCode,
     promotion,
     contractType: employee.contractType,
     employmentStatus: employee.employmentStatus ?? null,

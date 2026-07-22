@@ -2,15 +2,22 @@
 
 ## Objectif
 
-Produire, à partir d’un **snapshot de simulation persisté** (schema v3, contrat
-de calcul v4), un classeur Excel `.xlsx` destiné aux équipes RH, avec
+Produire, à partir d’un **snapshot de simulation persisté** (schema v3 ou v4,
+contrats v4/v5), un classeur Excel `.xlsx` destiné aux équipes RH, avec
 **protection par mot de passe optionnelle** et **écriture atomique**.
 
 L’export reste une **lecture fidèle** du snapshot immutable : aucun recalcul
-moteur, aucune relecture de l’import courant, aucune modification de
-migration / contrat / DTO de sauvegarde. Les **taux RH lisibles** et les
+moteur, aucune relecture de l’import courant. Les **taux RH lisibles** et les
 **statistiques** du tableau de bord sont dérivés exclusivement des montants et
 fractions déjà persistés (arithématique rationnelle exacte côté Rust).
+
+Depuis le Lot **2B-RC1-H1** (schema v4) :
+
+- `Resultats_RH` : Effet 9-Box neutralisé, Code 9-Box source, Facteur 9-Box
+  effectif, Traitement 9-Box appliqué (libellés français).
+- `Tableau_de_bord_RH` : Salariés avec effet 9-Box neutralisé.
+- Snapshots v3 : ces cellules restent vides / « Non disponible »
+  (aucune invention historique).
 
 ## Feuilles produites (ordre)
 

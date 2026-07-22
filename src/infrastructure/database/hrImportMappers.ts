@@ -42,6 +42,7 @@ export interface HrImportEmployeeRow {
   december_base_salary: number;
   nine_box_code: number | null;
   confirmed_underperformer: number;
+  neutralize_nine_box_effect: number;
   promotion_amount: number;
   correction_amount: number;
   social_measure_amount: number;
@@ -102,6 +103,7 @@ export function mapEmployeeSnapshot(row: HrImportEmployeeRow): EmployeeSnapshot 
     decemberBaseSalary: row.december_base_salary,
     nineBoxCode: row.nine_box_code,
     confirmedUnderperformer: row.confirmed_underperformer === 1,
+    neutralizeNineBoxEffect: row.neutralize_nine_box_effect === 1,
     promotionAmount: row.promotion_amount,
     correctionAmount: row.correction_amount,
     socialMeasureAmount: row.social_measure_amount,

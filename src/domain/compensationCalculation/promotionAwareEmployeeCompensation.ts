@@ -114,6 +114,8 @@ export interface BuildEmployeePromotionAwareExposuresInput {
   confirmedUnderperformer: boolean;
   performanceLevel?: PerformanceLevel;
   potentialLevel?: PotentialLevel;
+  /** Neutralisation individuelle de l’effet 9-Box (Lot 2B-RC1-H1). */
+  neutralizeNineBoxEffect?: boolean;
   campaignYear: number;
   technicalApplicationMonth: number;
   retroactivityStartMonth?: number;
@@ -191,6 +193,7 @@ export function buildEmployeePromotionAwareExposures(
         potentialFactors: input.potentialFactors,
         nineBoxFactors: input.nineBoxFactors,
         confirmedUnderperformer: input.confirmedUnderperformer,
+        neutralizeNineBoxEffect: input.neutralizeNineBoxEffect === true,
       });
 
       const theoreticalCompensationFactor = reduceFraction(

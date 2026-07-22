@@ -10,10 +10,19 @@ use super::models::{
     EmployeeRow, EmployeeSnapshot, MonthRow, OrgProfileRow, RunRow, SimulationSnapshot,
 };
 
-pub const EXPECTED_RESULT_SCHEMA_VERSION: i64 = 3;
-pub const EXPECTED_CALCULATION_CONTRACT_VERSION: i64 = 4;
+pub const EXPECTED_RESULT_SCHEMA_VERSION_V3: i64 = 3;
+pub const EXPECTED_RESULT_SCHEMA_VERSION_V4: i64 = 4;
+pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V4: i64 = 4;
+pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V5: i64 = 5;
 pub const EXPECTED_SENIORITY_IMPACT_CONTRACT_VERSION: i64 = 1;
 pub const EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION: i64 = 1;
+
+/// Alias historique (schema courant = v4).
+#[allow(dead_code)]
+pub const EXPECTED_RESULT_SCHEMA_VERSION: i64 = EXPECTED_RESULT_SCHEMA_VERSION_V4;
+/// Alias historique (contrat courant = v5).
+#[allow(dead_code)]
+pub const EXPECTED_CALCULATION_CONTRACT_VERSION: i64 = EXPECTED_CALCULATION_CONTRACT_VERSION_V5;
 
 const EXPECTED_MONTH_COUNT: usize = 12;
 
@@ -45,10 +54,15 @@ pub fn validate_month_numbers(months: &[i64]) -> Result<(), ExportError> {
 }
 
 fn validate_versions(run: &RunRow) -> Result<(), ExportError> {
-    if run.result_schema_version != EXPECTED_RESULT_SCHEMA_VERSION {
+    let schema_ok = run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V3
+        || run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V4;
+    if !schema_ok {
         return Err(ExportError::SchemaNotSupported);
     }
-    if run.calculation_contract_version != Some(EXPECTED_CALCULATION_CONTRACT_VERSION) {
+    let contract_ok = run.calculation_contract_version
+        == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V4)
+        || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V5);
+    if !contract_ok {
         return Err(ExportError::ContractNotSupported);
     }
     if run.seniority_impact_contract_version != Some(EXPECTED_SENIORITY_IMPACT_CONTRACT_VERSION) {

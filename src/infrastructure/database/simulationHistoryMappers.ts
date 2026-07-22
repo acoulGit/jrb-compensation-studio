@@ -40,6 +40,8 @@ export interface SimulationRunRow {
   positive_weight_employee_count: number;
   zero_weight_employee_count: number;
   confirmed_underperformer_count: number;
+  /** Schema v4 (migration 0008) — null sur snapshots v3 et antérieurs. */
+  neutralize_nine_box_effect_employee_count?: number | null;
   theoretical_total_numerator_text: string;
   theoretical_total_denominator_text: string;
   actual_operation_amount_fcfa_text: string;
@@ -97,6 +99,10 @@ export interface SimulationEmployeeResultRow {
   individual_rounding_delta_denominator_text: string;
   final_salary_fcfa_text: string;
   explanation_steps_json: string;
+  /** Colonnes schema v4 (migration 0008) — nullables pour snapshots v3. */
+  neutralize_nine_box_effect?: number | null;
+  source_nine_box_code?: number | null;
+  nine_box_treatment_kind?: string | null;
 }
 
 /** Ligne mensuelle persistée (schema v3, Lot 2B-P1). */
@@ -360,6 +366,8 @@ export function mapSimulationRunSummary(
     positiveWeightEmployeeCount: row.positive_weight_employee_count,
     zeroWeightEmployeeCount: row.zero_weight_employee_count,
     confirmedUnderperformerCount: row.confirmed_underperformer_count,
+    neutralizeNineBoxEffectEmployeeCount:
+      row.neutralize_nine_box_effect_employee_count ?? null,
     theoreticalAllocatedTotal: parseCanonicalExactAmount({
       numeratorText: row.theoretical_total_numerator_text,
       denominatorText: row.theoretical_total_denominator_text,
@@ -457,5 +465,16 @@ export function mapSimulationEmployeeResult(
       allowNegative: false,
     }),
     explanationSteps: parseExplanationSteps(row.explanation_steps_json),
+    neutralizeNineBoxEffect:
+      row.neutralize_nine_box_effect === null ||
+      row.neutralize_nine_box_effect === undefined
+        ? null
+        : row.neutralize_nine_box_effect === 1,
+    sourceNineBoxCode:
+      row.source_nine_box_code === undefined ? null : row.source_nine_box_code,
+    nineBoxTreatmentKind:
+      row.nine_box_treatment_kind === undefined
+        ? null
+        : row.nine_box_treatment_kind,
   };
 }

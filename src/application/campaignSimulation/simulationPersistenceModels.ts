@@ -161,6 +161,14 @@ export interface SaveSimulationEmployeeDto {
   fullYearRunRateCompensationAboveMinimumCostFcfaText?: string;
   /** Trajectoire mensuelle (12 mois) — présente uniquement en schema v3. */
   months?: SaveSimulationEmployeeMonthDto[];
+
+  /**
+   * Champs schema v4 (Lot 2B-RC1-H1). Optionnels / nullables : absents pour
+   * les snapshots v3 historiques (mappés en NULL, jamais de faux Non).
+   */
+  neutralizeNineBoxEffect?: boolean | null;
+  sourceNineBoxCode?: number | null;
+  nineBoxTreatmentKind?: string | null;
 }
 
 export interface SaveSimulationRunDto {
@@ -259,6 +267,9 @@ export interface SaveSimulationRunDto {
   aboveMinimumRemainingYearDirectCostText?: string;
   totalRemainingYearDirectCompensatoryCostText?: string;
 
+  /** Compteur population schema v4 (Lot 2B-RC1-H1). */
+  neutralizeNineBoxEffectEmployeeCount?: number | null;
+
   employees: SaveSimulationEmployeeDto[];
 }
 
@@ -310,6 +321,8 @@ export interface PersistedSimulationRunSummary {
   actualCompensationAboveMinimumCostFcfa?: bigint | null;
   actualCombinedCampaignPeriodCostFcfa?: bigint | null;
   fullYearRunRateCombinedBaseMeasureCostFcfa?: bigint | null;
+  /** Compteur schema v4 — null pour snapshots v3. */
+  neutralizeNineBoxEffectEmployeeCount?: number | null;
 }
 
 export interface PersistedSimulationEmployeeResult {
@@ -347,6 +360,14 @@ export interface PersistedSimulationEmployeeResult {
   }[];
   /** Trajectoire mensuelle relue (schema v3). Vide pour snapshots v1/v2. */
   months?: PersistedSimulationEmployeeMonthResult[];
+
+  /**
+   * Champs schema v4 (Lot 2B-RC1-H1). `null` pour snapshots v3 historiques —
+   * jamais de faux Non reconstruit.
+   */
+  neutralizeNineBoxEffect?: boolean | null;
+  sourceNineBoxCode?: number | null;
+  nineBoxTreatmentKind?: string | null;
 }
 
 /** Ligne mensuelle relue (schema v3, Lot 2B-P1). */

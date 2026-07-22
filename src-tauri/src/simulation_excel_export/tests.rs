@@ -81,6 +81,13 @@ const ORG_SEED: &str = r#"
 const SIMULATION_SCHEMA: &str = include_str!("../../migrations/0005_campaign_simulations.sql");
 const SIMULATION_SCHEMA_V3: &str =
     include_str!("../../migrations/0007_simulation_contract_v4_results.sql");
+const HR_EMPLOYEES_STUB: &str = r#"
+    CREATE TABLE IF NOT EXISTS hr_import_employees (
+        id INTEGER PRIMARY KEY AUTOINCREMENT
+    );
+"#;
+const SIMULATION_SCHEMA_V4: &str =
+    include_str!("../../migrations/0008_nine_box_neutralization.sql");
 
 async fn apply_sql(conn: &mut sqlx::SqliteConnection, sql: &str) {
     for statement in sql.split(';') {
@@ -109,6 +116,8 @@ async fn setup_temp_db() -> (tempfile::TempDir, String) {
         apply_sql(&mut conn, ORG_SEED).await;
         apply_sql(&mut conn, SIMULATION_SCHEMA).await;
         apply_sql(&mut conn, SIMULATION_SCHEMA_V3).await;
+        apply_sql(&mut conn, HR_EMPLOYEES_STUB).await;
+        apply_sql(&mut conn, SIMULATION_SCHEMA_V4).await;
     }
 
     (dir, url)
@@ -523,7 +532,7 @@ async fn wrong_contract_version_is_rejected() {
     // Corrompt la version de contrat de calcul après coup.
     let pool = SqlitePool::connect(&url).await.unwrap();
     sqlx::query(
-        "UPDATE compensation_simulation_runs SET calculation_contract_version = 5 WHERE id = ?1",
+        "UPDATE compensation_simulation_runs SET calculation_contract_version = 99 WHERE id = ?1",
     )
     .bind(run_id)
     .execute(&pool)
@@ -1091,4 +1100,58 @@ async fn twelve_months_per_employee_preserved() {
         .expect("export");
     assert_eq!(result.employee_count, 2);
     assert_eq!(result.month_row_count, 24);
+}
+
+fn input_with_months_v4(campaign_id: i64, batch_id: Option<i64>) -> SaveSimulationRunInput {
+    let mut input = input_with_months(campaign_id, batch_id);
+    input.result_schema_version = Some(4);
+    input.calculation_contract_version = Some(5);
+    input.neutralize_nine_box_effect_employee_count = Some(1);
+    if let Some(employee) = input.employees.get_mut(0) {
+        employee.neutralize_nine_box_effect = Some(true);
+        employee.source_nine_box_code = Some(5);
+        employee.nine_box_treatment_kind = Some("nine_box_effect_neutralized".into());
+        employee.evaluation_factor_numerator_text = "1000000".into();
+        employee.evaluation_factor_denominator_text = "1000000".into();
+    }
+    if let Some(employee) = input.employees.get_mut(1) {
+        employee.neutralize_nine_box_effect = Some(false);
+        employee.source_nine_box_code = Some(9);
+        employee.nine_box_treatment_kind = Some("nine_box_code_applied".into());
+    }
+    input
+}
+
+#[tokio::test]
+async fn schema_v4_export_includes_nine_box_headers_and_dashboard_counter() {
+    let (dir, url) = setup_temp_db().await;
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect(&url)
+        .await
+        .unwrap();
+    let campaign_id = seed_campaign(&pool, "draft").await;
+    let batch_id = seed_current_batch(&pool, campaign_id).await;
+    pool.close().await;
+
+    let input = input_with_months_v4(campaign_id, Some(batch_id));
+    let saved = save_simulation_run_on_url(&url, &input, None)
+        .await
+        .expect("save v4 run");
+    let path = out_path(&dir, "export-v4.xlsx");
+    export_simulation_run_excel_on_url(
+        &url,
+        &export_input(saved.simulation_run_id, &path, None, true),
+    )
+    .await
+    .expect("export v4");
+
+    let bytes = std::fs::read(&path).unwrap();
+    let xml = read_all_xml(&bytes);
+    assert!(xml.contains("Effet 9-Box neutralisé"));
+    assert!(xml.contains("Code 9-Box source"));
+    assert!(xml.contains("Facteur 9-Box effectif"));
+    assert!(xml.contains("Traitement 9-Box appliqué"));
+    assert!(xml.contains("Salariés avec effet 9-Box neutralisé"));
+    assert!(xml.contains("Effet 9-Box neutralisé") && xml.contains("Code 9-Box appliqué"));
 }
