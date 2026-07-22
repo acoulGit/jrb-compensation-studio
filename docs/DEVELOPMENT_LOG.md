@@ -1011,3 +1011,40 @@ du stash `wip/lot-2b-4b-before-annual-budget-fix` avec le moteur / schema v3
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
 - `git diff --check` ; migrations 0001–0007 inchangées ; stash intact ; aucun
   commit
+
+## 2026-07-22 — Lot 2B-UX1 — confort de visualisation des résultats
+
+### Objectif
+
+Améliorer uniquement l’UI de consultation : sidebar réellement repliable,
+pages Simulation / Historique en largeur fluide, détail salarié quasi plein
+écran, densification du tableau de trajectoire mensuelle. Aucun changement
+métier (moteur, contrats, DTO, migrations).
+
+### Choix
+
+- Réutilisation de l’état `sidebarCollapsed` déjà présent dans `AppShell`.
+- `main-content--fluid` uniquement pour `simulations` et `simulation-history`.
+- Drawer partagé et panneau courant : `simulation-drawer--max` (~96 vw).
+- Intitulés de colonnes compactés avec `title` pour les libellés complets.
+- Tests structurels jsdom (`resultsLayoutUx.test.tsx`) — pas de mesure pixel.
+
+### Recette manuelle
+
+**A. Sidebar** — Simulation → réduire → vérifier élargissement du tableau →
+Historique (sidebar reste réduite) → redéployer.
+
+**B. Résultat courant** — lancer une simulation → ouvrir un salarié → largeur
+quasi plein écran → colonnes trajectoire → Échap.
+
+**C. Historique** — ouvrir un run → salarié → même largeur → 12 mois → Fermer.
+
+**D. Responsive** — réduire la fenêtre → pas de débordement de page ; scroll
+éventuel local au tableau.
+
+### Validations
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check` ; migrations / domaine calcul / DTO save inchangés ; aucun
+  commit

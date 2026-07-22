@@ -16,7 +16,11 @@ function AppShellContent() {
       activePage={activePage}
       onActivePageChange={setActivePage}
     >
-      <div className={`app-shell${sidebarCollapsed ? " app-shell--collapsed" : ""}`}>
+      <div
+        className={`app-shell${sidebarCollapsed ? " app-shell--collapsed" : ""}`}
+        data-testid="app-shell"
+        data-sidebar-collapsed={sidebarCollapsed ? "true" : "false"}
+      >
         <Sidebar
           activePage={activePage}
           collapsed={sidebarCollapsed}
@@ -26,7 +30,20 @@ function AppShellContent() {
         <div className="app-shell__workspace">
           <TopHeader pageTitle={pageDefinitions[activePage].title} />
           <CampaignContext />
-          <main className="main-content" id="main-content">
+          <main
+            className={`main-content${
+              activePage === "simulations" || activePage === "simulation-history"
+                ? " main-content--fluid"
+                : ""
+            }`}
+            id="main-content"
+            data-testid="main-content"
+            data-fluid={
+              activePage === "simulations" || activePage === "simulation-history"
+                ? "true"
+                : "false"
+            }
+          >
             <PageContent page={activePage} />
           </main>
         </div>

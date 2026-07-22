@@ -135,7 +135,9 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
 - **Fingerprint** `buildSimulationSourceFingerprint` (sources + config).
 - **Provider** `SimulationExecutionProvider` : état / résultat / issues par
   `campaignId`, `runSequence` de session, invalidation stale.
-- **UI** : synthèse, tableau (recherche / pagination), drawer de détail.
+- **UI** : synthèse, tableau (recherche / pagination), drawer de détail
+  quasi plein écran (Lot **2B-UX1**) ; pages Simulation / Historique en largeur
+  fluide ; barre latérale repliable (état session dans `AppShell`).
 - Formatage exact : `formatFcfaInteger`, `formatExactAmountAsFcfa`,
   `formatExactRateAsPercent`, `formatFactorMilli`, `formatExactWeight`.
 

@@ -51,6 +51,7 @@ button:focus-visible {
   min-height: 100vh;
   padding-left: var(--sidebar-width);
   transition: padding-left 180ms ease;
+  overflow-x: hidden;
 }
 
 .app-shell--collapsed {
@@ -268,6 +269,7 @@ button:focus-visible {
 
 .app-shell__workspace {
   min-width: 0;
+  width: 100%;
 }
 
 .top-header {
@@ -360,6 +362,13 @@ button:focus-visible {
   max-width: 1500px;
   margin: 0 auto;
   padding: 30px;
+}
+
+/* Pages Simulation / Historique : toute la largeur utile du shell (Lot 2B-UX1). */
+.main-content--fluid {
+  max-width: none;
+  margin: 0;
+  padding: 24px 28px 32px;
 }
 
 .page-header {
@@ -801,6 +810,58 @@ button:focus-visible {
   white-space: nowrap;
 }
 
+/* Trajectoire mensuelle — densité maximale, scroll local uniquement si nécessaire. */
+.data-table--trajectory {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.data-table--trajectory th,
+.data-table--trajectory td {
+  padding: 6px 4px;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: normal;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.data-table--trajectory th {
+  white-space: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  hyphens: auto;
+}
+
+.data-table--trajectory td.data-table__num,
+.data-table--trajectory th.data-table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table--trajectory td.data-table__month,
+.data-table--trajectory th.data-table__month {
+  width: 3.2rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (min-width: 1280px) {
+  .simulation-drawer--max .data-table-wrap--scroll-x:has(.data-table--trajectory) {
+    overflow-x: visible;
+  }
+}
+
+@media (max-width: 1279px) {
+  .data-table--trajectory {
+    table-layout: auto;
+    min-width: 980px;
+  }
+}
+
 .data-table th,
 .data-table td {
   padding: 14px 16px;
@@ -983,13 +1044,18 @@ button:focus-visible {
   z-index: 40;
   background: rgba(15, 23, 42, 0.35);
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
+  align-items: stretch;
+  padding: 12px clamp(8px, 2vw, 24px);
 }
 
 .simulation-drawer {
   width: min(440px, 100%);
   height: 100%;
+  max-height: calc(100vh - 24px);
+  margin: auto 0;
   background: #fff;
+  border-radius: 12px;
   box-shadow: -8px 0 24px rgba(15, 23, 42, 0.12);
   display: flex;
   flex-direction: column;
@@ -1000,6 +1066,16 @@ button:focus-visible {
   width: min(960px, 100%);
 }
 
+/* Lot 2B-UX1 — détail salarié quasi plein écran (~94 % de la largeur utile). */
+.simulation-drawer--max {
+  width: min(96vw, 100%);
+  max-width: none;
+  height: calc(100vh - 24px);
+  max-height: calc(100vh - 24px);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18);
+}
+
 .simulation-drawer__header {
   display: flex;
   align-items: flex-start;
@@ -1007,6 +1083,11 @@ button:focus-visible {
   gap: 12px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--gray-200);
+  flex: 0 0 auto;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .simulation-drawer__header h2 {
@@ -1018,6 +1099,22 @@ button:focus-visible {
 .simulation-drawer__body {
   padding: 16px 18px 24px;
   overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .simulation-drawer-backdrop {
+    padding: 0;
+    justify-content: flex-end;
+  }
+
+  .simulation-drawer--max {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
 }
 
 .references-completeness ul {

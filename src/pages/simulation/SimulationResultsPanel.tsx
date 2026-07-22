@@ -869,7 +869,8 @@ function EmployeeDetailDrawer({
     >
       <aside
         id="simulation-employee-drawer"
-        className="simulation-drawer simulation-drawer--wide"
+        className="simulation-drawer simulation-drawer--max"
+        data-drawer-width="max"
         role="dialog"
         aria-modal="true"
         aria-labelledby="simulation-employee-drawer-title"
@@ -1078,52 +1079,168 @@ function EmployeeDetailDrawer({
             <h3>Trajectoire mensuelle</h3>
             <div className="data-table-wrap data-table-wrap--scroll-x">
               <table
-                className="data-table data-table--compact"
+                className="data-table data-table--compact data-table--trajectory"
                 data-testid="simulation-trajectory-table"
               >
                 <thead>
                   <tr>
-                    <th scope="col">Mois</th>
-                    <th scope="col">Salaire de base</th>
-                    <th scope="col">Grade</th>
-                    <th scope="col">Famille</th>
-                    <th scope="col">Taux cible</th>
-                    <th scope="col">Taux promotion déduit</th>
-                    <th scope="col">Taux complémentaire</th>
-                    <th scope="col">Complément théorique</th>
-                    <th scope="col">Plancher minimum</th>
-                    <th scope="col">Au-dessus du minimum</th>
-                    <th scope="col">Complément arrondi</th>
-                    <th scope="col">Coût promotion du mois</th>
-                    <th scope="col">Salaire final</th>
-                    <th scope="col">Taux ancienneté</th>
-                    <th scope="col">Ancienneté promo</th>
-                    <th scope="col">Ancienneté complément</th>
-                    <th scope="col">Ancienneté totale</th>
-                    <th scope="col">Paiement promotion</th>
-                    <th scope="col">Paiement complément</th>
+                    <th scope="col" className="data-table__month" title="Mois">
+                      Mois
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Salaire de base"
+                    >
+                      Base
+                    </th>
+                    <th scope="col" title="Grade">
+                      Grade
+                    </th>
+                    <th scope="col" title="Famille d’emploi">
+                      Fam.
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Taux cible compensatoire"
+                    >
+                      Taux cible
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Taux promotion déduit"
+                    >
+                      Taux promo
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Taux complémentaire"
+                    >
+                      Taux compl.
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Complément théorique"
+                    >
+                      Compl. théo.
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Plancher minimum"
+                    >
+                      Min. plancher
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Complément au-dessus du minimum"
+                    >
+                      Au-dessus min.
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Complément arrondi total"
+                    >
+                      Compl. arrondi
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Coût promotion du mois"
+                    >
+                      Coût promo
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Salaire final"
+                    >
+                      Salaire final
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Taux d’ancienneté"
+                    >
+                      Tx anc.
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Incidence d’ancienneté promotion"
+                    >
+                      Anc. promo
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Incidence d’ancienneté complément"
+                    >
+                      Anc. compl.
+                    </th>
+                    <th
+                      scope="col"
+                      className="data-table__num"
+                      title="Incidence d’ancienneté totale"
+                    >
+                      Anc. totale
+                    </th>
+                    <th scope="col" title="Paiement promotion">
+                      Paiement promo
+                    </th>
+                    <th scope="col" title="Paiement complément">
+                      Paiement compl.
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {employee.monthlyCompensationTrajectory.map((entry) => (
                     <tr key={entry.month}>
-                      <td>{entry.monthLabel}</td>
-                      <td>{entry.baseSalaryLabel}</td>
+                      <td className="data-table__month">{entry.monthLabel}</td>
+                      <td className="data-table__num">{entry.baseSalaryLabel}</td>
                       <td>{entry.gradeCode}</td>
                       <td>{entry.jobFamilyCode}</td>
-                      <td>{entry.targetCompensatoryRateLabel}</td>
-                      <td>{entry.promotionRateOffsetLabel}</td>
-                      <td>{entry.compensatoryComplementRateLabel}</td>
-                      <td>{entry.theoreticalCompensatoryComplementLabel}</td>
-                      <td>{entry.minimumComplementFloorLabel}</td>
-                      <td>{entry.actualComplementAboveMinimumLabel}</td>
-                      <td>{entry.roundedCompensatoryComplementLabel}</td>
-                      <td>{entry.promotionBudgetCostLabel}</td>
-                      <td>{entry.finalSalaryLabel}</td>
-                      <td>{entry.seniorityRateLabel}</td>
-                      <td>{entry.promotionSeniorityImpactLabel}</td>
-                      <td>{entry.compensatorySeniorityImpactLabel}</td>
-                      <td>{entry.totalSeniorityImpactLabel}</td>
+                      <td className="data-table__num">
+                        {entry.targetCompensatoryRateLabel}
+                      </td>
+                      <td className="data-table__num">
+                        {entry.promotionRateOffsetLabel}
+                      </td>
+                      <td className="data-table__num">
+                        {entry.compensatoryComplementRateLabel}
+                      </td>
+                      <td className="data-table__num">
+                        {entry.theoreticalCompensatoryComplementLabel}
+                      </td>
+                      <td className="data-table__num">
+                        {entry.minimumComplementFloorLabel}
+                      </td>
+                      <td className="data-table__num">
+                        {entry.actualComplementAboveMinimumLabel}
+                      </td>
+                      <td className="data-table__num">
+                        {entry.roundedCompensatoryComplementLabel}
+                      </td>
+                      <td className="data-table__num">
+                        {entry.promotionBudgetCostLabel}
+                      </td>
+                      <td className="data-table__num">{entry.finalSalaryLabel}</td>
+                      <td className="data-table__num">{entry.seniorityRateLabel}</td>
+                      <td className="data-table__num">
+                        {entry.promotionSeniorityImpactLabel}
+                      </td>
+                      <td className="data-table__num">
+                        {entry.compensatorySeniorityImpactLabel}
+                      </td>
+                      <td className="data-table__num">
+                        {entry.totalSeniorityImpactLabel}
+                      </td>
                       <td>{entry.promotionPaymentStatusLabel}</td>
                       <td>{entry.compensatoryPaymentStatusLabel}</td>
                     </tr>

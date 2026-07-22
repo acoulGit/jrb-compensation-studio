@@ -14,6 +14,7 @@ d’augmentation.
 | **2B-4A** | Persistance transactionnelle immuable (sans UI Historique) |
 | **2B-P1** | Consolidation snapshot schema v3 (contrat v4 + trajectoire mensuelle, migration `0007`) |
 | **2B-4B** | Bouton Enregistrer + page Historique (lecture seule, compatible schema v3 / dégradation v1-v2) |
+| **2B-UX1** | Confort UI : sidebar repliable, pages résultats fluides, détail salarié quasi plein écran (sans changement métier) |
 
 ## Séparation import / préparation / configuration / calcul
 
@@ -41,10 +42,13 @@ Le Lot **2B-3** l’appelle **uniquement** après un clic explicite
 - Navigation : libellé **Simulation** (`PageId` `simulations`).
 - Zones : Campagne, État de préparation, Budget cible, Arrondi individuel,
   Validation, **Lancer la simulation**, Synthèse, Résultats individuels,
-  Détail salarié (drawer).
+  Détail salarié (drawer quasi plein écran — Lot 2B-UX1).
 - Bouton de lancement visible seulement après validation réussie, campagne
   draft/active, readiness prêt, configuration non stale, aucune exécution
   en cours.
+- Lot **2B-UX1** : sidebar repliable (session), pages Simulation/Historique en
+  largeur fluide (`main-content--fluid`), trajectoire densifiée
+  (`data-table--trajectory`) — aucun changement métier.
 
 ## État de configuration (mémoire de session) — Lot 2B-2
 
