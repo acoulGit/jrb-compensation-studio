@@ -1157,3 +1157,26 @@ import, migrations, contrats, moteur, DTO ni snapshot.
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
 - `git diff --check` ; migrations / domaine calcul / DTO save inchangés ;
   aucun commit
+
+## 2026-07-22 — Lot 2B-RC1-PKG : métadonnées package pré-recette 0.9.0
+
+### Objectif
+
+Aligner les versions applicatives sur **0.9.0** et documenter la livraison
+pré-recette `0.9.0-prerecette-1`, sans changement fonctionnel.
+
+### Choix
+
+- Versions synchronisées : `package.json`, `Cargo.toml` / `Cargo.lock`,
+  `tauri.conf.json`.
+- Bundle Windows limité à `msi` + `nsis` ; publisher `JRB XSolutions`.
+- Identifiant inchangé : `com.jrbxsolutions.compensationstudio`.
+- WebView2 : stratégie par défaut Tauri conservée (pas de runtime offline).
+- Note de livraison : `docs/releases/0.9.0-prerecette-1.md`.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check` /
+  `cargo test` (+ `--locked` après mise à jour du lock)
+- Zones métier (moteur, import, snapshot, export Excel) inchangées ; aucun
+  commit / tag / push
