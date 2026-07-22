@@ -382,3 +382,11 @@ Le préchargement est déclaré dans `tauri.conf.json` (`plugins.sql.preload`).
 
 Évolution : ajouter un fichier `0008_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.
+
+## Export Excel RH et mot de passe (Lot 2B-E1)
+
+L’export Excel RH (`export_simulation_run_excel`) lit un snapshot existant en
+lecture seule et **n’écrit aucune donnée en base**. Le **mot de passe de
+protection n’est jamais persisté** : il n’existe que le temps de l’export (en
+mémoire, via `Zeroizing` côté Rust) et sert uniquement au chiffrement agile du
+fichier `.xlsx`. Aucune migration n’est introduite par ce lot.

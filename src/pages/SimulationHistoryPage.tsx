@@ -9,6 +9,23 @@ import { getPersistedSimulationRun } from "../application/campaignSimulation/get
 import { listCampaignSimulationHistory } from "../application/campaignSimulation/listCampaignSimulationHistory";
 import type { PersistedSimulationRunSummary } from "../application/campaignSimulation/simulationPersistenceModels";
 import type { SimulationResultViewModel } from "../application/campaignSimulation/simulationViewModels";
+import {
+  canPresentResultSchemaVersion,
+  classifyResultSchemaVersion,
+} from "../application/campaignSimulation/resultSchemaCompatibility";
+import { buildSuggestedFileName } from "../application/campaignSimulation/hrExcelExportModels";
+import {
+  EXPORT_UNKNOWN_DISABLED_HINT,
+  EXPORT_V1_DISABLED_HINT,
+  EXPORT_V2_DISABLED_HINT,
+} from "../application/campaignSimulation/hrExcelExportErrorMessages";
+import {
+  exportSimulationRunExcel,
+  pickExcelSavePath,
+} from "../application/campaignSimulation/exportSimulationRunExcel";
+import { generateHrExportPassword } from "../application/campaignSimulation/generateHrExportPassword";
+import { SimulationExcelExportDialog } from "./simulation/SimulationExcelExportDialog";
+import type { SimulationExcelExportSubmitOptions } from "./simulation/SimulationExcelExportDialog";
 import { useAppNavigation } from "../app/AppNavigationProvider";
 import { useAppData } from "../app/AppDataProvider";
 import { useSimulationHistoryRefresh } from "../app/SimulationHistoryRefreshProvider";
@@ -33,6 +50,18 @@ function fcfaOrDash(value: bigint | null | undefined): string {
 
 function monthOrDash(value: number | null | undefined): string {
   return value === null || value === undefined ? "—" : String(value);
+}
+
+/** Message d’indisponibilité de l’export selon la version de schéma. */
+function exportDisabledHint(resultSchemaVersion: number): string {
+  switch (classifyResultSchemaVersion(resultSchemaVersion)) {
+    case "incomplete":
+      return EXPORT_V2_DISABLED_HINT;
+    case "incompatible":
+      return EXPORT_V1_DISABLED_HINT;
+    default:
+      return EXPORT_UNKNOWN_DISABLED_HINT;
+  }
 }
 
 export function SimulationHistoryPage() {
@@ -63,6 +92,16 @@ export function SimulationHistoryPage() {
     null,
   );
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  const [exportRun, setExportRun] = useState<PersistedSimulationRunSummary | null>(
+    null,
+  );
+  const [exportingRunId, setExportingRunId] = useState<number | null>(null);
+  const [exportStatus, setExportStatus] = useState<{
+    message: string;
+    tone: "success" | "error";
+  } | null>(null);
+  const exportButtonRefs = useRef(new Map<number, HTMLButtonElement | null>());
 
   const listRequestIdRef = useRef(0);
   const detailRequestIdRef = useRef(0);
@@ -161,6 +200,9 @@ export function SimulationHistoryPage() {
     setDetailView(null);
     setDetailStatus("idle");
     setSelectedEmployeeId(null);
+    setExportRun(null);
+    setExportingRunId(null);
+    setExportStatus(null);
   }, [selectedCampaignId]);
 
   useEffect(() => {
@@ -199,6 +241,85 @@ export function SimulationHistoryPage() {
       },
     );
   }, [detailRunId, services.simulationHistory, selectedCampaignId]);
+
+  const openExportDialog = useCallback((run: PersistedSimulationRunSummary) => {
+    setExportStatus(null);
+    setExportRun(run);
+  }, []);
+
+  const closeExportDialog = useCallback(() => {
+    if (exportingRunId !== null) return;
+    setExportRun(null);
+  }, [exportingRunId]);
+
+  const handleGenerateExportPassword = useCallback(async () => {
+    const outcome = await generateHrExportPassword();
+    if (outcome.ok) {
+      return outcome.password;
+    }
+    setExportStatus({ message: outcome.message, tone: "error" });
+    return "";
+  }, []);
+
+  const handleExportSubmit = useCallback(
+    async (options: SimulationExcelExportSubmitOptions) => {
+      const run = exportRun;
+      if (!run || exportingRunId !== null) return;
+
+      const suggestedName = buildSuggestedFileName({
+        campaignName: run.campaignName,
+        runNumber: run.runNumber,
+        createdAtIso: run.createdAt,
+      });
+
+      let outputPath: string | null = null;
+      try {
+        outputPath = await pickExcelSavePath(suggestedName);
+      } catch {
+        outputPath = null;
+      }
+
+      if (outputPath === null) {
+        setExportRun(null);
+        return;
+      }
+
+      setExportingRunId(run.id);
+      setExportStatus(null);
+
+      const outcome = await exportSimulationRunExcel({
+        simulationRunId: run.id,
+        outputPath,
+        password: options.protect ? options.password : null,
+        confirmUnprotectedExport: options.protect
+          ? false
+          : options.confirmUnprotected,
+      });
+
+      setExportingRunId(null);
+      setExportRun(null);
+
+      if (outcome.ok) {
+        setExportStatus({
+          message: `Rapport RH exporté : ${outcome.result.fileName}${
+            outcome.result.protected ? " (protégé)" : ""
+          }.`,
+          tone: "success",
+        });
+        exportButtonRefs.current.get(run.id)?.focus();
+        return;
+      }
+
+      if (outcome.cancelled) {
+        exportButtonRefs.current.get(run.id)?.focus();
+        return;
+      }
+
+      setExportStatus({ message: outcome.message, tone: "error" });
+      exportButtonRefs.current.get(run.id)?.focus();
+    },
+    [exportRun, exportingRunId],
+  );
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const safePageIndex = Math.min(pageIndex, pageCount - 1);
@@ -370,6 +491,22 @@ export function SimulationHistoryPage() {
             </label>
           </div>
 
+          <p
+            className={
+              exportStatus?.tone === "error"
+                ? "form-feedback form-feedback--error"
+                : exportStatus?.tone === "success"
+                  ? "form-feedback form-feedback--success"
+                  : "form-feedback"
+            }
+            role="status"
+            aria-live="polite"
+            data-testid="simulation-history-export-status"
+            data-tone={exportStatus?.tone ?? undefined}
+          >
+            {exportStatus?.message ?? ""}
+          </p>
+
           <div
             className="data-table-wrap"
             data-testid="simulation-history-table-wrap"
@@ -395,7 +532,7 @@ export function SimulationHistoryPage() {
                   <th scope="col">Minimum (période)</th>
                   <th scope="col">Au-dessus min. (période)</th>
                   <th scope="col">Combiné (période)</th>
-                  <th scope="col">Action</th>
+                  <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -445,16 +582,66 @@ export function SimulationHistoryPage() {
                       {fcfaOrDash(run.actualCombinedCampaignPeriodCostFcfa)}
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className="link-button"
-                        data-testid={`simulation-history-open-${run.runNumber}`}
-                        onClick={() => {
-                          setDetailRunId(run.id);
-                        }}
-                      >
-                        Consulter
-                      </button>
+                      <div className="history-row-actions">
+                        <button
+                          type="button"
+                          className="link-button"
+                          data-testid={`simulation-history-open-${run.runNumber}`}
+                          onClick={() => {
+                            setDetailRunId(run.id);
+                          }}
+                        >
+                          Consulter
+                        </button>
+                        {(() => {
+                          const canExport = canPresentResultSchemaVersion(
+                            run.resultSchemaVersion,
+                          );
+                          const isExporting = exportingRunId === run.id;
+                          const hint = canExport
+                            ? undefined
+                            : exportDisabledHint(run.resultSchemaVersion);
+                          const hintId = `simulation-history-export-hint-${run.runNumber}`;
+                          return (
+                            <>
+                              <button
+                                ref={(node) => {
+                                  exportButtonRefs.current.set(run.id, node);
+                                }}
+                                type="button"
+                                className="link-button"
+                                data-testid={`simulation-history-export-${run.runNumber}`}
+                                disabled={!canExport || exportingRunId !== null}
+                                aria-busy={isExporting}
+                                aria-describedby={hint ? hintId : undefined}
+                                title={hint}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  if (!canExport || exportingRunId !== null) {
+                                    return;
+                                  }
+                                  openExportDialog(run);
+                                }}
+                              >
+                                {isExporting ? (
+                                  <span
+                                    data-testid={`simulation-history-exporting-${run.runNumber}`}
+                                  >
+                                    Export en cours…
+                                  </span>
+                                ) : (
+                                  "Exporter Excel"
+                                )}
+                              </button>
+                              {hint ? (
+                                <span id={hintId} className="sr-only">
+                                  {hint}
+                                </span>
+                              ) : null}
+                            </>
+                          );
+                        })()}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -520,6 +707,17 @@ export function SimulationHistoryPage() {
             Retour à la liste
           </button>
         </SectionCard>
+      ) : null}
+
+      {exportRun ? (
+        <SimulationExcelExportDialog
+          open={exportRun !== null}
+          run={exportRun}
+          exporting={exportingRunId === exportRun.id}
+          onClose={closeExportDialog}
+          onExport={handleExportSubmit}
+          onGeneratePassword={handleGenerateExportPassword}
+        />
       ) : null}
     </>
   );

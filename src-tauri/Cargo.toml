@@ -22,8 +22,21 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 tauri = { version = "2", features = [] }
 tauri-plugin-sql = { version = "2.4.0", features = ["sqlite"] }
+tauri-plugin-dialog = "2"
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+# LOT 2B-E1 — génération XLSX RH + chiffrement agile (versions épinglées).
+# rand 0.9 requis : ms-offcrypto-writer 1.0.7 lie CryptoRng/Rng de rand 0.9
+# (rand 0.8 ne satisfait pas le bound de Ecma376AgileWriter::create).
+rust_xlsxwriter = "0.96.0"
+ms-offcrypto-writer = "1.0.7"
+zeroize = { version = "1.8.1", features = ["derive"] }
+rand = "0.9"
 
 [dev-dependencies]
 tempfile = "3"
+# LOT 2B-E1 — déchiffrement pour le test de roundtrip Agile.
+office-crypto = "0.3.0"
+# LOT 2B-E1 — lecture des feuilles OOXML dans les tests (features alignées sur
+# la résolution existante tirée par rust_xlsxwriter : deflate uniquement).
+zip = { version = "7", default-features = false, features = ["deflate"] }

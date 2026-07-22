@@ -1,6 +1,7 @@
 mod campaign_write;
 mod hr_import;
 mod persistence;
+mod simulation_excel_export;
 mod simulation_persistence;
 mod sqlite_local;
 
@@ -54,6 +55,7 @@ pub fn run() {
     ];
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations(persistence::DATABASE_URL, migrations)
@@ -65,6 +67,8 @@ pub fn run() {
             campaign_write::restore_campaign,
             campaign_write::activate_campaign,
             simulation_persistence::save_simulation_run,
+            simulation_excel_export::export_simulation_run_excel,
+            simulation_excel_export::generate_hr_export_password,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

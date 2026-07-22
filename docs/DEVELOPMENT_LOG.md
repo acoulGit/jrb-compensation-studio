@@ -1048,3 +1048,112 @@ quasi plein écran → colonnes trajectoire → Échap.
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
 - `git diff --check` ; migrations / domaine calcul / DTO save inchangés ; aucun
   commit
+
+## 2026-07-22 — Lot 2B-E1 : frontend export Excel RH
+
+### Objectif
+
+Exposer, depuis l’historique des simulations, un export Excel RH d’un snapshot
+persisté v3, avec protection par mot de passe optionnelle, en s’appuyant sur les
+commandes Tauri `export_simulation_run_excel` et `generate_hr_export_password`
+déjà présentes côté Rust. Aucun changement de moteur, DTO, contrat ou migration.
+
+### Choix
+
+- Couche applicative dédiée (`hrExcelExport*`, `generateHrExportPassword`,
+  `exportSimulationRunExcel`) : fonctions pures appelant `invoke`/`save`
+  directement, mockées dans les tests jsdom.
+- Nom de fichier suggéré construit côté frontend en miroir de la sanitisation
+  Windows Rust (`JRB_Compensation_<Campagne>_Run_<Numero>_<Date>.xlsx`).
+- Dialogue modal centré réutilisant les couleurs de la charte (`.app-modal`),
+  distinct du drawer latéral existant.
+- Export réservé aux snapshots v3 via `canPresentResultSchemaVersion` ; v1/v2/
+  inconnu désactivés avec infobulle et texte lecteur d’écran.
+- Défense en profondeur sur le mot de passe : jamais journalisé, jamais conservé
+  après fermeture, message générique si une chaîne d’erreur le contenait.
+- Sélection de destination via `@tauri-apps/plugin-dialog` (déjà déclaré) ;
+  annulation = fermeture silencieuse sans erreur.
+
+### Fichiers
+
+- `src/application/campaignSimulation/hrExcelExportModels.ts`
+- `src/application/campaignSimulation/hrExcelExportErrorMessages.ts`
+- `src/application/campaignSimulation/generateHrExportPassword.ts`
+- `src/application/campaignSimulation/exportSimulationRunExcel.ts`
+- `src/pages/simulation/SimulationExcelExportDialog.tsx`
+- `src/pages/SimulationHistoryPage.tsx` (colonne « Actions », bouton export,
+  flux d’export, région aria-live)
+- `src/styles/global.css` (`.app-modal*`, `.sr-only`, `.field--checkbox`,
+  `.history-row-actions`, `.form-feedback--warning`)
+- `src/application/campaignSimulation/index.ts` (exports)
+- `src/tests/hrExcelExport.test.tsx`
+- `docs/HR_EXCEL_EXPORT.md` (+ mises à jour ARCHITECTURE / CAMPAIGN_SIMULATION /
+  DATABASE_SCHEMA)
+
+### Recette manuelle
+
+**A. Disponibilité** — Historique → sélectionner une campagne → un run v3 affiche
+un bouton **Export Excel** actif ; un run v2/v1 l’affiche désactivé avec
+infobulle.
+
+**B. Protection** — Cliquer Export → mot de passe coché par défaut → **Générer un
+mot de passe** → Afficher/Masquer → Exporter → choisir la destination → message
+de succès (aria-live), dialogue fermé.
+
+**C. Non protégé** — Décocher la protection → avertissement → cocher la
+confirmation → Exporter.
+
+**D. Annulation** — Ouvrir Export → Exporter → annuler le sélecteur de fichier →
+aucune erreur, dialogue fermé.
+
+**E. Sécurité** — Vérifier qu’aucun mot de passe n’apparaît dans les journaux ni
+dans un message d’erreur.
+
+### Validations
+
+- `pnpm exec tsc --noEmit`
+- `pnpm test` (478 tests, dont `hrExcelExport.test.tsx`)
+- `git diff --check` ; `mapExecutionResultToSaveDto.ts` /
+  `simulationPersistenceModels.ts` / migrations / moteur inchangés ; aucun commit
+
+## 2026-07-22 — Lot 2B-E1-R1 : correction métier et présentation export RH
+
+### Objectif
+
+Corriger rapidement la présentation RH de l’export Excel déjà validé
+techniquement (E1) : taux lisibles en pourcentage, libellés de période,
+feuille `Tableau_de_bord_RH`, statistiques et histogramme — sans toucher
+import, migrations, contrats, moteur, DTO ni snapshot.
+
+### Choix
+
+- Nouveau module `rates.rs` : fractions exactes (`i128`), stats min/max/moyenne/
+  médiane, bornes des 7 tranches ; conversion `f64` uniquement à l’écriture.
+- Taux total d’augmentation de base =
+  (promotion mensuelle + complément mensuel) / salaire décembre N-1 ;
+  **ancienneté exclue** des statistiques principales.
+- Colonnes num/den déplacées en fin de feuille (audit) ; colonnes RH principales
+  en pourcentages.
+- Cinq feuilles dans l’ordre :
+  `Tableau_de_bord_RH`, `Resultats_RH`, `Trajectoire_12_mois`,
+  `Synthese_campagne`, `Parametres`.
+- Graphique colonnes obligatoire sur la distribution ; doughnut P2 de répartition
+  des coûts lorsque les agrégats de période sont présents.
+- Libellés « annuel » incorrects remplacés par « sur la période » ; doublon
+  synthèse réduit à « Coût compensatoire sur la période ».
+- Import actuel **conservé** ; enrichissement d’import reporté.
+
+### Fichiers
+
+- `src-tauri/src/simulation_excel_export/rates.rs` (nouveau)
+- `src-tauri/src/simulation_excel_export/models.rs` (lecture élargie snapshot)
+- `src-tauri/src/simulation_excel_export/workbook.rs` (présentation + dashboard)
+- `src-tauri/src/simulation_excel_export/tests.rs` / `mod.rs`
+- `docs/HR_EXCEL_EXPORT.md`, `docs/DEVELOPMENT_LOG.md`
+
+### Validations
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check` ; migrations / domaine calcul / DTO save inchangés ;
+  aucun commit

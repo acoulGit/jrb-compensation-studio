@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-export-simulation-run-excel"
+description = "Autorise l’export Excel RH d’une simulation et la génération d’un mot de passe de protection."
+commands.allow = ["export_simulation_run_excel", "generate_hr_export_password"]

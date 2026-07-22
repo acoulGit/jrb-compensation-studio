@@ -238,7 +238,21 @@ G. Promotions > budget — erreur métier dédiée.
 - Campagnes archivées : historique consultable, aucune nouvelle sauvegarde.
 - Voir `docs/SIMULATION_PERSISTENCE.md`.
 
-## Reporté (post 2B-4B)
-- comparaison, export ;
+## Export Excel RH depuis l’historique (Lot 2B-E1)
+
+- Colonne **Actions** de l’historique : bouton **Export Excel** à côté de
+  **Consulter**.
+- Export réservé aux snapshots **v3** (`canPresentResultSchemaVersion`) ; les
+  snapshots v1/v2/inconnu affichent le bouton désactivé avec infobulle.
+- Dialogue modal : protection par mot de passe cochée par défaut (≥ 12
+  caractères), générateur de mot de passe robuste (≥ 20), ou export non protégé
+  confirmé explicitement.
+- Destination choisie via le sélecteur natif Windows (`.xlsx`). L’annulation du
+  sélecteur ferme le dialogue sans erreur.
+- Le mot de passe n’est jamais journalisé ni conservé après fermeture.
+- Voir `docs/HR_EXCEL_EXPORT.md`.
+
+## Reporté (post 2B-E1)
+- comparaison de simulations ;
 - workflow de validation métier ;
 - édition manuelle salarié par salarié.

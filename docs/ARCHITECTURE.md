@@ -164,6 +164,22 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
 
 Voir `docs/CAMPAIGN_SIMULATION.md`.
 
+## Couche export Excel RH (Lot 2B-E1)
+
+- Module Rust `src-tauri/src/simulation_excel_export/` : chargement du snapshot
+  v3, génération du classeur XLSX (4 feuilles), chiffrement agile optionnel,
+  écriture atomique, génération / validation du mot de passe. Aucun recalcul.
+- Commandes `export_simulation_run_excel` (entrée camelCase, résultat structuré,
+  erreurs FR sans détail sensible) et `generate_hr_export_password`.
+- Frontend `src/application/campaignSimulation/hrExcelExport*`,
+  `exportSimulationRunExcel`, `generateHrExportPassword` : fonctions pures
+  invoquant `invoke` / `save`, testées avec mocks jsdom.
+- UI : `SimulationExcelExportDialog` + intégration dans `SimulationHistoryPage`
+  (export réservé aux snapshots v3, protection mot de passe par défaut, export
+  non protégé confirmé explicitement). Le mot de passe n’est jamais journalisé
+  ni conservé après fermeture du dialogue.
+- Voir `docs/HR_EXCEL_EXPORT.md`.
+
 ## Couche import RH (Lot 1C)
 
 Le Lot 1C ajoute l’import local de population par campagne, sans moteur de
@@ -206,9 +222,14 @@ Aucune fonction produit ne nécessite le réseau. Permissions actuelles :
 - `core:default`
 - `sql:default`
 - `sql:allow-execute`
+- `allow-save-simulation-run`
+- `allow-export-simulation-run-excel`
+- `dialog:allow-save`
 
-Aucune permission HTTP, shell, opener, filesystem, upload, updater ou
-websocket n’est déclarée.
+`dialog:allow-save` est la seule capacité de dialogue déclarée : elle ouvre le
+sélecteur natif de destination `.xlsx` pour l’export RH (aucune ouverture ni
+lecture de fichier). Aucune permission HTTP, shell, opener, filesystem
+(lecture/écriture arbitraire), upload, updater ou websocket n’est déclarée.
 
 Le schéma distant référencé dans `tauri.conf.json` sert uniquement à l’aide de
 validation des outils ; il n’est pas chargé par l’application exécutée. La CSP

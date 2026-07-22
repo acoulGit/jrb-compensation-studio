@@ -84,6 +84,40 @@ export {
   parseCanonicalIntegerText,
 } from "./canonicalDecimalText";
 export { mapExecutionResultToSaveDto } from "./mapExecutionResultToSaveDto";
+export {
+  GENERATED_PASSWORD_MIN_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  buildSuggestedFileName,
+  formatExportDate,
+  sanitizeFileComponent,
+} from "./hrExcelExportModels";
+export type {
+  ExportSimulationRunExcelInput,
+  ExportSimulationRunExcelResult,
+  GenerateHrExportPasswordResult,
+  SuggestedFileNameInput,
+} from "./hrExcelExportModels";
+export {
+  EXPORT_UNKNOWN_DISABLED_HINT,
+  EXPORT_UNPROTECTED_CONFIRMATION_MESSAGE,
+  EXPORT_UNPROTECTED_WARNING,
+  EXPORT_V1_DISABLED_HINT,
+  EXPORT_V2_DISABLED_HINT,
+  isCancelledMessage,
+  looksLikePasswordLeak,
+  validateExportPasswordOptions,
+} from "./hrExcelExportErrorMessages";
+export type {
+  ValidateExportPasswordOptionsInput,
+  ValidateExportPasswordResult,
+} from "./hrExcelExportErrorMessages";
+export { generateHrExportPassword } from "./generateHrExportPassword";
+export type { GenerateHrExportPasswordOutcome } from "./generateHrExportPassword";
+export {
+  exportSimulationRunExcel,
+  pickExcelSavePath,
+} from "./exportSimulationRunExcel";
+export type { ExportSimulationRunExcelOutcome } from "./exportSimulationRunExcel";
 export { saveCurrentCampaignSimulation } from "./saveCurrentCampaignSimulation";
 export type { SimulationPersistenceCode } from "./simulationPersistenceCodes";
 export type {

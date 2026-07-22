@@ -9,6 +9,8 @@
     "sql:allow-execute",
     "allow-replace-current-population",
     "allow-campaign-write",
-    "allow-save-simulation-run"
+    "allow-save-simulation-run",
+    "allow-export-simulation-run-excel",
+    "dialog:allow-save"
   ]
 }
