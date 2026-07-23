@@ -40,6 +40,7 @@ export function mapReferenceConfig(
     campaignId: row.campaign_id,
     nineBoxMode: row.nine_box_mode,
     nineBoxOrientation: row.nine_box_orientation,
+    nineBoxConfirmationFactorMilli: Number(row.nine_box_confirmation_factor_milli),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -47,11 +48,11 @@ export function mapReferenceConfig(
 
 export function mapJobFamily(row: JobFamilyRow): JobFamily {
   return {
-    id: row.id,
-    campaignId: row.campaign_id,
+    id: Number(row.id),
+    campaignId: Number(row.campaign_id),
     code: row.code,
     label: row.label,
-    sortOrder: row.sort_order,
+    sortOrder: Number(row.sort_order),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -59,11 +60,11 @@ export function mapJobFamily(row: JobFamilyRow): JobFamily {
 
 export function mapGrade(row: GradeRow): Grade {
   return {
-    id: row.id,
-    campaignId: row.campaign_id,
+    id: Number(row.id),
+    campaignId: Number(row.campaign_id),
     code: row.code,
     label: row.label,
-    sortOrder: row.sort_order,
+    sortOrder: Number(row.sort_order),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -71,10 +72,13 @@ export function mapGrade(row: GradeRow): Grade {
 
 export function mapSalaryGridCell(row: SalaryGridRow): SalaryGridCell {
   return {
-    campaignId: row.campaign_id,
-    jobFamilyId: row.job_family_id,
-    gradeId: row.grade_id,
-    s0Amount: row.s0_amount,
+    campaignId: Number(row.campaign_id),
+    jobFamilyId: Number(row.job_family_id),
+    gradeId: Number(row.grade_id),
+    s0Amount:
+      row.s0_amount === null || row.s0_amount === undefined
+        ? null
+        : Number(row.s0_amount),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -82,13 +86,16 @@ export function mapSalaryGridCell(row: SalaryGridRow): SalaryGridCell {
 
 export function mapSalaryPosition(row: SalaryPositionRow): SalaryPosition {
   return {
-    id: row.id,
-    campaignId: row.campaign_id,
+    id: Number(row.id),
+    campaignId: Number(row.campaign_id),
     code: row.code,
     label: row.label,
-    sortOrder: row.sort_order,
-    referenceRatioBps: row.reference_ratio_bps,
-    positionFactorMilli: row.position_factor_milli,
+    sortOrder: Number(row.sort_order),
+    referenceRatioBps:
+      row.reference_ratio_bps === null || row.reference_ratio_bps === undefined
+        ? null
+        : Number(row.reference_ratio_bps),
+    positionFactorMilli: Number(row.position_factor_milli),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -99,11 +106,11 @@ export function mapPerformanceFactor(row: LevelFactorRow): PerformanceFactor {
     throw new Error(`Niveau de performance inconnu : ${row.level}`);
   }
   return {
-    campaignId: row.campaign_id,
+    campaignId: Number(row.campaign_id),
     level: row.level,
     label: row.label,
-    sortOrder: row.sort_order,
-    factorMilli: row.factor_milli,
+    sortOrder: Number(row.sort_order),
+    factorMilli: Number(row.factor_milli),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -114,11 +121,11 @@ export function mapPotentialFactor(row: LevelFactorRow): PotentialFactor {
     throw new Error(`Niveau de potentiel inconnu : ${row.level}`);
   }
   return {
-    campaignId: row.campaign_id,
+    campaignId: Number(row.campaign_id),
     level: row.level,
     label: row.label,
-    sortOrder: row.sort_order,
-    factorMilli: row.factor_milli,
+    sortOrder: Number(row.sort_order),
+    factorMilli: Number(row.factor_milli),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -136,11 +143,11 @@ export function mapNineBoxFactor(row: NineBoxFactorRow): NineBoxFactor {
     );
   }
   return {
-    campaignId: row.campaign_id,
-    boxCode: row.box_code,
+    campaignId: Number(row.campaign_id),
+    boxCode: Number(row.box_code),
     performanceLevel: row.performance_level,
     potentialLevel: row.potential_level,
-    factorMilli: row.factor_milli,
+    factorMilli: Number(row.factor_milli),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

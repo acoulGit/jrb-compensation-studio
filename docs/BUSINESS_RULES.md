@@ -86,7 +86,11 @@ convention historique non documentée :
 
 ## Budget
 
-- Le budget est global et ne constitue pas un taux individuel garanti.
+- Le budget est global et ne constitue pas, **par défaut**, un taux
+  individuel garanti. Un **minimum garanti d’augmentation** optionnel
+  (Lot **2A-H2D-2**, contrat v4) peut toutefois imposer un plancher mensuel
+  sur l’augmentation totale de base (promotion applicable + complément),
+  réservé avant répartition du reliquat.
 - Les directeurs sont exclus de l’assiette (résolution d’assiette hors Lot 2A-3).
 - Une consommation exacte du budget n’est **pas** forcée après arrondi
   individuel : le montant réel de l’opération est la somme des montants
@@ -150,6 +154,23 @@ Montant réel = Σ montants arrondis ; écart total = montant réel − budget c
 - Les intérimaires et prestataires sont exclus.
 - En cas de disponibilité hors groupe, les actions sont gelées.
 
+**Opérationnalisation Lot 2A-H2C-2A** : prédicat pur
+`isCompensatoryMeasureEligible` (`compensatoryMeasureEligibility.ts`),
+distinct de `isPromotionBudgetPopulationEmployee`.
+
+| Règle documentée | Application moteur |
+| --- | --- |
+| CDI / CDD | inclus (`contractType` ∈ {`cdi`,`cdd`}) |
+| Intérim / prestataire | exclus (`temporary`, `contractor`, `other`) |
+| Ancienneté ≥ 12 mois au 31/12 N-1 | `hireDate ≤ 31/12/(N-2)` |
+| Disponibilité hors groupe | gel → inéligible (`external_availability`) |
+| Période d’essai terminée | **non opérationalisée** (pas de champ d’import) |
+
+Un salarié promu peut consommer le budget promotion tout en étant inéligible
+au complément (facteur effectif 0, aucune exposition solveur positive).
+Le sous-performant confirmé conserve le coût de promotion ; son complément
+effectif reste nul (poids matriciel 0).
+
 ## Ancienneté
 
 - L’ancienneté représente 1 % du salaire de base courant.
@@ -175,6 +196,15 @@ moteur.
   futur périmètre budgétaire.
 - **Champs optionnels** : code 9-Box (1–9), sous-performant confirmé, montants
   de promotion, correction et mesure RH/sociale (≥ 0 FCFA).
+- **Promotion structurée (Lot 2A-H2C-1)** : groupe optionnel cohérent
+  (`promotionDate`, salaires avant/après, grades, familles). Absent = pas de
+  `PromotionEvent` ; le `promotionAmount` historique seul est conservé sans
+  trajectoire ni coût H2C. Partiel = erreur. Avec groupe complet, le montant
+  canonique est le delta dérivé (BigInt) ; `promotionAmount` historique n’est
+  accepté que s’il est vide/0/égal au delta, sinon `PROMOTION_AMOUNT_MISMATCH`.
+  Fenêtre N-1 ou N ; cohérence avec le snapshot décembre N-1. Trajectoire
+  mensuelle et coût campagne consommés par le moteur budget promotion /
+  calibrage compensatoire (Lot 2A-H2C-2, cf. section dédiée).
 - **Intégrité** : aucun import partiel ; remplacement atomique de la population
   courante ; historique des lots conservé (`current` / `superseded`).
 - **Campagne archivée** : import bloqué (lecture seule).
@@ -183,12 +213,173 @@ moteur.
 
 Détails techniques : `docs/HR_IMPORT.md`.
 
+## Préparation de simulation (Lot 2B-1)
+
+Règles de readiness (sans calcul d’allocation) :
+
+- Campagnes `draft` et `active` : préparation autorisée.
+- Campagne `archived` : consultation possible, nouvelle simulation bloquée ;
+  le statut n’est pas modifié par la préparation.
+- Population : uniquement le lot RH `current` ; lots `superseded` ignorés.
+- Mapping déterministe vers `PreparedEmployeeCalculationInput` ; aucune valeur
+  par défaut silencieuse (notamment `confirmedUnderperformer`).
+- Niveaux Performance/Potentiel : valeurs canoniques `low` / `medium` /
+  `high` (aliases FR normalisés explicitement).
+- Orientation 9-Box : métadonnée de rapport uniquement, hors moteur.
+- Configuration budget / arrondi : section distincte de la population et des
+  référentiels ; absente ⇒ non prêt, sans masquer les autres issues.
+
+Détails : `docs/CAMPAIGN_SIMULATION.md`.
+
+## Configuration de simulation (Lot 2B-2)
+
+- Deux modes de budget explicites (aucun défaut silencieux) : montant saisi ;
+  pourcentage de masse éligible saisie.
+- Montant manuel : entier FCFA ≥ 0, non arrondi au pas individuel.
+- Taux : conversion exacte en basis points (max 2 décimales, sans flottant).
+- Budget cible exact éventuellement fractionnaire ; jamais arrondi au pas.
+- Pas d’arrondi individuel paramétrable (mode `nearest_half_up`), non figé à 5.
+- Configuration validée uniquement en mémoire de session ; invalidée à toute
+  modification ; isolée par campagne.
+- Campagne archivée : lecture seule (pas de nouvelle validation).
+
+## Exécution de simulation (Lot 2B-3)
+
+- Lancement **explicite** uniquement (« Lancer la simulation »).
+- Pas d’appel moteur à l’ouverture, saisie, readiness ou validation seule.
+- Empreinte des sources : toute divergence après validation bloque l’exécution
+  (`SIMULATION_INPUTS_CHANGED_AFTER_VALIDATION`).
+- Atomicité : pas de résultat partiel présenté comme valide.
+- Résultat courant invalidé (stale) si données ou configuration changent.
+- Isolation mémoire par campagne ; rien après redémarrage.
+- `monthlyFinalSalaryFcfa` = salaire mensuel + augmentation mensuelle finale
+  (produit du moteur H1, pas un recalcul UI).
+- Enregistrement explicite et historique UI livrés au Lot 2B-4B ; export
+  toujours reporté.
+
+## Budget annuel et salaires mensuels (2A-H1)
+
+- Le budget cible est un **coût annuel** d’augmentations (12 mois, hors charges).
+- Les salaires et S0 restent **mensuels** ; le ratio salarial est inchangé.
+- L’allocation est annuelle ; l’arrondi s’applique au **mensuel** uniquement.
+- Mode pourcentage : masse mensuelle saisie × 12 avant application du taux.
+
+## Calendrier d’application et rappel (2A-H2A)
+
+- `campaignYear` : année de campagne **explicite** (entier 4 chiffres).
+  Le moteur ne lit jamais `Date.now()` ; l’année système ne sert qu’à
+  initialiser le formulaire UI.
+- `technicalApplicationMonth` : mois d’application technique (1 = janvier …
+  12 = décembre), rattaché à `campaignYear`.
+- `retroactivityStartMonth` (Lot **2A-H2D-1**, contrat v3) : début de la
+  période d’effet (1–12, défaut janvier). Doit être ≤ mois d’application.
+- Minimum garanti d’augmentation (Lot **2A-H2D-2**, contrat v4) — modes
+  exclusifs `none` | `fixed_monthly_amount` | `percentage_of_base_salary` :
+  - porte sur l’augmentation mensuelle totale de base
+    (promotion applicable + complément compensatoire) ;
+  - population distincte : CDI/CDD + `active` / `group_detachment` /
+    `legal_leave` (pas d’exigence ≥ 12 mois ni d’exclusion sous-performant) ;
+  - plancher payable = `ceil` du complément minimum requis au pas d’arrondi ;
+  - réservation `Σ planchers` avant allocation du reliquat pondéré ;
+  - si promo + planchers > enveloppe → `MINIMUM_GUARANTEE_EXCEEDS_BUDGET` ;
+  - mode `none` : parité stricte avec H2D-1.
+- Effet financier rétroactif au **mois de rétroactivité** (plus seulement
+  au 1er janvier).
+- Formules (BigInt FCFA) — avec `retro = retroactivityStartMonth` :
+  - `campaignCoveredMonthCount = 13 - retro`
+  - `retroactiveMonths = technicalApplicationMonth - retro`
+  - `remainingDirectPaymentMonths = 13 - technicalApplicationMonth`
+  - rappel / direct = sommes des mois couverts (complément variable possible)
+  - `annual*` = alias du **coût effectif de campagne** (période couverte)
+  - `fullYearRunRate*` = décembre × 12 (informatif, hors calibrage)
+- Invariant : `rappel + paiement direct = coût effectif de campagne`.
+- Le rappel est un **décalage de paiement**, pas un coût additionnel à
+  l’enveloppe (pas de double comptage).
+- Hors périmètre H2A : ancienneté, TPA, CNSS, charges patronales, autres
+  incidences, rappel d’ancienneté (Lot 2A-H2B).
+
+## Incidence supplémentaire d’ancienneté (2A-H2B)
+
+- Vocabulaire : « incidence supplémentaire d’ancienneté » (pas la prime totale).
+- Assiette exclusive : `monthlyFinalIncreaseFcfa` (augmentation mensuelle finale).
+- Barème sans plafond : moins de 3 anniversaires effectifs → 0 % ; sinon
+  `ratePercent = effectiveAnniversaryCount + 2`.
+- Prise d’effet : 1er jour du mois précédant le mois d’anniversaire
+  (embauche en janvier → décembre de l’année précédente). Pas de prorata journalier.
+- Arrondi : plafond FCFA (`(num + 99) / 100` pour taux entier).
+- Approximation conventionnelle : pas de chargement de la prime historique.
+- Hors budget : ne modifie ni budget cible, ni allocation, ni coût annuel de base.
+- Ventilation rappel / direct selon `technicalApplicationMonth` (H2A).
+- Hors périmètre H2B : TPA, CNSS, charges, taxes, prime historique.
+
+## Moteur budget promotion / calibrage compensatoire (2A-H2C-2)
+
+- Le coût annuel des promotions **incluses** dans la simulation (fenêtre
+  N-1/N, non exclues après le mois d’application technique) est déduit du
+  budget annuel cible **avant** le calibrage du complément matriciel.
+- Seuls les salariés en position de **consommer le budget** contribuent au
+  coût de promotion déduit : statut d’emploi `active`, `group_detachment`
+  ou `legal_leave` (`isPromotionBudgetPopulationEmployee`). Statut absent
+  ⇒ traité comme `active` (rétro-compatibilité des salariés préparés avant
+  ce lot).
+- Les statuts `external_availability`, `suspended`, `departed` et `other`
+  n’engagent pas le budget : la promotion reste importée et visible dans les
+  résultats, mais son coût n’est pas comptabilisé dans l’enveloppe.
+- Si le coût annuel des promotions incluses dépasse le budget annuel cible,
+  la simulation est bloquée : « Le coût annuel des promotions incluses
+  dépasse l’enveloppe disponible. Augmentez le budget ou revoyez la
+  population de la campagne. »
+- Le reliquat (`budget annuel cible − coût annuel promotions incluses`) est
+  ensuite intégralement dévolu au complément compensatoire matriciel, calibré
+  par un taux **unique** appliqué à tous les salariés/mois éligibles (salaire
+  × facteur matriciel effectif du mois), après déduction de l’augmentation de
+  promotion déjà perçue le mois concerné.
+- Un salarié sous-performant confirmé ou marqué non éligible à la mesure
+  compensatoire (`compensatoryMeasureEligible = false`) a un facteur
+  compensatoire nul, y compris les mois où une promotion est active : la
+  promotion continue de s’appliquer, seul le complément matriciel est exclu.
+- Si aucun salarié n’est éligible au complément compensatoire alors qu’un
+  reliquat de budget existe, la simulation est bloquée (capacité
+  d’allocation compensatoire nulle) : « Aucun salarié éligible ne peut
+  absorber le reliquat de budget compensatoire après déduction du coût des
+  promotions. Vérifiez l’éligibilité de la population ou le budget cible. »
+- Sans promotion structurée dans la population, ce lot ne change **aucun**
+  résultat par rapport au moteur Lot 2A-3/H2A/H2B (parité stricte, y compris
+  arrondis et écarts).
+- Hors périmètre H2C-2 : correction Sout- distincte, mesures RH/sociales,
+  TPA, CNSS, charges patronales.
+
+## Persistance de simulation (Lots 2B-4A / 2B-4B)
+
+- Enregistrement **explicite** d’un snapshot immuable (append-only).
+- Pas d’enregistrement automatique après calcul.
+- Vérification fingerprints / lot courant / statut avant sauvegarde.
+- Grands entiers et fractions en TEXT canonique (pas de REAL / Number).
+- Aucune mise à jour ni suppression métier des runs enregistrés.
+- **Schema v3 (contrat v4)** : enveloppe/théorique/effectif de la **période
+  d’effet** (rétroactivité → décembre), trajectoire mensuelle persistée
+  (12 mois), minimum garanti, promotions et incidences d’ancienneté.
+- **Schema v2** : annuel/mensuel sans mois ni ancienneté/minimum persistés —
+  présenté en lecture seule **incomplète** (aucun faux zéro, aucun détail
+  mensuel inventé).
+- Snapshots `result_schema_version = 1` : sémantique obsolète, non convertis
+  ni recalculés (incompatibles) ; schéma inconnu refusé par prudence.
+- **2B-4B** : une exécution courante = une sauvegarde max par session
+  (identité `runSequence` + empreintes source/config) ; historique consultable
+  même si campagne archivée, sans réutiliser l’import RH courant.
+
 ## Autres règles
 
 - Un sous-performant confirmé reçoit 0 % matriciel.
 - Une mesure RH ou sociale distincte et motivée reste possible.
-- En cas de promotion, un complément est accordé seulement si la cible
-  matricielle dépasse l’augmentation de promotion déjà reçue.
+- En cas de promotion, un complément matriciel est accordé seulement si la
+  cible matricielle dépasse l’augmentation de promotion déjà reçue (moteur de
+  complément : Lot 2A-H2C-2, cf. section dédiée ci-dessous).
+- Une promotion en N postérieure au mois d’application technique est exclue
+  du calcul courant (`EXCLUDED_AFTER_TECHNICAL_APPLICATION_MONTH`) tout en
+  conservant les données importées. Pas de rappel propre à la promotion
+  (payée dès le mois d’effet) ; le rappel du complément compensatoire suit la
+  règle H2A (mois compensatoires uniquement).
 - La correction Sout- est distincte et peut être étalée sur deux ans.
 - L’arrondi final individuel est effectué au multiple d’un pas paramétrable
   (politique `nearest_half_up`) ; le pas n’est pas figé à 5 FCFA.

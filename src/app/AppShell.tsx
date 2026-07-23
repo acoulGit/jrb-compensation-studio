@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AppNavigationProvider } from "./AppNavigationProvider";
 import { useAppData } from "./AppDataProvider";
 import { CampaignContext } from "../components/layout/CampaignContext";
 import { TopHeader } from "../components/layout/TopHeader";
@@ -6,10 +7,53 @@ import { Sidebar } from "../components/navigation/Sidebar";
 import type { PageId } from "../components/navigation/navigation";
 import { PageContent, pageDefinitions } from "../pages/pages";
 
-export function AppShell() {
-  const { status, errorMessage, retry } = useAppData();
+function AppShellContent() {
   const [activePage, setActivePage] = useState<PageId>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  return (
+    <AppNavigationProvider
+      activePage={activePage}
+      onActivePageChange={setActivePage}
+    >
+      <div
+        className={`app-shell${sidebarCollapsed ? " app-shell--collapsed" : ""}`}
+        data-testid="app-shell"
+        data-sidebar-collapsed={sidebarCollapsed ? "true" : "false"}
+      >
+        <Sidebar
+          activePage={activePage}
+          collapsed={sidebarCollapsed}
+          onNavigate={setActivePage}
+          onToggle={() => setSidebarCollapsed((value) => !value)}
+        />
+        <div className="app-shell__workspace">
+          <TopHeader pageTitle={pageDefinitions[activePage].title} />
+          <CampaignContext />
+          <main
+            className={`main-content${
+              activePage === "simulations" || activePage === "simulation-history"
+                ? " main-content--fluid"
+                : ""
+            }`}
+            id="main-content"
+            data-testid="main-content"
+            data-fluid={
+              activePage === "simulations" || activePage === "simulation-history"
+                ? "true"
+                : "false"
+            }
+          >
+            <PageContent page={activePage} />
+          </main>
+        </div>
+      </div>
+    </AppNavigationProvider>
+  );
+}
+
+export function AppShell() {
+  const { status, errorMessage, retry } = useAppData();
 
   if (status === "loading") {
     return (
@@ -41,21 +85,5 @@ export function AppShell() {
     );
   }
 
-  return (
-    <div className={`app-shell${sidebarCollapsed ? " app-shell--collapsed" : ""}`}>
-      <Sidebar
-        activePage={activePage}
-        collapsed={sidebarCollapsed}
-        onNavigate={setActivePage}
-        onToggle={() => setSidebarCollapsed((value) => !value)}
-      />
-      <div className="app-shell__workspace">
-        <TopHeader pageTitle={pageDefinitions[activePage].title} />
-        <CampaignContext />
-        <main className="main-content" id="main-content">
-          <PageContent page={activePage} />
-        </main>
-      </div>
-    </div>
-  );
+  return <AppShellContent />;
 }

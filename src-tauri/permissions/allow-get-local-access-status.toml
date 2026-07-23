@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-get-local-access-status"
+description = "Autorise la lecture du statut d’accès local (aucun secret)."
+commands.allow = ["get_local_access_status"]

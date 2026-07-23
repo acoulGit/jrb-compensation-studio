@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_PERFORMANCE_FACTORS,
   DEFAULT_POTENTIAL_FACTORS,
@@ -43,7 +44,7 @@ function defaultPositions() {
 
 function defaultFactors(): Pick<
   PopulationCalculationReferences,
-  "performanceFactors" | "potentialFactors" | "nineBoxFactors"
+  "performanceFactors" | "potentialFactors" | "nineBoxFactors" | "nineBoxConfirmationFactorMilli"
 > {
   return {
     performanceFactors: DEFAULT_PERFORMANCE_FACTORS.map((f) => ({
@@ -60,6 +61,7 @@ function defaultFactors(): Pick<
       factorMilli: f.factorMilli,
       boxCode: f.boxCode,
     })),
+    nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   };
 }
 
@@ -108,6 +110,7 @@ function buildInput(
         salaryFcfa: 1_000_000,
         performanceLevel: "high",
         potentialLevel: "medium",
+        hireDate: "2020-07-15",
         confirmedUnderperformer: false,
       },
     ],
@@ -120,6 +123,8 @@ function buildInput(
       mode: "nearest_half_up",
       stepFcfa: 100,
     },
+    campaignYear: overrides.campaignYear ?? 2026,
+    technicalApplicationMonth: overrides.technicalApplicationMonth ?? 1,
   };
 }
 
@@ -227,6 +232,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_000_000,
           performanceLevel: "medium",
           potentialLevel: "medium",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
         {
@@ -236,6 +242,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 2_000_000,
           performanceLevel: "medium",
           potentialLevel: "medium",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
       ],
@@ -263,12 +270,16 @@ describe("Lot 2A-4 — orchestrateur population", () => {
     expect(a.salaryPositionCode).toBe("S0");
     expect(b.salaryPositionCode).toBe("S0");
     expect(a.effectiveMatrixWeight).toEqual(b.effectiveMatrixWeight);
-    expect(a.finalRoundedIncreaseAmountFcfa).toBe(200_000n);
-    expect(b.finalRoundedIncreaseAmountFcfa).toBe(100_000n);
-    expect(result.actualOperationAmountFcfa).toBe(300_000n);
+    expect(a.monthlyFinalRoundedIncreaseFcfa).toBe(16_667n);
+    expect(b.monthlyFinalRoundedIncreaseFcfa).toBe(8_333n);
+    expect(a.annualActualCostFcfa).toBe(200_004n);
+    expect(b.annualActualCostFcfa).toBe(99_996n);
+    expect(result.annualActualOperationCostFcfa).toBe(300_000n);
+    expect(a.monthlyFinalSalaryFcfa).toBe(2_000_000n + 16_667n);
+    expect(b.monthlyFinalSalaryFcfa).toBe(1_000_000n + 8_333n);
     expect(
       fractionsEqual(
-        result.totalTheoreticalAllocation,
+        result.annualTheoreticalAllocatedTotal,
         result.budgetTargetResult.exactAmount,
       ),
     ).toBe(true);
@@ -293,6 +304,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             mode === "none" || mode === "performance_only"
               ? undefined
               : "low",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
       ];
@@ -318,6 +330,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_000_000,
           performanceLevel: "high",
           potentialLevel: "low",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
       ],
@@ -354,7 +367,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
     expect(
       fractionsEqual(
         fractional.budgetTargetResult.exactAmount,
-        reduceFraction(250_623n * 400n, 10_000n),
+        reduceFraction(250_623n * 12n * 400n, 10_000n),
       ),
     ).toBe(true);
 
@@ -366,7 +379,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
         }),
       );
       for (const employee of result.employees) {
-        expect(employee.finalRoundedIncreaseAmountFcfa % BigInt(step)).toBe(0n);
+        expect(employee.monthlyFinalRoundedIncreaseFcfa % BigInt(step)).toBe(0n);
       }
     }
   });
@@ -382,6 +395,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             salaryFcfa: 1_000_000,
             performanceLevel: "high",
             potentialLevel: "high",
+            hireDate: "2020-07-15",
             confirmedUnderperformer: true,
           },
           {
@@ -391,6 +405,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             salaryFcfa: 1_000_000,
             performanceLevel: "medium",
             potentialLevel: "medium",
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
         ],
@@ -401,28 +416,31 @@ describe("Lot 2A-4 — orchestrateur population", () => {
     const under = withUnder.employees.find((e) => e.employeeId === "U")!;
     expect(under.blockingReason).toBe("CONFIRMED_UNDERPERFORMER");
     expect(under.allocationWeight.numerator).toBe(0n);
-    expect(under.theoreticalIncreaseAmount.numerator).toBe(0n);
-    expect(under.finalRoundedIncreaseAmountFcfa).toBe(0n);
+    expect(under.annualTheoreticalAllocation.numerator).toBe(0n);
+    expect(under.monthlyFinalRoundedIncreaseFcfa).toBe(0n);
     expect(withUnder.populationSummary.confirmedUnderperformerCount).toBe(1);
     expect(withUnder.populationSummary.zeroWeightEmployeeCount).toBe(1);
 
-    expectPopulationFailure(() =>
-      calculatePreparedPopulationCompensation(
-        buildInput({
-          employees: [
-            {
-              employeeId: "U1",
-              familyCode: "F1",
-              gradeCode: "G1",
-              salaryFcfa: 1_000_000,
-              performanceLevel: "high",
-              potentialLevel: "high",
-              confirmedUnderperformer: true,
-            },
-          ],
-          budgetTarget: { mode: "manual_amount", manualBudgetFcfa: 10_000 },
-        }),
-      ),
+    expectPopulationFailure(
+      () =>
+        calculatePreparedPopulationCompensation(
+          buildInput({
+            employees: [
+              {
+                employeeId: "U1",
+                familyCode: "F1",
+                gradeCode: "G1",
+                salaryFcfa: 1_000_000,
+                performanceLevel: "high",
+                potentialLevel: "high",
+                hireDate: "2020-07-15",
+                confirmedUnderperformer: true,
+              },
+            ],
+            budgetTarget: { mode: "manual_amount", manualBudgetFcfa: 10_000 },
+          }),
+        ),
+      "NO_COMPENSATORY_ALLOCATION_CAPACITY",
     );
   });
 
@@ -433,7 +451,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
         roundingPolicy: { mode: "nearest_half_up", stepFcfa: 5 },
       }),
     );
-    expect(zero.actualOperationAmountFcfa).toBe(0n);
+    expect(zero.annualActualOperationCostFcfa).toBe(0n);
 
     try {
       calculatePreparedPopulationCompensation(
@@ -446,6 +464,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
               salaryFcfa: 1000,
               performanceLevel: "high",
               potentialLevel: "high",
+              hireDate: "2020-07-15",
               confirmedUnderperformer: false,
             },
             {
@@ -455,6 +474,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
               salaryFcfa: 2000,
               performanceLevel: "high",
               potentialLevel: "high",
+              hireDate: "2020-07-15",
               confirmedUnderperformer: false,
             },
           ],
@@ -481,6 +501,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
               salaryFcfa: 1000,
               performanceLevel: "high",
               potentialLevel: "high",
+              hireDate: "2020-07-15",
               confirmedUnderperformer: false,
             },
           ],
@@ -504,6 +525,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
               familyCode: "F1",
               gradeCode: "G1",
               salaryFcfa: 1000,
+              hireDate: "2020-07-15",
               confirmedUnderperformer: false,
             },
           ],
@@ -522,6 +544,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 650_000, // ~65% → S7-
           performanceLevel: "high",
           potentialLevel: "high",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
         {
@@ -531,6 +554,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_500_000, // 100% → S0
           performanceLevel: "medium",
           potentialLevel: "low",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
         {
@@ -540,6 +564,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_620_000, // 135% → S7+
           performanceLevel: "low",
           potentialLevel: "low",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: true,
         },
       ],
@@ -568,18 +593,18 @@ describe("Lot 2A-4 — orchestrateur population", () => {
     expect(beta.salaryPositionCode).toBe("S0");
 
     expect(gamma.blockingReason).toBe("CONFIRMED_UNDERPERFORMER");
-    expect(gamma.finalRoundedIncreaseAmountFcfa).toBe(0n);
-    expect(gamma.theoreticalIncreaseAmount.numerator).toBe(0n);
+    expect(gamma.monthlyFinalRoundedIncreaseFcfa).toBe(0n);
+    expect(gamma.annualTheoreticalAllocation.numerator).toBe(0n);
 
     expect(
       fractionsEqual(
-        result.totalTheoreticalAllocation,
+        result.annualTheoreticalAllocatedTotal,
         result.budgetTargetResult.exactAmount,
       ),
     ).toBe(true);
-    expect(result.actualOperationAmountFcfa).toBe(
+    expect(result.annualActualOperationCostFcfa).toBe(
       result.employees.reduce(
-        (sum, e) => sum + e.finalRoundedIncreaseAmountFcfa,
+        (sum, e) => sum + e.annualActualCostFcfa,
         0n,
       ),
     );
@@ -600,6 +625,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             salaryFcfa: 800_000,
             performanceLevel: "high",
             potentialLevel: "medium",
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
           {
@@ -609,6 +635,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             salaryFcfa: 1_200_000,
             performanceLevel: "medium",
             potentialLevel: "high",
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
         ],
@@ -636,6 +663,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 500_000,
           performanceLevel: "low",
           potentialLevel: "low",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
         {
@@ -645,6 +673,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_500_000,
           performanceLevel: "high",
           potentialLevel: "high",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
       ],
@@ -656,6 +685,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_200_000,
           performanceLevel: "medium",
           potentialLevel: "medium",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: false,
         },
         {
@@ -665,6 +695,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           salaryFcfa: 1_200_000,
           performanceLevel: "medium",
           potentialLevel: "medium",
+          hireDate: "2020-07-15",
           confirmedUnderperformer: true,
         },
       ],
@@ -703,15 +734,15 @@ describe("Lot 2A-4 — orchestrateur population", () => {
           expect(forward.employees.map((e) => e.employeeId)).toEqual(
             [...forward.employees.map((e) => e.employeeId)].sort(),
           );
-          expect(forward.actualOperationAmountFcfa).toBe(
+          expect(forward.annualActualOperationCostFcfa).toBe(
             forward.employees.reduce(
-              (sum, e) => sum + e.finalRoundedIncreaseAmountFcfa,
+              (sum, e) => sum + e.annualActualCostFcfa,
               0n,
             ),
           );
           expect(
             fractionsEqual(
-              forward.totalTheoreticalAllocation,
+              forward.annualTheoreticalAllocatedTotal,
               forward.budgetTargetResult.exactAmount,
             ),
           ).toBe(true);
@@ -720,14 +751,14 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             const twin = reverse.employees.find(
               (e) => e.employeeId === employee.employeeId,
             )!;
-            expect(twin.finalRoundedIncreaseAmountFcfa).toBe(
-              employee.finalRoundedIncreaseAmountFcfa,
+            expect(twin.monthlyFinalRoundedIncreaseFcfa).toBe(
+              employee.monthlyFinalRoundedIncreaseFcfa,
             );
-            expect(employee.finalRoundedIncreaseAmountFcfa % BigInt(stepFcfa)).toBe(
+            expect(employee.monthlyFinalRoundedIncreaseFcfa % BigInt(stepFcfa)).toBe(
               0n,
             );
             if (employee.allocationWeight.numerator === 0n) {
-              expect(employee.finalRoundedIncreaseAmountFcfa).toBe(0n);
+              expect(employee.monthlyFinalRoundedIncreaseFcfa).toBe(0n);
             }
           }
         }
@@ -747,6 +778,7 @@ describe("Lot 2A-4 — orchestrateur population", () => {
             salaryFcfa: bigSalary,
             performanceLevel: "medium",
             potentialLevel: "medium",
+            hireDate: "2020-07-15",
             confirmedUnderperformer: false,
           },
         ],
@@ -762,6 +794,10 @@ describe("Lot 2A-4 — orchestrateur population", () => {
       }),
     );
     expect(result.employees[0].salaryFcfa).toBe(bigSalary);
-    expect(result.actualOperationAmountFcfa).toBe(10n ** 16n);
+    // annualActual = round(budget/12) × 12 — peut différer du budget cible
+    expect(result.annualActualOperationCostFcfa).toBe(
+      result.employees[0].monthlyFinalRoundedIncreaseFcfa * 12n,
+    );
+    expect(result.annualActualOperationCostFcfa).toBe(9_999_999_999_999_996n);
   });
 });

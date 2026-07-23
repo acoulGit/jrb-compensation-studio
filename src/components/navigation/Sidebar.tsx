@@ -57,7 +57,11 @@ export function Sidebar({
   const footerLabel = organization?.reportFooter ?? "Document confidentiel";
 
   return (
-    <aside className={`sidebar${collapsed ? " sidebar--collapsed" : ""}`}>
+    <aside
+      className={`sidebar${collapsed ? " sidebar--collapsed" : ""}`}
+      data-testid="app-sidebar"
+      data-collapsed={collapsed ? "true" : "false"}
+    >
       <div className="brand">
         <span className="brand__mark" aria-hidden="true">
           J
@@ -98,12 +102,24 @@ export function Sidebar({
         <button
           className="sidebar-toggle"
           type="button"
+          data-testid="sidebar-toggle"
           onClick={onToggle}
-          aria-label={collapsed ? "Déployer la barre latérale" : "Réduire la barre latérale"}
+          aria-label={
+            collapsed
+              ? "Déployer la barre latérale"
+              : "Réduire la barre latérale"
+          }
           aria-expanded={!collapsed}
+          title={
+            collapsed
+              ? "Déployer la barre latérale"
+              : "Réduire la barre latérale"
+          }
         >
           <span aria-hidden="true">{collapsed ? "›" : "‹"}</span>
-          <span className="sidebar-toggle__label">Réduire</span>
+          <span className="sidebar-toggle__label">
+            {collapsed ? "Déployer" : "Réduire"}
+          </span>
         </button>
       </div>
     </aside>

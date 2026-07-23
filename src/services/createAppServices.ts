@@ -2,10 +2,13 @@ import { MemoryCampaignRepository } from "../infrastructure/database/repositorie
 import { MemoryCompensationReferenceRepository } from "../infrastructure/database/repositories/memoryCompensationReferenceRepository";
 import { MemoryHrImportRepository } from "../infrastructure/database/repositories/memoryHrImportRepository";
 import { MemoryOrganizationRepository } from "../infrastructure/database/repositories/memoryOrganizationRepository";
+import { MemorySimulationHistoryRepository } from "../infrastructure/database/repositories/memorySimulationHistoryRepository";
 import { SqliteCampaignRepository } from "../infrastructure/database/repositories/sqliteCampaignRepository";
 import { SqliteCompensationReferenceRepository } from "../infrastructure/database/repositories/sqliteCompensationReferenceRepository";
 import { SqliteHrImportRepository } from "../infrastructure/database/repositories/sqliteHrImportRepository";
 import { SqliteOrganizationRepository } from "../infrastructure/database/repositories/sqliteOrganizationRepository";
+import { SqliteSimulationHistoryRepository } from "../infrastructure/database/repositories/sqliteSimulationHistoryRepository";
+import type { SimulationHistoryRepository } from "../infrastructure/database/repositories/simulationHistoryRepository";
 import { CampaignService } from "./campaignService";
 import { CompensationReferenceService } from "./compensationReferenceService";
 import { HrImportService } from "./hrImportService";
@@ -16,6 +19,7 @@ export interface AppServices {
   campaign: CampaignService;
   compensationReference: CompensationReferenceService;
   hrImport: HrImportService;
+  simulationHistory: SimulationHistoryRepository;
 }
 
 export function createSqliteAppServices(): AppServices {
@@ -34,6 +38,7 @@ export function createSqliteAppServices(): AppServices {
       compensationReference,
       new SqliteHrImportRepository(),
     ),
+    simulationHistory: new SqliteSimulationHistoryRepository(),
   };
 }
 
@@ -53,5 +58,6 @@ export function createMemoryAppServices(): AppServices {
       compensationReference,
       new MemoryHrImportRepository(),
     ),
+    simulationHistory: new MemorySimulationHistoryRepository(),
   };
 }

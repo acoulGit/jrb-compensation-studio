@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-save-simulation-run"
+description = "Autorise l’enregistrement atomique d’une simulation de campagne réussie."
+commands.allow = ["save_simulation_run"]

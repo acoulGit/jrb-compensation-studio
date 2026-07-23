@@ -41,9 +41,19 @@ pub struct ReplacePopulationEmployeeInput {
     pub december_base_salary: i64,
     pub nine_box_code: Option<i64>,
     pub confirmed_underperformer: bool,
+    /// Lot 2B-RC1-H1 — défaut `false` si absent (imports anciens / clients sans champ).
+    #[serde(default)]
+    pub neutralize_nine_box_effect: bool,
     pub promotion_amount: i64,
     pub correction_amount: i64,
     pub social_measure_amount: i64,
+    pub promotion_date: Option<String>,
+    pub salary_before_promotion: Option<i64>,
+    pub salary_after_promotion: Option<i64>,
+    pub previous_grade_id: Option<i64>,
+    pub promoted_grade_id: Option<i64>,
+    pub previous_job_family_id: Option<i64>,
+    pub promoted_job_family_id: Option<i64>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -194,9 +204,88 @@ fn validate_input(input: &ReplacePopulationInput) -> Result<String, ReplacePopul
                 ));
             }
         }
+        validate_promotion_group(employee)?;
     }
 
     Ok(file_name)
+}
+
+fn validate_promotion_group(
+    employee: &ReplacePopulationEmployeeInput,
+) -> Result<(), ReplacePopulationError> {
+    let has_date = employee
+        .promotion_date
+        .as_ref()
+        .is_some_and(|value| !value.trim().is_empty());
+    let has_other = employee.salary_before_promotion.is_some()
+        || employee.salary_after_promotion.is_some()
+        || employee.previous_grade_id.is_some()
+        || employee.promoted_grade_id.is_some()
+        || employee.previous_job_family_id.is_some()
+        || employee.promoted_job_family_id.is_some();
+
+    if !has_date && !has_other {
+        return Ok(());
+    }
+    if !has_date {
+        return Err(ReplacePopulationError::Validation(
+            "Champs de promotion sans date de promotion.".into(),
+        ));
+    }
+    let date = employee.promotion_date.as_ref().unwrap().trim();
+    if date.len() != 10 {
+        return Err(ReplacePopulationError::Validation(
+            "Date de promotion invalide.".into(),
+        ));
+    }
+    if employee.salary_before_promotion.is_none()
+        || employee.salary_after_promotion.is_none()
+        || employee.previous_grade_id.is_none()
+        || employee.promoted_grade_id.is_none()
+        || employee.previous_job_family_id.is_none()
+        || employee.promoted_job_family_id.is_none()
+    {
+        return Err(ReplacePopulationError::Validation(
+            "Groupe promotion incomplet.".into(),
+        ));
+    }
+    let before = employee.salary_before_promotion.unwrap();
+    let after = employee.salary_after_promotion.unwrap();
+    if before <= 0 || after <= before {
+        return Err(ReplacePopulationError::Validation(
+            "Salaires de promotion invalides.".into(),
+        ));
+    }
+    if employee.previous_grade_id == employee.promoted_grade_id {
+        return Err(ReplacePopulationError::Validation(
+            "Une promotion exige un changement de grade.".into(),
+        ));
+    }
+    let derived = after - before;
+    if employee.promotion_amount != 0 && employee.promotion_amount != derived {
+        return Err(ReplacePopulationError::Validation(format!(
+            "PROMOTION_AMOUNT_MISMATCH: montant saisi ({}) ≠ du montant calculé ({}).",
+            employee.promotion_amount, derived
+        )));
+    }
+    Ok(())
+}
+
+/// Montant canonique : delta dérivé si promotion structurée, sinon historique.
+fn canonical_promotion_amount(employee: &ReplacePopulationEmployeeInput) -> i64 {
+    let has_date = employee
+        .promotion_date
+        .as_ref()
+        .is_some_and(|value| !value.trim().is_empty());
+    if has_date {
+        if let (Some(before), Some(after)) = (
+            employee.salary_before_promotion,
+            employee.salary_after_promotion,
+        ) {
+            return after - before;
+        }
+    }
+    employee.promotion_amount
 }
 
 async fn utc_now_iso(tx: &mut Transaction<'_, Sqlite>) -> Result<String, ReplacePopulationError> {
@@ -261,7 +350,14 @@ async fn replace_current_population_in_tx(
     let mut family_ids: Vec<i64> = input
         .employees
         .iter()
-        .map(|employee| employee.job_family_id)
+        .flat_map(|employee| {
+            [
+                Some(employee.job_family_id),
+                employee.previous_job_family_id,
+                employee.promoted_job_family_id,
+            ]
+        })
+        .flatten()
         .collect();
     family_ids.sort_unstable();
     family_ids.dedup();
@@ -283,7 +379,14 @@ async fn replace_current_population_in_tx(
     let mut grade_ids: Vec<i64> = input
         .employees
         .iter()
-        .map(|employee| employee.grade_id)
+        .flat_map(|employee| {
+            [
+                Some(employee.grade_id),
+                employee.previous_grade_id,
+                employee.promoted_grade_id,
+            ]
+        })
+        .flatten()
         .collect();
     grade_ids.sort_unstable();
     grade_ids.dedup();
@@ -371,10 +474,15 @@ async fn replace_current_population_in_tx(
                 import_batch_id, campaign_id, employee_number, employee_label,
                 job_family_id, grade_id, contract_type, employment_status, hire_date,
                 december_base_salary, nine_box_code, confirmed_underperformer,
+                neutralize_nine_box_effect,
                 promotion_amount, correction_amount, social_measure_amount,
+                promotion_date, salary_before_promotion, salary_after_promotion,
+                previous_grade_id, promoted_grade_id,
+                previous_job_family_id, promoted_job_family_id,
                 source_row_number, created_at
             ) VALUES (
-                ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17
+                ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
+                ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25
             )
             "#,
         )
@@ -394,9 +502,21 @@ async fn replace_current_population_in_tx(
         } else {
             0
         })
-        .bind(employee.promotion_amount)
+        .bind(if employee.neutralize_nine_box_effect {
+            1
+        } else {
+            0
+        })
+        .bind(canonical_promotion_amount(employee))
         .bind(employee.correction_amount)
         .bind(employee.social_measure_amount)
+        .bind(&employee.promotion_date)
+        .bind(employee.salary_before_promotion)
+        .bind(employee.salary_after_promotion)
+        .bind(employee.previous_grade_id)
+        .bind(employee.promoted_grade_id)
+        .bind(employee.previous_job_family_id)
+        .bind(employee.promoted_job_family_id)
         .bind(employee.source_row_number)
         .bind(&now)
         .execute(&mut **tx)
@@ -458,6 +578,7 @@ pub async fn replace_current_population(
     app: AppHandle,
     input: ReplacePopulationInput,
 ) -> Result<ReplacePopulationResult, String> {
+    crate::local_access::require_unlocked_and_licensed(&app).await?;
     let path = resolve_app_database_path(&app).map_err(|error| error.user_message())?;
     let url = sqlite_url_from_path(&path).map_err(|error| error.user_message())?;
 
@@ -558,9 +679,18 @@ mod tests {
             december_base_salary INTEGER NOT NULL CHECK (december_base_salary > 0),
             nine_box_code INTEGER NULL,
             confirmed_underperformer INTEGER NOT NULL DEFAULT 0,
+            neutralize_nine_box_effect INTEGER NOT NULL DEFAULT 0
+                CHECK (neutralize_nine_box_effect IN (0, 1)),
             promotion_amount INTEGER NOT NULL DEFAULT 0,
             correction_amount INTEGER NOT NULL DEFAULT 0,
             social_measure_amount INTEGER NOT NULL DEFAULT 0,
+            promotion_date TEXT NULL,
+            salary_before_promotion INTEGER NULL,
+            salary_after_promotion INTEGER NULL,
+            previous_grade_id INTEGER NULL,
+            promoted_grade_id INTEGER NULL,
+            previous_job_family_id INTEGER NULL,
+            promoted_job_family_id INTEGER NULL,
             source_row_number INTEGER NOT NULL CHECK (source_row_number > 0),
             created_at TEXT NOT NULL
         );
@@ -660,9 +790,17 @@ mod tests {
                 december_base_salary: 450_000,
                 nine_box_code: Some(5),
                 confirmed_underperformer: false,
+                neutralize_nine_box_effect: false,
                 promotion_amount: 0,
                 correction_amount: 0,
                 social_measure_amount: 0,
+                promotion_date: None,
+                salary_before_promotion: None,
+                salary_after_promotion: None,
+                previous_grade_id: None,
+                promoted_grade_id: None,
+                previous_job_family_id: None,
+                promoted_job_family_id: None,
             })
             .collect()
     }
@@ -885,6 +1023,108 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn promotion_columns_persist_and_reload() {
+        let (_dir, url, campaign_id, family_id, grade_id) = setup_temp_db().await;
+        let pool = SqlitePool::connect(&url).await.unwrap();
+        let now = "2026-07-19T00:00:00.000Z";
+        let promoted = sqlx::query(
+            r#"
+            INSERT INTO campaign_grades (campaign_id, code, label, sort_order, created_at, updated_at)
+            VALUES (?1, 'G2', 'Grade 2', 2, ?2, ?2)
+            "#,
+        )
+        .bind(campaign_id)
+        .bind(now)
+        .execute(&pool)
+        .await
+        .expect("promoted grade");
+        let promoted_grade_id = promoted.last_insert_rowid();
+        pool.close().await;
+
+        let mut employee = sample_employees(family_id, grade_id, 1).remove(0);
+        employee.december_base_salary = 500_000;
+        employee.promotion_date = Some("2026-04-15".into());
+        employee.salary_before_promotion = Some(500_000);
+        employee.salary_after_promotion = Some(550_000);
+        employee.previous_grade_id = Some(grade_id);
+        employee.promoted_grade_id = Some(promoted_grade_id);
+        employee.previous_job_family_id = Some(family_id);
+        employee.promoted_job_family_id = Some(family_id);
+
+        let input = ReplacePopulationInput {
+            campaign_id,
+            file_name: "promo.xlsx".into(),
+            format: "xlsx".into(),
+            sheet_name: Some("Population".into()),
+            file_size_bytes: 2048,
+            source_row_count: 1,
+            warning_count: 0,
+            employees: vec![employee],
+        };
+        replace_current_population_on_url(&url, &input, None)
+            .await
+            .expect("import with promotion");
+
+        let pool = SqlitePool::connect(&url).await.unwrap();
+        let row: (Option<String>, Option<i64>, Option<i64>) = sqlx::query_as(
+            r#"
+            SELECT promotion_date, salary_before_promotion, salary_after_promotion
+            FROM hr_import_employees e
+            INNER JOIN hr_import_batches b ON b.id = e.import_batch_id
+            WHERE b.campaign_id = ?1 AND b.status = 'current'
+            "#,
+        )
+        .bind(campaign_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(row.0.as_deref(), Some("2026-04-15"));
+        assert_eq!(row.1, Some(500_000));
+        assert_eq!(row.2, Some(550_000));
+        let amount: i64 = sqlx::query_scalar(
+            r#"
+            SELECT promotion_amount
+            FROM hr_import_employees e
+            INNER JOIN hr_import_batches b ON b.id = e.import_batch_id
+            WHERE b.campaign_id = ?1 AND b.status = 'current'
+            "#,
+        )
+        .bind(campaign_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(amount, 50_000);
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    async fn rows_without_promotion_keep_null_columns() {
+        let (_dir, url, campaign_id, family_id, grade_id) = setup_temp_db().await;
+        let input = sample_input(campaign_id, family_id, grade_id, "no-promo.xlsx", 1);
+        replace_current_population_on_url(&url, &input, None)
+            .await
+            .expect("import without promotion");
+
+        let pool = SqlitePool::connect(&url).await.unwrap();
+        let row: (Option<String>, Option<i64>, Option<i64>) = sqlx::query_as(
+            r#"
+            SELECT promotion_date, salary_before_promotion, previous_grade_id
+            FROM hr_import_employees e
+            INNER JOIN hr_import_batches b ON b.id = e.import_batch_id
+            WHERE b.campaign_id = ?1 AND b.status = 'current'
+            "#,
+        )
+        .bind(campaign_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(row.0.is_none());
+        assert!(row.1.is_none());
+        assert!(row.2.is_none());
+        pool.close().await;
+    }
+
+    #[tokio::test]
     async fn inserted_count_is_verified_before_commit() {
         let (_dir, url, campaign_id, family_id, grade_id) = setup_temp_db().await;
         let input = sample_input(campaign_id, family_id, grade_id, "count.xlsx", 3);
@@ -909,6 +1149,126 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(counted, actual);
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    async fn saves_and_reloads_promotion_fields() {
+        let (_dir, url, campaign_id, family_id, grade_id) = setup_temp_db().await;
+        let pool = SqlitePool::connect(&url).await.unwrap();
+        let now = "2026-07-19T00:00:00.000Z";
+        let promoted = sqlx::query(
+            r#"
+            INSERT INTO campaign_grades (campaign_id, code, label, sort_order, created_at, updated_at)
+            VALUES (?1, 'GB', 'Grade B', 2, ?2, ?2)
+            "#,
+        )
+        .bind(campaign_id)
+        .bind(now)
+        .execute(&pool)
+        .await
+        .expect("promoted grade");
+        let promoted_grade_id = promoted.last_insert_rowid();
+        pool.close().await;
+
+        let mut employees = sample_employees(family_id, grade_id, 1);
+        employees[0].december_base_salary = 500_000;
+        employees[0].promotion_date = Some("2026-04-15".into());
+        employees[0].salary_before_promotion = Some(500_000);
+        employees[0].salary_after_promotion = Some(550_000);
+        employees[0].previous_grade_id = Some(grade_id);
+        employees[0].promoted_grade_id = Some(promoted_grade_id);
+        employees[0].previous_job_family_id = Some(family_id);
+        employees[0].promoted_job_family_id = Some(family_id);
+        employees[0].promotion_amount = 50_000;
+
+        let input = ReplacePopulationInput {
+            campaign_id,
+            file_name: "promo.xlsx".into(),
+            format: "xlsx".into(),
+            sheet_name: Some("Population".into()),
+            file_size_bytes: 4_000,
+            source_row_count: 1,
+            warning_count: 0,
+            employees,
+        };
+        replace_current_population_on_url(&url, &input, None)
+            .await
+            .expect("import with promotion");
+
+        let pool = SqlitePool::connect(&url).await.unwrap();
+        let row = sqlx::query(
+            r#"
+            SELECT promotion_date, salary_before_promotion, salary_after_promotion,
+                   previous_grade_id, promoted_grade_id,
+                   previous_job_family_id, promoted_job_family_id, promotion_amount
+            FROM hr_import_employees
+            WHERE campaign_id = ?1
+            "#,
+        )
+        .bind(campaign_id)
+        .fetch_one(&pool)
+        .await
+        .expect("reload");
+
+        let promotion_date: Option<String> = row.get("promotion_date");
+        let before: Option<i64> = row.get("salary_before_promotion");
+        let after: Option<i64> = row.get("salary_after_promotion");
+        let previous_grade: Option<i64> = row.get("previous_grade_id");
+        let promoted_grade: Option<i64> = row.get("promoted_grade_id");
+        let previous_family: Option<i64> = row.get("previous_job_family_id");
+        let promoted_family: Option<i64> = row.get("promoted_job_family_id");
+        let amount: i64 = row.get("promotion_amount");
+
+        assert_eq!(promotion_date.as_deref(), Some("2026-04-15"));
+        assert_eq!(before, Some(500_000));
+        assert_eq!(after, Some(550_000));
+        assert_eq!(previous_grade, Some(grade_id));
+        assert_eq!(promoted_grade, Some(promoted_grade_id));
+        assert_eq!(previous_family, Some(family_id));
+        assert_eq!(promoted_family, Some(family_id));
+        assert_eq!(amount, 50_000);
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    async fn neutralize_nine_box_effect_is_persisted_exactly() {
+        let (_dir, url, campaign_id, family_id, grade_id) = setup_temp_db().await;
+        let mut input = sample_input(campaign_id, family_id, grade_id, "neutralize-mix.xlsx", 8);
+        for (index, employee) in input.employees.iter_mut().enumerate() {
+            employee.employee_number = format!("EMP-P{:03}", index + 1);
+            // Trois premiers = Oui, cinq suivants = Non
+            employee.neutralize_nine_box_effect = index < 3;
+        }
+
+        replace_current_population_on_url(&url, &input, None)
+            .await
+            .expect("import with neutralize flags");
+
+        let pool = SqlitePool::connect(&url).await.unwrap();
+        let rows: Vec<(String, i64)> = sqlx::query_as(
+            r#"
+            SELECT e.employee_number, e.neutralize_nine_box_effect
+            FROM hr_import_employees e
+            INNER JOIN hr_import_batches b ON b.id = e.import_batch_id
+            WHERE b.campaign_id = ?1 AND b.status = 'current'
+            ORDER BY e.employee_number
+            "#,
+        )
+        .bind(campaign_id)
+        .fetch_all(&pool)
+        .await
+        .expect("read neutralize flags");
+
+        assert_eq!(rows.len(), 8);
+        let true_count = rows.iter().filter(|(_, flag)| *flag == 1).count();
+        let false_count = rows.iter().filter(|(_, flag)| *flag == 0).count();
+        assert_eq!(true_count, 3);
+        assert_eq!(false_count, 5);
+        assert_eq!(rows[0], ("EMP-P001".into(), 1));
+        assert_eq!(rows[1], ("EMP-P002".into(), 1));
+        assert_eq!(rows[2], ("EMP-P003".into(), 1));
+        assert_eq!(rows[3], ("EMP-P004".into(), 0));
         pool.close().await;
     }
 

@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-setup-local-access"
+description = "Autorise la configuration initiale du mot de passe local — réservé à la fenêtre access."
+commands.allow = ["setup_local_access"]

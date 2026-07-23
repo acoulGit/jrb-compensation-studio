@@ -116,9 +116,13 @@ const BATCH_SELECT = `SELECT id, campaign_id, status, source_file_name, source_f
 const EMPLOYEE_SELECT = `SELECT e.id, e.import_batch_id, e.campaign_id, e.employee_number,
                                  e.employee_label, e.job_family_id, e.grade_id, e.contract_type,
                                  e.employment_status, e.hire_date, e.december_base_salary,
-                                 e.nine_box_code, e.confirmed_underperformer, e.promotion_amount,
-                                 e.correction_amount, e.social_measure_amount, e.source_row_number,
-                                 e.created_at
+                                 e.nine_box_code, e.confirmed_underperformer,
+                                 e.neutralize_nine_box_effect, e.promotion_amount,
+                                 e.correction_amount, e.social_measure_amount,
+                                 e.promotion_date, e.salary_before_promotion, e.salary_after_promotion,
+                                 e.previous_grade_id, e.promoted_grade_id,
+                                 e.previous_job_family_id, e.promoted_job_family_id,
+                                 e.source_row_number, e.created_at
                           FROM hr_import_employees e
                           INNER JOIN hr_import_batches b ON b.id = e.import_batch_id`;
 
@@ -153,9 +157,17 @@ export class SqliteHrImportRepository implements HrImportRepository {
               decemberBaseSalary: employee.decemberBaseSalary,
               nineBoxCode: employee.nineBoxCode,
               confirmedUnderperformer: employee.confirmedUnderperformer,
+              neutralizeNineBoxEffect: employee.neutralizeNineBoxEffect,
               promotionAmount: employee.promotionAmount,
               correctionAmount: employee.correctionAmount,
               socialMeasureAmount: employee.socialMeasureAmount,
+              promotionDate: employee.promotionDate,
+              salaryBeforePromotion: employee.salaryBeforePromotion,
+              salaryAfterPromotion: employee.salaryAfterPromotion,
+              previousGradeId: employee.previousGradeId,
+              promotedGradeId: employee.promotedGradeId,
+              previousJobFamilyId: employee.previousJobFamilyId,
+              promotedJobFamilyId: employee.promotedJobFamilyId,
             })),
           },
         },

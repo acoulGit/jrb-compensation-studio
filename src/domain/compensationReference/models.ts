@@ -48,11 +48,20 @@ export const MAX_LABEL_LENGTH = 80;
 export const MAX_FACTOR_MILLI = 10_000;
 export const MIN_FACTOR_MILLI = 0;
 
+/** Plage du coefficient provisoire 9-Box (millièmes). */
+export const MIN_NINE_BOX_CONFIRMATION_FACTOR_MILLI = 500;
+export const MAX_NINE_BOX_CONFIRMATION_FACTOR_MILLI = 1000;
+
 export interface CompensationReferenceConfig {
   campaignId: number;
   nineBoxMode: NineBoxMode;
   /** Présentation uniquement ; défaut Orange = performance en lignes. */
   nineBoxOrientation: NineBoxOrientation;
+  /**
+   * Coefficient provisoire appliqué lorsque « Neutraliser effet 9-Box » = Oui
+   * (contrat ≥ 6). Entier en millièmes : 900 = 0,900. Plage 500–1000.
+   */
+  nineBoxConfirmationFactorMilli: number;
   createdAt: string;
   updatedAt: string;
 }

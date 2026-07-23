@@ -6,6 +6,7 @@ export interface ReferenceConfigRow {
   campaign_id: number;
   nine_box_mode: string;
   nine_box_orientation: string;
+  nine_box_confirmation_factor_milli: number;
   created_at: string;
   updated_at: string;
 }

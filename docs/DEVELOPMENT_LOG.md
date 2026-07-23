@@ -445,3 +445,979 @@ même poids matriciel ⇒ même taux théorique ; montants ∝ salaires.
 - `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
 - `git diff --check`
 - migrations 0001–0004 : diff silencieux
+
+## 2026-07-19 — Lot 2B-1 : préparation applicative de simulation
+
+### Objectif
+
+Créer le pont campagne ↔ population RH courante ↔ référentiels ↔ contrats
+moteur Lot 2A, sous forme d’un rapport de readiness, sans lancer le calcul.
+
+### Décision contrat d’entrée
+
+Mapping non ambigu : `employeeNumber` → `employeeId` ;
+`jobFamilyId`/`gradeId` → codes référentiel ; `decemberBaseSalary` →
+`salaryFcfa` ; Performance/Potentiel dérivés de `nineBoxCode` via facteurs
+9-Box ; `confirmedUnderperformer` booléen post-import (pas de défaut
+silencieux dans le mapper). Statut : pas de
+`LOT_2B_1_BLOCKED_INPUT_CONTRACT`.
+
+### Livrables
+
+- `src/application/campaignSimulation/` (modèles, mapping, readiness, codes)
+- `CampaignService.getCampaign` (lecture seule)
+- Tests `campaignSimulationReadiness.test.ts`
+- Docs : `CAMPAIGN_SIMULATION.md` + mises à jour Architecture / règles /
+  contrat / dictionnaire / import / journal
+- Aucune migration / UI / Rust / persistance / calcul d’allocation
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux
+
+## 2026-07-19 — Lot 2B-2 : configuration UI de simulation
+
+### Objectif
+
+Page Simulation : sélection de campagne, readiness, saisie budget / arrondi,
+validation en mémoire — sans exécuter le moteur ni persister.
+
+### Livrables
+
+- `SimulationPage`, `SimulationConfigurationProvider`
+- Parsing exact FCFA / taux bps / pas d’arrondi
+- Tests parsing + page + navigation
+- Docs mises à jour
+- Aucune migration / Rust / Tauri / calcul d’allocation
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux
+
+## 2026-07-20 — Correctif alignement readiness référentiels (2B-2)
+
+### Cause
+
+Rapport Simulation obsolète après édition Référentiels ; validation Simulation
+pas assez alignée sur `computeReferenceCompleteness` ; messages génériques.
+
+### Correction
+
+- `buildPopulationCalculationReferences` = complétude éditoriale + contrôles moteur
+- coercion numérique IDs/montants SQLite dans les mappers
+- refresh readiness à l’entrée Simulation + révision référentiels
+- sous-issues détaillées + log DEV `[SIMULATION_REFERENCE_READINESS_FAILED]`
+- tests `referenceReadinessAlignment.test.ts`
+
+## 2026-07-20 — Lot 2B-3 : exécution en mémoire et consultation
+
+### Objectif
+
+Lancer explicitement une simulation via le moteur Lot 2A, consulter synthèse /
+résultats individuels / détail, avec garde d’empreinte et isolation session —
+sans persistance.
+
+### Livrables
+
+- `executeCampaignSimulation`, `buildSimulationSourceFingerprint`,
+  `buildSimulationResultView`, formatage exact étendu
+- `SimulationExecutionProvider` + panneau résultats / drawer
+- Tests service, provider, UI
+- Docs mises à jour
+- Aucune migration / Rust / Tauri / SQLite simulation
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 : diff silencieux
+- aucun fichier `src-tauri/` modifié
+
+## 2026-07-20 — Lot 2B-4A : persistance transactionnelle des simulations
+
+### Objectif
+
+Enregistrer durablement un snapshot immuable d’une simulation réussie
+(SQLite + commande Rust atomique), sans UI Historique.
+
+### Livrables
+
+- Migration `0005_campaign_simulations.sql`
+- `simulation_persistence.rs` + permission `allow-save-simulation-run`
+- Service `saveCurrentCampaignSimulation`, DTO / mappers TEXT canonique
+- `SimulationHistoryRepository` memory + sqlite
+- Docs + tests Rust / TypeScript
+- Aucune UI Enregistrer / Historique
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0004 inchangées ; seule 0005 ajoutée
+
+## 2026-07-20 — Correctif 2A-H1 : budget annuel / augmentation mensuelle
+
+### Objectif
+
+Corriger le contrat de calcul qui traitait le budget annuel comme une
+augmentation mensuelle (taux ×12, nouveau salaire gonflé).
+
+### Livrables
+
+- Constantes `CALCULATION_CONTRACT_VERSION=2`, `ANNUAL_BUDGET_PERIOD_MONTHS=12`
+- `resolveBudgetTarget` : annualisation masse × 12 en mode %
+- Orchestrateur 2A-4 : allocation annuelle → ÷12 → arrondi mensuel → ×12
+- Modèles / vues / UI avec libellés annuel/mensuel explicites
+- `result_schema_version = 2` (Rust + memory) ; pas de migration 0006
+- Fingerprints contrat v2 ; snapshots v1 signalés incompatibles
+- Tests moteur + régression EMP-2002 / budget 5 000 023
+- Docs mises à jour
+- Stash 2B-4B **non appliqué**
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- migrations 0001–0005 inchangées
+- stash intact ; aucun commit
+
+## 2026-07-20 — Correctif 2A-H1 final : formatage d’affichage 2 décimales
+
+### Objectif
+
+Limiter l’affichage UI des taux et montants théoriques à 2 décimales
+(arrondi d’affichage half-up), sans modifier les fractions métier.
+
+### Livrables
+
+- `formatExactAmountAsFcfa` / `formatExactRateAsPercent` — max 2 décimales
+- Tests dédiés `formatExactBudgetDisplay.test.ts`
+- Aucune modification moteur / migrations / Rust / stash
+
+### Vérifications
+
+- `pnpm test` / `pnpm build` / cargo / migrations inchangées
+- stash intact ; aucun commit
+
+## 2026-07-20 — Lot 2A-H2A : calendrier d’application et rappel
+
+### Objectif
+
+Ajouter mois d’application technique, effet rétroactif au 1er janvier,
+rappel de salaire de base et ventilation du coût annuel (rappel vs paiement
+direct), sans anticiper H2B (ancienneté / charges).
+
+### Livrables
+
+- Domaine `baseSalaryReminder.ts` + champs salarié / population
+- Config UI : `campaignYear`, `technicalApplicationMonth` (liste FR)
+- Fingerprints étendus ; moteur sans `Date.now()`
+- Affichage synthèse / tableau / détail
+- Tests janvier / juillet / décembre / invariants / validations / fingerprint
+- Docs BUSINESS_RULES, CALCULATION_CONTRACT, CAMPAIGN_SIMULATION,
+  DATA_DICTIONARY, DEVELOPMENT_LOG
+- `result_schema_version` inchangé (= 2) ; pas de migration 0006
+- Persistance colonnes rappel : **différée** (mémoire d’abord)
+- Stash 2B-4B **non appliqué**
+
+### Vérifications
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check`
+- migrations 0001–0005 inchangées
+- stash intact ; aucun commit
+
+## 2026-07-20 — Lot 2A-H2B : incidence supplémentaire d’ancienneté
+
+### Objectif
+
+Calculer mois par mois l’incidence d’ancienneté sur l’augmentation mensuelle
+finale, hors budget, avec rappel/direct et date d’embauche importée.
+
+### Livrables
+
+- Domaine `seniorityImpact.ts` + `SENIORITY_IMPACT_CONTRACT_VERSION = 1`
+- Propagation `hireDate` : import → préparé → moteur → vues
+- Fingerprints : contrat ancienneté + `hireDate`
+- UI synthèse « Impacts hors budget », tableau et détail
+- Tests barème / cas 2023–2024 / validations / hors budget
+- Docs mises à jour ; `result_schema_version = 2` inchangé
+- Pas de migration 0006 ; persistance SQL inchangée
+- Stash 2B-4B **non appliqué**
+
+### Vérifications
+
+- `pnpm test` / `pnpm build` / cargo / `git diff --check`
+- migrations 0001–0005 et `simulation_persistence.rs` inchangés
+- stash intact ; aucun commit
+
+## 2026-07-21 — Lot 2A-H2C-1 correction : coexistence promotionAmount
+
+### Objectif
+
+Sécuriser la coexistence entre `promotionAmount` historique et la promotion
+structurée H2C (pas de correction silencieuse en cas d’écart).
+
+### Comportement
+
+- Sans promo structurée : conserver `promotionAmount` ; pas de `PromotionEvent`
+- Avec promo structurée : montant canonique = delta salaires
+- Absente / vide / 0 → dérivé ; égale → OK ; différente → `PROMOTION_AMOUNT_MISMATCH`
+
+### Vérifications
+
+- `pnpm test` / `pnpm build` / cargo / `git diff --check`
+- stash intact ; aucun commit
+
+## 2026-07-20 — Lot 2A-H2C-1 : import promotions + trajectoire mensuelle
+
+### Objectif
+
+Capturer une promotion structurée (N-1 ou N), valider la cohérence avec le
+snapshot décembre N-1, construire une trajectoire salariale mensuelle
+déterministe et préparer le coût campagne pour H2C-2 — sans modifier
+l’allocation budgétaire ni `result_schema_version` / contrat v2.
+
+### Livrables
+
+- Domaine `promotionTrajectory.ts` (`PromotionEvent`, trajectoire, validations)
+- Migration `0006_employee_promotions.sql` (colonnes optionnelles sur
+  `hr_import_employees`)
+- Import : colonnes optionnelles, aliases, normalisation, persistance TS/Rust
+- Mapping → `PreparedEmployeeCalculationInput.promotion` + fingerprint
+- Prévisualisation ImportPage (date / delta)
+- Tests `promotionTrajectory.test.ts` + scénarios import
+- Docs BUSINESS_RULES, CALCULATION_CONTRACT, DATA_DICTIONARY, HR_IMPORT
+- Stash 2B-4B **non appliqué** ; aucun commit
+
+### Vérifications
+
+- `pnpm test` : 305 passed
+- `pnpm build` : OK
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked` : OK
+- migrations 0001–0005 inchangées ; 0006 créée
+- stash 2B-4B intact ; aucun commit
+
+## 2026-07-21 — Lot 2A-H2C-2A correction sémantique coût / erreurs
+
+### Objectif
+
+- `annualPromotionBudgetCostFcfa` = coût **imputable** uniquement ;
+  coût brut informatif = `promotionInclusion.promotionCampaignCostFcfa` ;
+- `totalAnnualPromotionBudgetCostFcfa` = Σ exacte des coûts imputables ;
+- `NO_COMPENSATORY_ALLOCATION_CAPACITY` / `PROMOTION_COST_EXCEEDS_BUDGET`
+  conservent leur code (non masqués en `POPULATION_CALCULATION_FAILED`).
+
+### Vérifications
+
+- `pnpm test` / `pnpm build` / cargo ; stash intact ; aucun commit
+
+## 2026-07-21 — Lot 2A-H2C-2A audit éligibilité avant commit
+
+### Objectif
+
+Clarifier et brancher la séparation population budget promotion vs éligibilité
+complément compensatoire, en réutilisant les règles documentées (CDI/CDD,
+12 mois au 31/12 N-1, gel `external_availability`).
+
+### Livrables
+
+- `compensatoryMeasureEligibility.ts` — `isCompensatoryMeasureEligible`
+- Mapping import → `contractType` + éligibilité calculée
+- Fallback statut/contrat absents limité aux fixtures techniques
+- Tests pipeline (contrat, ancienneté, promu non éligible, etc.)
+- Parité fixture 5 000 023 inchangée
+- Stash intact ; aucun commit ; migrations inchangées
+
+## 2026-07-21 — Lot 2A-H2C-2A : moteur budget promotion / calibrage compensatoire
+
+### Objectif
+
+Intégrer le coût des promotions structurées (Lot 2A-H2C-1) au budget annuel
+et calibrer le complément compensatoire matriciel sur le reliquat, avec une
+résolution **mensuelle** (12 expositions/salarié) pour absorber les
+promotions en cours d’année, tout en garantissant une parité stricte avec le
+moteur existant en l’absence de promotion structurée.
+
+### Livrables
+
+- `promotionBudgetPopulation.ts` — statuts d’emploi consommant le budget
+  (`isPromotionBudgetPopulationEmployee` ; `active` / `group_detachment` /
+  `legal_leave` ; absent ⇒ `active` par rétro-compatibilité)
+- `promotionCompensatoryCalibration.ts` — solveur exact piecewise
+  (`solvePromotionAwareCompensatoryCalibrationRate`, BigInt/fractions
+  uniquement) + helpers de coût annuel promotion
+  (`PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION = 1`)
+- `promotionAwareEmployeeCompensation.ts` — expositions mensuelles puis
+  finalisation par salarié (arrondi mensuel, ventilation ancienneté
+  promotion/compensatoire, coût combiné)
+  (`PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION = 1`)
+- `calculatePreparedPopulationCompensation.ts` réécrit : nouveau pipeline
+  (coût promotion → `PROMOTION_COST_EXCEEDS_BUDGET` si dépassement → budget
+  disponible → calibrage → finalisation → invariants population)
+- `PreparedEmployeeCalculationInput` : `employmentStatus`,
+  `compensatoryMeasureEligible` (tous deux optionnels, défauts
+  rétro-compatibles)
+- Nouveaux champs résultat salarié/population (`monthlyCompensationTrajectory`,
+  `totalAnnualPromotionBudgetCostFcfa`, `availableAnnualCompensatoryBudget`,
+  `compensatoryCalibrationRate`, totaux combinés et ancienneté ventilée)
+- Nouveaux codes d’erreur : `INVALID_EMPLOYMENT_STATUS`,
+  `INVALID_COMPENSATORY_MEASURE_ELIGIBLE`, `PROMOTION_COST_EXCEEDS_BUDGET`,
+  `NO_COMPENSATORY_ALLOCATION_CAPACITY` (remontée dans
+  `POPULATION_CALCULATION_FAILED`), `PROMOTION_BUDGET_INVARIANT_FAILED`
+- Wiring `employmentStatus` : `EmployeeSnapshot` →
+  `mapImportedEmployeeToPreparedInput`
+- Fingerprint de simulation (Lot 2B-3) étendu : `employmentStatus`,
+  `compensatoryMeasureEligible`, versions de contrat calibrage / trajectoire
+  mensuelle
+- Tests `promotionBudgetEngine.test.ts` (solveur, population budget,
+  dépassement budget, statuts non payants, éligibilité compensatoire,
+  ventilation ancienneté)
+- Docs BUSINESS_RULES, CALCULATION_CONTRACT, HR_IMPORT, DEVELOPMENT_LOG
+
+### Parité
+
+- `annualBudgetMonthlyIncrease.test.ts` inchangé et **toujours au vert** :
+  sans promotion structurée, `promotionRateOffset = 0` partout et
+  `availableAnnualCompensatoryBudget = budget annuel cible`, donc résultats
+  strictement identiques au moteur Lot 2A-3/H2A/H2B.
+- `result_schema_version` inchangé (= 2) ; aucune migration créée/modifiée.
+
+### Vérifications
+
+- `pnpm test` : 328 passed (25 fichiers)
+- `pnpm build` : OK
+- `cargo fmt --check` / `cargo check` : OK (aucun fichier Rust modifié dans ce
+  lot) ; `cargo test` non concluant dans cet environnement d’exécution
+  (espace disque insuffisant sur le volume de travail, sans rapport avec ce
+  lot — voir limites connues)
+- migrations 0001–0006 inchangées (`git diff -- src-tauri/migrations` vide)
+- stash `wip/lot-2b-4b-before-annual-budget-fix` intact ; aucun commit
+
+### Limites connues
+
+- Environnement d’exécution à espace disque très contraint : `cargo test`
+  (build complet) a échoué avec `no space on device` indépendamment du code
+  produit ; `cargo fmt --check` et `cargo check` (build incrémental) ont
+  réussi. À rejouer sur un environnement disposant de plus d’espace disque
+  libre si une validation Rust complète est requise.
+- Couverture de tests du nouveau moteur volontairement ciblée (scénarios clés
+  du brief) plutôt qu’exhaustive sur toutes les combinaisons possibles de
+  statuts / éligibilité / mois de promotion.
+
+## 2026-07-21 — Lot 2A-H2C-2B restitution UI résultats
+
+### Objectif
+
+Rendre les résultats H2C-2A auditables : enveloppe, calendrier de paiement,
+ancienneté hors budget, tableau / détail salarié, trajectoire mensuelle,
+erreurs métier dédiées — sans recalcul dans React ni migration.
+
+### Livrables
+
+- `buildSimulationResultView` enrichi + `promotionAwareResultLabels`
+- `findDedicatedSimulationBusinessError`
+- `SimulationResultsPanel` (synthèse enveloppe, calendrier, ancienneté, détail)
+- Tests `promotionAwareResultView.test.ts`
+- Docs CAMPAIGN_SIMULATION / DATA_DICTIONARY / CALCULATION_CONTRACT
+- `result_schema_version = 2` inchangé ; stash 2B-4B intact ; aucun commit
+
+## 2026-07-21 — Lot 2A-H2C-2B audit agrégats de vue
+
+### Objectif
+
+Supprimer les recompositions métier dans `buildSimulationResultView` :
+delta combiné, ventilations promo et ancienneté viennent exclusivement du
+moteur (`annualCombinedRoundingDeltaFcfa`,
+`totalPromotionCostAlreadyPaidBeforeTechnicalMonthFcfa`, etc.).
+
+### Vérifications
+
+- Tests de preuve (valeurs forgées ≠ recomposition locale)
+- Erreurs métier détectées par `issue.code` uniquement
+- Migrations / `result_schema_version` / stash inchangés ; aucun commit
+
+## 2026-07-21 — Lot 2A-H2C-2B fix NO_COMPENSATORY_ALLOCATION_CAPACITY
+
+### Objectif
+
+Enrichir l’erreur avec le contexte budgétaire structuré et corriger le
+message : ne plus conseiller d’augmenter le budget.
+
+### Vérifications
+
+- Carte : budget disponible / coût promo / cible / expositions depuis le moteur
+- Message : réduire l’enveloppe ou revoir l’éligibilité
+- `PROMOTION_COST_EXCEEDS_BUDGET` inchangé ; migrations / stash / aucun commit
+
+## 2026-07-21 — Lot 2A-H2D-1 rétroactivité configurable
+
+### Objectif
+
+Rendre le début de période d’effet configurable (`retroactivityStartMonth`),
+passer le contrat de calcul à **v3**, propager la vue / labels / tests, et
+bloquer la persistance schema v2 pour les résultats contrat 3.
+
+### Livrables
+
+- Moteur : période `[rétro … décembre]`, `outside_campaign`, `fullYearRunRate*`
+- Vue : `buildSimulationResultView` + labels « Enveloppe de la période d’effet »,
+  « Coût effectif de campagne », « Hors période », « Delta de période »
+- Tests : `configurableRetroactivity.test.ts` + alignement contrat v3
+- Docs : CALCULATION_CONTRACT / BUSINESS_RULES / CAMPAIGN_SIMULATION /
+  DATA_DICTIONARY / SIMULATION_PERSISTENCE
+- Migrations 0001–0006 et stash inchangés ; aucun commit
+
+### Limites
+
+- `RESULT_SCHEMA_VERSION = 2` : sauvegarde snapshot refusée pour contrat 3
+  jusqu’à consolidation schema v3 (lot ultérieur).
+
+## 2026-07-21 — Audit non-régression H2D-1 (recette 5 000 023)
+
+### Constat (CAS B)
+
+La fixture Population Test 1 (14 éligibles + 1 sous-performant, mode `none`,
+budget manuel 5 000 023, pas 5, rétro janvier) produit **sur tous les moteurs
+mesurés** :
+
+| Moteur | Coût réel | Delta |
+|---|---|---|
+| e985548 (H1 pré-H2C-2) | 5 000 040 | +17 |
+| 21dbbb6 (H2C) | 5 000 040 | +17 |
+| H2D-1 rétro=1 / omis | 5 000 040 | +17 |
+
+EMP-2002 mensuel arrondi mesuré : **30 205** FCFA (×12 = 362 460).
+
+Le brief H2D-1 citant 4 999 860 / −163 et EMP-2002 = 31 110 **n’est pas
+reproductible** avec cette fixture. `31 110` reste un montant **illustratif**
+des tests unitaires H2A/H2B (rappel / ancienneté), pas le résultat de
+Population Test 1. Aucune régression moteur H2D-1 ni H2C détectée sur cette
+recette ; tests renforcés sur les valeurs mesurées.
+## 2026-07-21 — Lot 2A-H2D-2 minimum garanti d'augmentation
+
+### Objectif
+
+Ajouter un minimum garanti d'augmentation optionnel (modes exclusifs),
+passer le contrat de calcul a **v4**, reserver les planchers avant
+allocation du reliquat, et exposer config / resultats / erreurs.
+
+### Livrables
+
+- Domaine : minimumIncrease.ts, minimumIncreasePopulation.ts, planchers
+  sur expositions, solveur floor-aware, agregats periode / rappel / plein effet
+- Config / UI : section minimum, fingerprints minMode/minAmt/minRate
+- Erreur dediee MINIMUM_GUARANTEE_EXCEEDS_BUDGET
+- Tests : minimumIncreaseGuarantee.test.ts + alignement contrat v4
+- Docs : BUSINESS_RULES / CALCULATION_CONTRACT / CAMPAIGN_SIMULATION /
+  DATA_DICTIONARY / SIMULATION_PERSISTENCE
+- Migrations 0001-0006 et stash inchanges ; aucun commit
+
+## 2026-07-21 — Lot 2B-P1 consolidation snapshot schema v3
+
+### Objectif
+
+Persister fidèlement le résultat du contrat de calcul **v4** (rétroactivité
+configurable, incidence d'ancienneté, minimum garanti, trajectoire mensuelle)
+en **append-only**, **sans recalcul**, et débloquer l'enregistrement des
+simulations contrat ≥ 3 refusées jusqu'ici.
+
+### Livrables
+
+- Migration `0007_simulation_contract_v4_results.sql` (uniquement) :
+  - `ALTER compensation_simulation_runs` : configuration contrat v4, enveloppe
+    promotion-aware, agrégats rappel/direct, ancienneté, plein effet
+    (colonnes NULL pour les anciens snapshots)
+  - `ALTER compensation_simulation_employee_results` : identité promotion,
+    minimum garanti, ancienneté, calendrier, plein effet
+  - Nouvelle table `compensation_simulation_employee_month_results`
+    (trajectoire mensuelle 1–12, FK `ON DELETE CASCADE`,
+    `UNIQUE(employee_result_id, month)`, index de lecture, aucun `REAL`)
+- Audit legacy : réutilisation documentée des colonnes 0005
+  (`budget_target_*`, `theoretical_total_*`, `actual_operation_amount_fcfa_text`,
+  `total_rounding_delta_*`, `campaign_year`) sans réinterprétation ; alias
+  `annual*` côté TS restent transitionnels et mappés vers ces colonnes
+- TS : `RESULT_SCHEMA_VERSION = 3` (+ `RESULT_SCHEMA_VERSION_V2 = 2`) ;
+  DTO run/employee/**month** étendus ; `mapExecutionResultToSaveDto` mappe les
+  12 mois sans recalcul ; `assertSimulationResultPersistable` autorise
+  contrat 4 + schema 3 et refuse contrat ≥ 3 && schema < 3 ;
+  `resultSchemaCompatibility` : v3 courant / v2 incomplet / v1 incompatible /
+  inconnu refusé ; memory + sqlite repos + mappers lisent les mois (copie
+  défensive, ordre jan→déc)
+- Rust : `MIGRATION_0007` enregistrée (`persistence.rs` + `lib.rs`) ;
+  `simulation_persistence.rs` étendu (DTO miroir, validations run/employee/mois,
+  INSERT run `result_schema_version = 3` + salariés + 12 mois, vérification
+  `month_count = employee_count × 12`, transaction unique + rollback + faute
+  `AfterMonth`)
+- Tests : `simulationPersistenceSchemaV3.test.ts` + extensions
+  (mapExecutionResultToSaveDto, memory repo, resultSchemaCompatibility) ;
+  nouveaux tests Rust (v3 + 12 mois, all-or-nothing, plage mois, rollback mois)
+- Docs : ARCHITECTURE / DATABASE_SCHEMA / CALCULATION_CONTRACT /
+  CAMPAIGN_SIMULATION / DATA_DICTIONARY / SIMULATION_PERSISTENCE / DEVELOPMENT_LOG
+
+### Validations
+
+- `pnpm test` (414) / `pnpm build` : OK
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked` (47) : OK
+- `git diff --check` propre ; `git diff -- migrations 0001..0006` vide
+- stash `wip/lot-2b-4b-before-annual-budget-fix` intact ; aucun commit
+
+## 2026-07-21 — Lot 2B-4B : enregistrement UI et historique (schema v3)
+
+### Objectif
+
+Greffer l’enregistrement explicite depuis la page Simulation et la consultation
+en lecture seule de l’historique SQLite par campagne, en réconciliant l’UI issue
+du stash `wip/lot-2b-4b-before-annual-budget-fix` avec le moteur / schema v3
+(contrat v4) livré à HEAD.
+
+### Livrables
+
+- `SimulationSaveActions` greffée dans `SimulationResultsPanel`
+  (visible hors résultat obsolète et hors lecture seule ; métriques H2A–H2D
+  intactes).
+- `SimulationSaveProvider`, `AppNavigationProvider`,
+  `SimulationHistoryRefreshProvider` déjà câblés dans `App.tsx` ; navigation
+  `simulation-history` branchée dans l’`AppShell`.
+- Vue partagée `SimulationResultViewModel` étendue schema v3 (période d’effet,
+  promotions, minimum garanti, au-dessus du minimum, combiné, delta, plein
+  effet, trajectoire mensuelle) avec `ResultSchemaCompatibility` ; dégradation
+  explicite pour v1 (incompatible) / v2 (incomplète) — aucun faux zéro, aucun
+  détail mensuel inventé.
+- `getPersistedSimulationRun` branché sur `classifyResultSchemaVersion`
+  (unknown ⇒ échec explicite ; v1/v2 ⇒ ok + drapeaux + message ; v3 ⇒ vue
+  complète).
+- `buildSimulationResultIdentity` documentée (empreintes source/config encodant
+  rétro/tech/minimum) et enrichie de champs de configuration validée optionnels.
+- `PersistedSimulationRunSummary` étendue de champs v3 optionnels (NULL pour
+  v1/v2), alignée memory repo + mappers SQLite **en lecture seule** (aucune
+  migration).
+- Historique n’utilise pas l’import RH courant pour reconstruire une simulation.
+- Tests : `buildSimulationResultIdentity`, `simulationHistoryServices`,
+  `simulationSaveAndHistory`.
+
+### Validations
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check` ; migrations 0001–0007 inchangées ; stash intact ; aucun
+  commit
+
+## 2026-07-22 — Lot 2B-UX1 — confort de visualisation des résultats
+
+### Objectif
+
+Améliorer uniquement l’UI de consultation : sidebar réellement repliable,
+pages Simulation / Historique en largeur fluide, détail salarié quasi plein
+écran, densification du tableau de trajectoire mensuelle. Aucun changement
+métier (moteur, contrats, DTO, migrations).
+
+### Choix
+
+- Réutilisation de l’état `sidebarCollapsed` déjà présent dans `AppShell`.
+- `main-content--fluid` uniquement pour `simulations` et `simulation-history`.
+- Drawer partagé et panneau courant : `simulation-drawer--max` (~96 vw).
+- Intitulés de colonnes compactés avec `title` pour les libellés complets.
+- Tests structurels jsdom (`resultsLayoutUx.test.tsx`) — pas de mesure pixel.
+
+### Recette manuelle
+
+**A. Sidebar** — Simulation → réduire → vérifier élargissement du tableau →
+Historique (sidebar reste réduite) → redéployer.
+
+**B. Résultat courant** — lancer une simulation → ouvrir un salarié → largeur
+quasi plein écran → colonnes trajectoire → Échap.
+
+**C. Historique** — ouvrir un run → salarié → même largeur → 12 mois → Fermer.
+
+**D. Responsive** — réduire la fenêtre → pas de débordement de page ; scroll
+éventuel local au tableau.
+
+### Validations
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check` ; migrations / domaine calcul / DTO save inchangés ; aucun
+  commit
+
+## 2026-07-22 — Lot 2B-E1 : frontend export Excel RH
+
+### Objectif
+
+Exposer, depuis l’historique des simulations, un export Excel RH d’un snapshot
+persisté v3, avec protection par mot de passe optionnelle, en s’appuyant sur les
+commandes Tauri `export_simulation_run_excel` et `generate_hr_export_password`
+déjà présentes côté Rust. Aucun changement de moteur, DTO, contrat ou migration.
+
+### Choix
+
+- Couche applicative dédiée (`hrExcelExport*`, `generateHrExportPassword`,
+  `exportSimulationRunExcel`) : fonctions pures appelant `invoke`/`save`
+  directement, mockées dans les tests jsdom.
+- Nom de fichier suggéré construit côté frontend en miroir de la sanitisation
+  Windows Rust (`JRB_Compensation_<Campagne>_Run_<Numero>_<Date>.xlsx`).
+- Dialogue modal centré réutilisant les couleurs de la charte (`.app-modal`),
+  distinct du drawer latéral existant.
+- Export réservé aux snapshots v3 via `canPresentResultSchemaVersion` ; v1/v2/
+  inconnu désactivés avec infobulle et texte lecteur d’écran.
+- Défense en profondeur sur le mot de passe : jamais journalisé, jamais conservé
+  après fermeture, message générique si une chaîne d’erreur le contenait.
+- Sélection de destination via `@tauri-apps/plugin-dialog` (déjà déclaré) ;
+  annulation = fermeture silencieuse sans erreur.
+
+### Fichiers
+
+- `src/application/campaignSimulation/hrExcelExportModels.ts`
+- `src/application/campaignSimulation/hrExcelExportErrorMessages.ts`
+- `src/application/campaignSimulation/generateHrExportPassword.ts`
+- `src/application/campaignSimulation/exportSimulationRunExcel.ts`
+- `src/pages/simulation/SimulationExcelExportDialog.tsx`
+- `src/pages/SimulationHistoryPage.tsx` (colonne « Actions », bouton export,
+  flux d’export, région aria-live)
+- `src/styles/global.css` (`.app-modal*`, `.sr-only`, `.field--checkbox`,
+  `.history-row-actions`, `.form-feedback--warning`)
+- `src/application/campaignSimulation/index.ts` (exports)
+- `src/tests/hrExcelExport.test.tsx`
+- `docs/HR_EXCEL_EXPORT.md` (+ mises à jour ARCHITECTURE / CAMPAIGN_SIMULATION /
+  DATABASE_SCHEMA)
+
+### Recette manuelle
+
+**A. Disponibilité** — Historique → sélectionner une campagne → un run v3 affiche
+un bouton **Export Excel** actif ; un run v2/v1 l’affiche désactivé avec
+infobulle.
+
+**B. Protection** — Cliquer Export → mot de passe coché par défaut → **Générer un
+mot de passe** → Afficher/Masquer → Exporter → choisir la destination → message
+de succès (aria-live), dialogue fermé.
+
+**C. Non protégé** — Décocher la protection → avertissement → cocher la
+confirmation → Exporter.
+
+**D. Annulation** — Ouvrir Export → Exporter → annuler le sélecteur de fichier →
+aucune erreur, dialogue fermé.
+
+**E. Sécurité** — Vérifier qu’aucun mot de passe n’apparaît dans les journaux ni
+dans un message d’erreur.
+
+### Validations
+
+- `pnpm exec tsc --noEmit`
+- `pnpm test` (478 tests, dont `hrExcelExport.test.tsx`)
+- `git diff --check` ; `mapExecutionResultToSaveDto.ts` /
+  `simulationPersistenceModels.ts` / migrations / moteur inchangés ; aucun commit
+
+## 2026-07-22 — Lot 2B-E1-R1 : correction métier et présentation export RH
+
+### Objectif
+
+Corriger rapidement la présentation RH de l’export Excel déjà validé
+techniquement (E1) : taux lisibles en pourcentage, libellés de période,
+feuille `Tableau_de_bord_RH`, statistiques et histogramme — sans toucher
+import, migrations, contrats, moteur, DTO ni snapshot.
+
+### Choix
+
+- Nouveau module `rates.rs` : fractions exactes (`i128`), stats min/max/moyenne/
+  médiane, bornes des 7 tranches ; conversion `f64` uniquement à l’écriture.
+- Taux total d’augmentation de base =
+  (promotion mensuelle + complément mensuel) / salaire décembre N-1 ;
+  **ancienneté exclue** des statistiques principales.
+- Colonnes num/den déplacées en fin de feuille (audit) ; colonnes RH principales
+  en pourcentages.
+- Cinq feuilles dans l’ordre :
+  `Tableau_de_bord_RH`, `Resultats_RH`, `Trajectoire_12_mois`,
+  `Synthese_campagne`, `Parametres`.
+- Graphique colonnes obligatoire sur la distribution ; doughnut P2 de répartition
+  des coûts lorsque les agrégats de période sont présents.
+- Libellés « annuel » incorrects remplacés par « sur la période » ; doublon
+  synthèse réduit à « Coût compensatoire sur la période ».
+- Import actuel **conservé** ; enrichissement d’import reporté.
+
+### Fichiers
+
+- `src-tauri/src/simulation_excel_export/rates.rs` (nouveau)
+- `src-tauri/src/simulation_excel_export/models.rs` (lecture élargie snapshot)
+- `src-tauri/src/simulation_excel_export/workbook.rs` (présentation + dashboard)
+- `src-tauri/src/simulation_excel_export/tests.rs` / `mod.rs`
+- `docs/HR_EXCEL_EXPORT.md`, `docs/DEVELOPMENT_LOG.md`
+
+### Validations
+
+- `pnpm test` / `pnpm build`
+- `cargo fmt --check` / `cargo check --locked` / `cargo test --locked`
+- `git diff --check` ; migrations / domaine calcul / DTO save inchangés ;
+  aucun commit
+
+## 2026-07-22 — Lot 2B-RC1-PKG : métadonnées package pré-recette 0.9.0
+
+### Objectif
+
+Aligner les versions applicatives sur **0.9.0** et documenter la livraison
+pré-recette `0.9.0-prerecette-1`, sans changement fonctionnel.
+
+### Choix
+
+- Versions synchronisées : `package.json`, `Cargo.toml` / `Cargo.lock`,
+  `tauri.conf.json`.
+- Bundle Windows limité à `msi` + `nsis` ; publisher `JRB XSolutions`.
+- Identifiant inchangé : `com.jrbxsolutions.compensationstudio`.
+- WebView2 : stratégie par défaut Tauri conservée (pas de runtime offline).
+- Note de livraison : `docs/releases/0.9.0-prerecette-1.md`.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check` /
+  `cargo test` (+ `--locked` après mise à jour du lock)
+- Zones métier (moteur, import, snapshot, export Excel) inchangées ; aucun
+  commit / tag / push
+
+## 2026-07-22 — Lot 2B-RC1-H1 : neutralisation individuelle effet 9-Box
+
+### Objectif
+
+Permettre, à l’import, de neutraliser l’effet 9-Box pour certains salariés
+non encore évalués (`Neutraliser effet 9-Box = Oui` → facteur effectif = 1),
+sans toucher à la sous-performance confirmée ni aux autres facteurs.
+
+### Choix
+
+- Colonne d’import facultative ; absente/vide → Non ; invalide → erreur FR.
+- Priorité : la neutralisation impose le facteur 1 même si un code 9-Box est
+  présent (avertissement non bloquant ; code source conservé).
+- Sous-performance confirmée : toujours applicable (poids effectif 0).
+- Versionnement explicite : `CALCULATION_CONTRACT_VERSION` 4→**5**,
+  `RESULT_SCHEMA_VERSION` 3→**4** ; migration additive `0008`.
+- Anciens imports sans colonne : bit-for-bit identiques ; snapshots v3
+  consultables (champs v4 = Non disponible / vide, jamais de faux Non).
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
+- Aucun commit ; branche `release/0.9.0-prerecette-1` non modifiée
+
+## 2026-07-22 — Lot 2B-RC1-H1-HF1 : conservation après validation import
+
+### Cause
+
+La prévisualisation TS lisait correctement `neutralizeNineBoxEffect`, mais la
+commande Rust `replace_current_population` (`hr_import.rs`) n’avait pas le
+champ dans `ReplacePopulationEmployeeInput` ni dans l’`INSERT`. Serde
+ignorait la propriété camelCase : SQLite appliquait alors le défaut `0`
+(Non) pour toutes les lignes.
+
+### Correction
+
+- Champ `neutralize_nine_box_effect` ajouté au DTO Rust (`#[serde(default)]`)
+  et écrit explicitement dans l’`INSERT`.
+- Pas de migration supplémentaire (colonne déjà fournie par `0008`).
+- Tests : conservation 3 Oui / 5 Non (TS + Rust).
+
+## 2026-07-22 — Lot 2B-RC1-H2 : coefficient provisoire 9-Box (« Performance à confirmer »)
+
+### Objectif
+
+Remplacer la neutralisation « facteur 9-Box = 1 » du Lot H1 par un
+coefficient provisoire paramétrable (défaut **0,900**), appliqué lorsque
+`neutralizeNineBoxEffect = Oui` (performance en cours de confirmation),
+sans introduire de nouvelle colonne d’import ni renommer les champs
+existants.
+
+### Choix
+
+- Nouveau paramètre de référence par campagne :
+  `CompensationReferenceConfig.nineBoxConfirmationFactorMilli` (millièmes,
+  bornes 500–1000, défaut 900), éditable depuis la page Références.
+- `resolveEvaluationFactor` applique ce coefficient (au lieu du facteur
+  neutre 1) quand `neutralizeNineBoxEffect` est actif ; la sous-performance
+  confirmée reste prioritaire (poids effectif 0), inchangée depuis H1.
+- Nouveau statut de traitement `performance_pending_confirmation`
+  (remplace `nine_box_effect_neutralized` par défaut ; l’ancienne valeur
+  reste disponible pour la relecture de snapshots historiques schema v4).
+- Versionnement explicite : `CALCULATION_CONTRACT_VERSION` 5→**6**,
+  `RESULT_SCHEMA_VERSION` 4→**5** ; migration additive `0009`
+  (`campaign_reference_config.nine_box_confirmation_factor_milli`,
+  `compensation_simulation_runs.nine_box_confirmation_factor_milli`).
+- Aucune colonne d’import supplémentaire : la colonne facultative
+  « Neutraliser effet 9-Box » (Lot H1) reste le seul déclencheur ; seul le
+  libellé affiché à l’écran évolue (« Performance à confirmer »).
+- Compatibilité descendante : snapshots schema v3/v4 toujours consultables
+  (coefficient provisoire = Non disponible, jamais de valeur 900 fabriquée) ;
+  export Excel conserve les libellés historiques pour schema < 5.
+
+### Validations
+
+- `pnpm test` (incl. `src/tests/nineBoxConfirmationFactor.test.ts`) /
+  `pnpm build` / `cargo fmt --check` / `cargo check` / `cargo test`
+- Aucun commit ; branche `feature/lot-2b-rc1-h2-nine-box-confirmation`.
+
+## 2026-07-22 — Lot 2B-RC1-H3 : promotion salariale sans changement de grade
+
+### Objectif
+
+Autoriser une promotion avec hausse salariale lorsque le grade après est
+identique au grade avant, ou vide (conservation du grade d’origine).
+
+### Choix
+
+- Suppression du rejet `PROMOTION_REQUIRES_GRADE_CHANGE` dans
+  `buildPromotionEvent`.
+- Import : `promotedGradeCode` facultatif → fallback vers l’ancien grade
+  (sinon grade courant) ; familles : fallback existant élargi.
+- Contrôles salariaux / date / groupe partiel inchangés.
+- Versionnement : `CALCULATION_CONTRACT_VERSION` 6→**7** ;
+  `RESULT_SCHEMA_VERSION` reste **5** (structure déjà compatible) ;
+  **aucune migration**.
+- Export Excel : accepte contrats 6 et 7 sur schema 5.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
+- Aucun commit ; branche `feature/lot-2b-rc1-h3-same-grade-promotion`.
+
+## 2026-07-23 — Lot 2B-RC1-SEC1-A : accès local (mot de passe + période initiale)
+
+### Objectif
+
+Verrouiller l’application par mot de passe local dès le démarrage et limiter
+son usage à une période initiale de 10 mois civils avant activation d’une
+licence (Lot 2B-RC1-SEC1-B, hors périmètre ici), avec détection d’anomalie
+d’horloge système.
+
+### Choix
+
+- Nouveau module `local_access` (Rust) : `state` (session en mémoire,
+  `unlocked` par défaut à `false`), `password` (Argon2id PHC via `argon2`,
+  buffers `Zeroizing`, politique 8–128 caractères, rejet des mots de passe
+  uniquement composés d’espaces), `calendar` (dates civiles UTC via `time`,
+  ajout de 10 mois avec calage sur le dernier jour du mois cible, anomalie
+  d’horloge si recul de plus de 24h par rapport à la dernière observation
+  persistée), `store` (persistance SQLite dédiée, migration `0010` rejouée
+  de façon idempotente), `commands` (5 commandes Tauri), `windows` (bascule
+  entre les fenêtres `access` et `main`).
+- Deux fenêtres Tauri strictement isolées : `access` (seule créée au
+  démarrage, sans capacité `sql:*`) et `main` (créée uniquement après
+  configuration/déverrouillage réussi). La fenêtre `access` ne charge jamais
+  `AppDataProvider` ni la base métier.
+- Garde `require_unlocked_and_licensed` ajoutée en tête de toutes les
+  commandes métier existantes : `replace_current_population`,
+  `archive_campaign`, `restore_campaign`, `activate_campaign`,
+  `save_simulation_run`, `export_simulation_run_excel`,
+  `generate_hr_export_password`. Messages français stables (verrou, licence
+  expirée, anomalie d’horloge), jamais de secret journalisé.
+- Migration additive `0010_local_access_state.sql` : table singleton
+  `local_access_state` (voir `docs/DATABASE_SCHEMA.md`).
+- Frontend : `src/access/AccessApp.tsx` (écrans configuration, déverrouillage,
+  expiration, anomalie d’horloge — mots de passe systématiquement effacés
+  après tentative), `src/application/localAccess/*` (invocations typées,
+  aucun secret journalisé), section « Sécurité » dans la page Paramètres
+  (changement de mot de passe + verrouillage manuel).
+- Aucun changement de `CALCULATION_CONTRACT_VERSION` (7) ni de
+  `RESULT_SCHEMA_VERSION` (5) ; aucune logique métier de calcul/import/export
+  modifiée au-delà de l’appel de garde.
+- Activation de licence (Lot 2B-RC1-SEC1-B) explicitement hors périmètre.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check --locked` /
+  `cargo test --locked`
+- Aucun commit ; branche `feature/lot-2b-rc1-sec1-local-access-license`.
+
+## 2026-07-23 — Lot 2B-RC1-SEC1-A-HF1 : permissions granulaires par fenêtre
+
+### Cause racine
+
+Le groupe `allow-local-access` accordait `setup_local_access` (et `unlock`)
+également à la fenêtre `main`, malgré le refus métier `AlreadySetUp`.
+
+### Correction
+
+- Permissions Tauri granulaires : `allow-get-local-access-status`,
+  `allow-setup-local-access`, `allow-unlock-local-access`,
+  `allow-change-local-password`, `allow-lock-local-access`.
+- Suppression de `allow-local-access.toml`.
+- Capability `access` : statut + setup + unlock uniquement (pas de SQL).
+- Capability `main` : statut + change + lock (+ SQL / métier) ; pas de setup/unlock.
+- Garde Rust `require_window_label` + erreur `INVALID_ACCESS_WINDOW` sur
+  setup/unlock (`access`) et change/lock (`main`), avant toute lecture de
+  mot de passe.
+- Migration `0010` et contrats de calcul inchangés.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
+- Aucun commit ; même branche SEC1.
+
+## 2026-07-23 — Lot 2B-RC1-SEC1-B : licence hors ligne signée
+
+### Objectif
+
+Activation et renouvellement par code Ed25519 lié à l’`installationId`,
+générateur séparé hors bundle, migration `0011_license_activations`.
+
+### Choix
+
+- Crate `crates/jrb-license-core` (format `JRB1.…`, vérification, sans secret).
+- Outil `tools/license-generator` (`keygen` / `issue` / `inspect`).
+- Commande `activate_offline_license` : access (expiré / anomalie) sans ouvrir
+  `main` ; main (session déverrouillée) pour renouvellement anticipé.
+- `base_date = max(current_valid_until, now)` + mois civils SEC1-A.
+- Activation valide lève `clock_anomaly_detected`.
+- Clé publique embarquée ; clé privée hors dépôt uniquement.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt|check|test` (app + générateur)
+- Aucun commit ; branche `feature/lot-2b-rc1-sec1b-offline-license`.
+
+## 2026-07-23 — Lot 2B-RC1-H4 : mois d’effet configurable du minimum garanti
+
+### Objectif
+
+Décorréler la temporalité du plancher du minimum garanti de la rétroactivité
+générale et du mois d’application technique, tout en conservant la
+rétroactivité habituelle pour la part au-dessus du minimum.
+
+### Choix
+
+- Trois paramètres distincts : `retroactivityStartMonth`,
+  `technicalApplicationMonth`, `minimumGuaranteeEffectiveMonth`.
+- **Défaut** nouvelle simulation : `minimumGuaranteeEffectiveMonth =
+  technicalApplicationMonth` (le brouillon n’est pas écrasé si le mois
+  technique change ensuite).
+- **Mois couverts par le minimum** :
+  `m >= max(retroactivityStartMonth, minimumGuaranteeEffectiveMonth)`.
+- **Rappel du minimum** : uniquement si
+  `minimumGuaranteeEffectiveMonth < technicalApplicationMonth`.
+- **Réservation budgétaire du plancher** : agrégée sur les mois couverts
+  uniquement (`MINIMUM_GUARANTEE_EXCEEDS_BUDGET` tient compte du vrai
+  nombre de mois).
+- **Part au-dessus du minimum** : rétroactivité générale inchangée
+  (`retroactivityStartMonth`).
+- Versionnement explicite : `CALCULATION_CONTRACT_VERSION` 7→**8**,
+  `MINIMUM_INCREASE_CONTRACT_VERSION` 1→**2**, `RESULT_SCHEMA_VERSION`
+  5→**6** ; migration additive `0012_minimum_guarantee_effective_month.sql`
+  (`compensation_simulation_runs` + miroir salarié, INTEGER NULL CHECK 1–12,
+  sans DEFAULT ni backfill).
+- **Compatibilité historique schema ≤ 5** : mois d’effet résolu =
+  `retroactivityStartMonth` (jamais le mois technique) ; libellé
+  « Aligné historiquement sur le mois de rétroactivité »
+  (`resolveMinimumGuaranteeEffectiveMonth`).
+- Export Excel : feuilles `Parametres`, `Resultats_RH`, `Trajectoire_12_mois`
+  adaptées (voir `docs/HR_EXCEL_EXPORT.md`). Aucun changement de sécurité
+  locale ni de licence.
+
+### Validations
+
+- `pnpm test` (incl. `src/tests/minimumGuaranteeEffectiveMonth.test.ts`) /
+  `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
+- Aucun commit.

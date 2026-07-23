@@ -198,6 +198,32 @@ function parseDateString(text: string): string | null {
 }
 
 /**
+ * Retourne une date ISO (`YYYY-MM-DD`) calendairement valide, sans contrôle
+ * « aujourd’hui / futur » (utile pour date de promotion N-1/N).
+ * `null` si absente, formule, mal formée ou ambiguë (année sur deux chiffres).
+ */
+export function readIsoDate(value: unknown): string | null {
+  if (isFormulaCell(value)) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return dateToIso(value);
+  }
+  if (typeof value === "number") {
+    return excelSerialToIso(value);
+  }
+  if (typeof value === "string") {
+    return parseDateString(value.trim());
+  }
+  return null;
+}
+
+/** Alias sémantique de `readIsoDate` pour la date de promotion. */
+export function readPromotionDate(value: unknown): string | null {
+  return readIsoDate(value);
+}
+
+/**
  * Retourne une date ISO (`YYYY-MM-DD`) valide et non postérieure à
  * `todayIsoDate`, ou `null` si la valeur est absente, mal formée, ambiguë
  * (année sur deux chiffres) ou future.
@@ -206,19 +232,7 @@ export function readHireDate(
   value: unknown,
   todayIsoDate: string,
 ): string | null {
-  if (isFormulaCell(value)) {
-    return null;
-  }
-  let iso: string | null;
-  if (value instanceof Date) {
-    iso = dateToIso(value);
-  } else if (typeof value === "number") {
-    iso = excelSerialToIso(value);
-  } else if (typeof value === "string") {
-    iso = parseDateString(value.trim());
-  } else {
-    iso = null;
-  }
+  const iso = readIsoDate(value);
   if (!iso) {
     return null;
   }
@@ -244,6 +258,14 @@ function parseFcfaNumber(raw: unknown): number | null {
     return Number(trimmed);
   }
   return null;
+}
+
+/** Montant strictement positif ; cellule vide = absent (`null`), invalide = `null`. */
+export function readStrictPositiveFcfa(raw: unknown): number | null {
+  if (!cellToText(raw)) {
+    return null;
+  }
+  return readPositiveFcfa(raw);
 }
 
 /** Montant obligatoire strictement positif (ex. salaire de base décembre). */

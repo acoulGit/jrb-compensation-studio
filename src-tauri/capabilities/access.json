@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "access",
+  "description": "Capability for the access (local lock) window — no SQL plugin access.",
+  "windows": ["access"],
+  "permissions": [
+    "core:default",
+    "allow-get-local-access-status",
+    "allow-setup-local-access",
+    "allow-unlock-local-access",
+    "allow-activate-offline-license"
+  ]
+}

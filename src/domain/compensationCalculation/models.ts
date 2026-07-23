@@ -82,6 +82,17 @@ export interface EvaluationFactorInput {
   performanceFactors: readonly LevelFactorRef[];
   potentialFactors: readonly LevelFactorRef[];
   nineBoxFactors: readonly NineBoxFactorRef[];
+  /**
+   * Déclencheur d’import « Neutraliser effet 9-Box ».
+   * Contrat 5 : facteur effectif = 1,000.
+   * Contrat 6+ : applique `nineBoxConfirmationFactorMilli` (défaut 900).
+   */
+  neutralizeNineBoxEffect?: boolean;
+  /**
+   * Coefficient provisoire global en millièmes (500–1000).
+   * Obligatoire si `neutralizeNineBoxEffect` et contrat ≥ 6.
+   */
+  nineBoxConfirmationFactorMilli?: number;
 }
 
 export interface EvaluationFactorSelection {
@@ -89,13 +100,15 @@ export interface EvaluationFactorSelection {
     | "neutral"
     | "performance"
     | "nine_box"
-    | "performance_potential";
+    | "performance_potential"
+    | "pending_confirmation";
   performanceLevel?: PerformanceLevel;
   potentialLevel?: PotentialLevel;
   performanceFactorMilli?: number;
   potentialFactorMilli?: number;
   nineBoxFactorMilli?: number;
   nineBoxCode?: number;
+  nineBoxConfirmationFactorMilli?: number;
 }
 
 export interface EvaluationFactorResult {
@@ -117,6 +130,13 @@ export interface IndividualWeightInput extends SalaryPositionInput {
   potentialFactors: readonly LevelFactorRef[];
   nineBoxFactors: readonly NineBoxFactorRef[];
   confirmedUnderperformer?: boolean;
+  /**
+   * Déclencheur d’import « Neutraliser effet 9-Box »
+   * (contrat 5 = facteur 1 ; contrat 6+ = coefficient provisoire).
+   */
+  neutralizeNineBoxEffect?: boolean;
+  /** Coefficient provisoire global en millièmes (contrat ≥ 6). */
+  nineBoxConfirmationFactorMilli?: number;
 }
 
 export interface IndividualWeightResult {

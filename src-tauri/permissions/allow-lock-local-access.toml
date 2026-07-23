@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-lock-local-access"
+description = "Autorise le verrouillage manuel de la session — réservé à la fenêtre main."
+commands.allow = ["lock_local_access"]

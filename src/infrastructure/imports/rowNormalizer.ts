@@ -20,6 +20,7 @@ import {
   readNonNegativeFcfa,
   readPositiveFcfa,
 } from "./cellReaders";
+import { readPromotionImportGroup, resolveCanonicalPromotionAmount } from "./promotionImportValidation";
 
 interface CodeReferenceItem {
   id: number;
@@ -43,9 +44,21 @@ interface DraftRow {
   decemberBaseSalary: number | null;
   nineBoxCode: number | null;
   confirmedUnderperformer: boolean;
+  neutralizeNineBoxEffect: boolean;
   promotionAmount: number;
   correctionAmount: number;
   socialMeasureAmount: number;
+  promotionDate: string | null;
+  salaryBeforePromotion: number | null;
+  salaryAfterPromotion: number | null;
+  previousGradeId: number | null;
+  previousGradeCode: string | null;
+  promotedGradeId: number | null;
+  promotedGradeCode: string | null;
+  previousJobFamilyId: number | null;
+  previousJobFamilyCode: string | null;
+  promotedJobFamilyId: number | null;
+  promotedJobFamilyCode: string | null;
   isValid: boolean;
   issues: HrImportIssue[];
 }
@@ -57,6 +70,8 @@ export function normalizeImportRows(input: {
   jobFamilies: CodeReferenceItem[];
   grades: CodeReferenceItem[];
   todayIsoDate: string;
+  /** Année de référence de la campagne (N) — fenêtre de promotion N-1/N. */
+  campaignReferenceYear: number;
   referenceIncomplete?: boolean;
 }): {
   normalized: NormalizedImportRow[];
@@ -66,8 +81,15 @@ export function normalizeImportRows(input: {
   warningCount: number;
   duplicateNumbers: number;
 } {
-  const { rows, headerRowIndex, mapping, jobFamilies, grades, todayIsoDate } =
-    input;
+  const {
+    rows,
+    headerRowIndex,
+    mapping,
+    jobFamilies,
+    grades,
+    todayIsoDate,
+    campaignReferenceYear,
+  } = input;
   const referenceIncomplete = input.referenceIncomplete ?? false;
 
   const mappingByField = buildMappingIndex(mapping);
@@ -330,7 +352,26 @@ export function normalizeImportRows(input: {
       confirmedUnderperformer = confirmedResult;
     }
 
-    const promotionAmount = readOptionalAmount(
+    const neutralizeRaw = readCell(
+      row,
+      mappingByField,
+      "neutralizeNineBoxEffect",
+    );
+    const neutralizeResult = readBooleanFlag(neutralizeRaw);
+    let neutralizeNineBoxEffect = false;
+    if (neutralizeResult === "invalid") {
+      pushError(
+        rowIssues,
+        "invalid_neutralize_nine_box_effect",
+        sourceRowNumber,
+        "neutralizeNineBoxEffect",
+        "La valeur de « Neutraliser effet 9-Box » est invalide. Utilisez Oui, Non, true, false, 1 ou 0.",
+      );
+    } else {
+      neutralizeNineBoxEffect = neutralizeResult;
+    }
+
+    const historicalPromotionAmount = readOptionalAmountWithPresence(
       row,
       mappingByField,
       "promotionAmount",
@@ -338,6 +379,7 @@ export function normalizeImportRows(input: {
       sourceRowNumber,
       rowIssues,
     );
+    let promotionAmount = historicalPromotionAmount.value;
     const correctionAmount = readOptionalAmount(
       row,
       mappingByField,
@@ -354,6 +396,46 @@ export function normalizeImportRows(input: {
       sourceRowNumber,
       rowIssues,
     );
+
+    const promotionFields = readPromotionImportGroup({
+      row,
+      mappingByField,
+      sourceRowNumber,
+      rowIssues,
+      jobFamilies,
+      grades,
+      campaignReferenceYear,
+      currentJobFamilyId: jobFamilyId,
+      currentJobFamilyCode: resolvedJobFamilyCode,
+      currentGradeId: gradeId,
+      currentGradeCode: resolvedGradeCode,
+      decemberBaseSalary,
+    });
+    if (
+      promotionFields.promotionDate !== null &&
+      promotionFields.salaryBeforePromotion !== null &&
+      promotionFields.salaryAfterPromotion !== null
+    ) {
+      const derivedPromotionAmount =
+        promotionFields.salaryAfterPromotion -
+        promotionFields.salaryBeforePromotion;
+      const reconciled = resolveCanonicalPromotionAmount({
+        historicalPresent: historicalPromotionAmount.present,
+        historicalAmount: historicalPromotionAmount.value,
+        derivedAmount: derivedPromotionAmount,
+      });
+      if (!reconciled.ok) {
+        pushError(
+          rowIssues,
+          reconciled.code,
+          sourceRowNumber,
+          "promotionAmount",
+          reconciled.message,
+        );
+      } else {
+        promotionAmount = reconciled.amount;
+      }
+    }
 
     if (employeeNumber) {
       const key = employeeNumber.toUpperCase();
@@ -378,9 +460,11 @@ export function normalizeImportRows(input: {
       decemberBaseSalary,
       nineBoxCode,
       confirmedUnderperformer,
+      neutralizeNineBoxEffect,
       promotionAmount,
       correctionAmount,
       socialMeasureAmount,
+      ...promotionFields,
       isValid: !rowIssues.some((issue) => issue.severity === "error"),
       issues: rowIssues,
     });
@@ -443,9 +527,21 @@ export function normalizeImportRows(input: {
       decemberBaseSalary: draft.decemberBaseSalary,
       nineBoxCode: draft.nineBoxCode,
       confirmedUnderperformer: draft.confirmedUnderperformer,
+      neutralizeNineBoxEffect: draft.neutralizeNineBoxEffect,
       promotionAmount: draft.promotionAmount,
       correctionAmount: draft.correctionAmount,
       socialMeasureAmount: draft.socialMeasureAmount,
+      promotionDate: draft.promotionDate,
+      salaryBeforePromotion: draft.salaryBeforePromotion,
+      salaryAfterPromotion: draft.salaryAfterPromotion,
+      previousGradeId: draft.previousGradeId,
+      previousGradeCode: draft.previousGradeCode,
+      promotedGradeId: draft.promotedGradeId,
+      promotedGradeCode: draft.promotedGradeCode,
+      previousJobFamilyId: draft.previousJobFamilyId,
+      previousJobFamilyCode: draft.previousJobFamilyCode,
+      promotedJobFamilyId: draft.promotedJobFamilyId,
+      promotedJobFamilyCode: draft.promotedJobFamilyCode,
     });
   }
 
@@ -501,9 +597,28 @@ function readOptionalAmount(
   sourceRowNumber: number,
   rowIssues: HrImportIssue[],
 ): number {
+  return readOptionalAmountWithPresence(
+    row,
+    mappingByField,
+    field,
+    invalidMessage,
+    sourceRowNumber,
+    rowIssues,
+  ).value;
+}
+
+/** Distingue cellule absente/vide d’une valeur explicitement saisie. */
+function readOptionalAmountWithPresence(
+  row: unknown[],
+  mappingByField: Map<HrImportColumnKey, number | null>,
+  field: HrImportColumnKey,
+  invalidMessage: string,
+  sourceRowNumber: number,
+  rowIssues: HrImportIssue[],
+): { present: boolean; value: number } {
   const raw = readCell(row, mappingByField, field);
   if (cellToText(raw) === "") {
-    return 0;
+    return { present: false, value: 0 };
   }
   if (isFormulaCell(raw)) {
     pushError(
@@ -513,7 +628,7 @@ function readOptionalAmount(
       field,
       "Les formules ne sont pas autorisées dans le fichier importé : saisissez une valeur fixe.",
     );
-    return 0;
+    return { present: true, value: 0 };
   }
   const amount = readNonNegativeFcfa(raw);
   if (amount === null) {
@@ -524,9 +639,9 @@ function readOptionalAmount(
       field,
       invalidMessage,
     );
-    return 0;
+    return { present: true, value: 0 };
   }
-  return amount;
+  return { present: true, value: amount };
 }
 
 function pushIssue(

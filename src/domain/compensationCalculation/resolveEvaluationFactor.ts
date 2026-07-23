@@ -131,7 +131,42 @@ export function resolveEvaluationFactor(
   let performanceLevel = input.performanceLevel;
   let potentialLevel = input.potentialLevel;
 
-  switch (mode) {
+  if (input.neutralizeNineBoxEffect === true) {
+    const confirmationMilli = input.nineBoxConfirmationFactorMilli;
+    if (
+      confirmationMilli === undefined ||
+      !Number.isInteger(confirmationMilli) ||
+      confirmationMilli < 500 ||
+      confirmationMilli > 1000
+    ) {
+      throw new CompensationCalculationError(
+        "INVALID_NINE_BOX_CONFIRMATION_FACTOR",
+        "Le coefficient provisoire 9-Box doit être compris entre 0,500 et 1,000.",
+      );
+    }
+    // milli → échelle 1e6 : 900 → 900_000 (= 0,900)
+    exactFactorNumerator = confirmationMilli * 1_000;
+    selectedFactors = {
+      kind: "pending_confirmation",
+      nineBoxConfirmationFactorMilli: confirmationMilli,
+    };
+    explanation.push({
+      code: "EVALUATION_PERFORMANCE_PENDING_CONFIRMATION",
+      label: "Performance en cours de confirmation",
+      inputValues: {
+        neutralizeNineBoxEffect: true,
+        nineBoxConfirmationFactorMilli: confirmationMilli,
+        mode,
+        performanceLevel: performanceLevel ?? null,
+        potentialLevel: potentialLevel ?? null,
+      },
+      outputValue: exactFactorNumerator,
+      formula: `${confirmationMilli} * 1000 (= ${(confirmationMilli / 1000).toFixed(3).replace(".", ",")})`,
+      reason:
+        "Mesure provisoire : coefficient global « Performance à confirmer », indépendamment du code 9-Box source.",
+    });
+  } else {
+    switch (mode) {
     case "none": {
       exactFactorNumerator = NEUTRAL_EVALUATION_FACTOR_SCALED;
       selectedFactors = { kind: "neutral" };
@@ -267,6 +302,7 @@ export function resolveEvaluationFactor(
         `Mode d’évaluation non supporté : ${String(mode)}.`,
       );
     }
+  }
   }
 
   if (

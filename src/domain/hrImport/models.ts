@@ -84,9 +84,17 @@ export type RequiredHrImportColumnKey =
 export type OptionalHrImportColumnKey =
   | "nineBoxCode"
   | "confirmedUnderperformer"
+  | "neutralizeNineBoxEffect"
   | "promotionAmount"
   | "correctionAmount"
-  | "socialMeasureAmount";
+  | "socialMeasureAmount"
+  | "promotionDate"
+  | "salaryBeforePromotion"
+  | "salaryAfterPromotion"
+  | "previousGradeCode"
+  | "promotedGradeCode"
+  | "previousJobFamilyCode"
+  | "promotedJobFamilyCode";
 
 export type HrImportColumnKey =
   | RequiredHrImportColumnKey
@@ -120,11 +128,39 @@ export const OPTIONAL_IMPORT_COLUMNS: readonly HrImportColumn[] = [
     label: "Sous-performant confirmé",
     required: false,
   },
+  {
+    key: "neutralizeNineBoxEffect",
+    label: "Neutraliser effet 9-Box",
+    required: false,
+  },
   { key: "promotionAmount", label: "Montant de promotion", required: false },
   { key: "correctionAmount", label: "Montant de correction", required: false },
   {
     key: "socialMeasureAmount",
     label: "Montant mesure RH / sociale",
+    required: false,
+  },
+  { key: "promotionDate", label: "Date de promotion", required: false },
+  {
+    key: "salaryBeforePromotion",
+    label: "Salaire de base avant promotion",
+    required: false,
+  },
+  {
+    key: "salaryAfterPromotion",
+    label: "Salaire de base après promotion",
+    required: false,
+  },
+  { key: "previousGradeCode", label: "Ancien grade", required: false },
+  { key: "promotedGradeCode", label: "Nouveau grade", required: false },
+  {
+    key: "previousJobFamilyCode",
+    label: "Ancienne famille de métiers",
+    required: false,
+  },
+  {
+    key: "promotedJobFamilyCode",
+    label: "Nouvelle famille de métiers",
     required: false,
   },
 ] as const;
@@ -177,9 +213,23 @@ export interface NormalizedImportRow {
   decemberBaseSalary: number | null;
   nineBoxCode: number | null;
   confirmedUnderperformer: boolean;
+  /** Défaut métier = false (Non) si colonne absente ou vide. */
+  neutralizeNineBoxEffect: boolean;
   promotionAmount: number;
   correctionAmount: number;
   socialMeasureAmount: number;
+  /** Groupe promotion structuré (Lot 2A-H2C-1) — null si aucune promotion. */
+  promotionDate: string | null;
+  salaryBeforePromotion: number | null;
+  salaryAfterPromotion: number | null;
+  previousGradeId: number | null;
+  previousGradeCode: string | null;
+  promotedGradeId: number | null;
+  promotedGradeCode: string | null;
+  previousJobFamilyId: number | null;
+  previousJobFamilyCode: string | null;
+  promotedJobFamilyId: number | null;
+  promotedJobFamilyCode: string | null;
 }
 
 /** Salarié persisté (snapshot d’un lot d’import), forme domaine camelCase. */
@@ -197,9 +247,19 @@ export interface EmployeeSnapshot {
   decemberBaseSalary: number;
   nineBoxCode: number | null;
   confirmedUnderperformer: boolean;
+  /** Défaut métier = false (Non). */
+  neutralizeNineBoxEffect: boolean;
   promotionAmount: number;
   correctionAmount: number;
   socialMeasureAmount: number;
+  /** Groupe promotion structuré (Lot 2A-H2C-1) — null si aucune promotion. */
+  promotionDate: string | null;
+  salaryBeforePromotion: number | null;
+  salaryAfterPromotion: number | null;
+  previousGradeId: number | null;
+  promotedGradeId: number | null;
+  previousJobFamilyId: number | null;
+  promotedJobFamilyId: number | null;
   sourceRowNumber: number;
   createdAt: string;
 }

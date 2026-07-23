@@ -4,6 +4,7 @@ export type PageId =
   | "references"
   | "imports"
   | "simulations"
+  | "simulation-history"
   | "individual-review"
   | "reports"
   | "settings"
@@ -20,7 +21,8 @@ export const primaryNavigation: NavigationItem[] = [
   { id: "campaigns", label: "Campagnes", symbol: "CA" },
   { id: "references", label: "Référentiels", symbol: "RE" },
   { id: "imports", label: "Import RH", symbol: "IR" },
-  { id: "simulations", label: "Simulations", symbol: "SI" },
+  { id: "simulations", label: "Simulation", symbol: "SI" },
+  { id: "simulation-history", label: "Historique simulations", symbol: "HS" },
   { id: "individual-review", label: "Revue individuelle", symbol: "RI" },
   { id: "reports", label: "Rapports", symbol: "RA" },
 ];

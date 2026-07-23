@@ -7,6 +7,17 @@ pub const MIGRATION_0002_SQL: &str = include_str!("../migrations/0002_compensati
 pub const MIGRATION_0003_SQL: &str = include_str!("../migrations/0003_hr_import.sql");
 pub const MIGRATION_0004_SQL: &str =
     include_str!("../migrations/0004_compensation_calculation.sql");
+pub const MIGRATION_0005_SQL: &str = include_str!("../migrations/0005_campaign_simulations.sql");
+pub const MIGRATION_0006_SQL: &str = include_str!("../migrations/0006_employee_promotions.sql");
+pub const MIGRATION_0007_SQL: &str =
+    include_str!("../migrations/0007_simulation_contract_v4_results.sql");
+pub const MIGRATION_0008_SQL: &str = include_str!("../migrations/0008_nine_box_neutralization.sql");
+pub const MIGRATION_0009_SQL: &str =
+    include_str!("../migrations/0009_nine_box_confirmation_factor.sql");
+pub const MIGRATION_0010_SQL: &str = include_str!("../migrations/0010_local_access_state.sql");
+pub const MIGRATION_0011_SQL: &str = include_str!("../migrations/0011_license_activations.sql");
+pub const MIGRATION_0012_SQL: &str =
+    include_str!("../migrations/0012_minimum_guarantee_effective_month.sql");
 
 pub const MIGRATION_0001_VERSION: i64 = 1;
 pub const MIGRATION_0001_DESCRIPTION: &str = "initial_persistence";
@@ -19,6 +30,30 @@ pub const MIGRATION_0003_DESCRIPTION: &str = "hr_import";
 
 pub const MIGRATION_0004_VERSION: i64 = 4;
 pub const MIGRATION_0004_DESCRIPTION: &str = "compensation_calculation";
+
+pub const MIGRATION_0005_VERSION: i64 = 5;
+pub const MIGRATION_0005_DESCRIPTION: &str = "campaign_simulations";
+
+pub const MIGRATION_0006_VERSION: i64 = 6;
+pub const MIGRATION_0006_DESCRIPTION: &str = "employee_promotions";
+
+pub const MIGRATION_0007_VERSION: i64 = 7;
+pub const MIGRATION_0007_DESCRIPTION: &str = "simulation_contract_v4_results";
+
+pub const MIGRATION_0008_VERSION: i64 = 8;
+pub const MIGRATION_0008_DESCRIPTION: &str = "nine_box_neutralization";
+
+pub const MIGRATION_0009_VERSION: i64 = 9;
+pub const MIGRATION_0009_DESCRIPTION: &str = "nine_box_confirmation_factor";
+
+pub const MIGRATION_0010_VERSION: i64 = 10;
+pub const MIGRATION_0010_DESCRIPTION: &str = "local_access_state";
+
+pub const MIGRATION_0011_VERSION: i64 = 11;
+pub const MIGRATION_0011_DESCRIPTION: &str = "license_activations";
+
+pub const MIGRATION_0012_VERSION: i64 = 12;
+pub const MIGRATION_0012_DESCRIPTION: &str = "minimum_guarantee_effective_month";
 
 #[cfg(test)]
 mod tests {
@@ -77,6 +112,126 @@ mod tests {
     }
 
     #[test]
+    fn migration_0005_is_present_and_ordered_after_0004() {
+        assert_eq!(MIGRATION_0005_VERSION, 5);
+        assert_eq!(MIGRATION_0005_DESCRIPTION, "campaign_simulations");
+        assert!(MIGRATION_0005_VERSION > MIGRATION_0004_VERSION);
+        assert!(MIGRATION_0005_SQL.contains("compensation_simulation_runs"));
+        assert!(MIGRATION_0005_SQL.contains("compensation_simulation_employee_results"));
+        assert!(MIGRATION_0005_SQL.contains("source_fingerprint"));
+        assert!(MIGRATION_0005_SQL.contains("budget_target_numerator_text"));
+        assert!(MIGRATION_0005_SQL.contains("final_salary_fcfa_text"));
+        assert!(MIGRATION_0005_SQL.contains("ON DELETE CASCADE"));
+        assert!(!MIGRATION_0005_SQL.contains("REAL"));
+    }
+
+    #[test]
+    fn migration_0006_is_present_and_ordered_after_0005() {
+        assert_eq!(MIGRATION_0006_VERSION, 6);
+        assert_eq!(MIGRATION_0006_DESCRIPTION, "employee_promotions");
+        assert!(MIGRATION_0006_VERSION > MIGRATION_0005_VERSION);
+        assert!(MIGRATION_0006_SQL.contains("promotion_date"));
+        assert!(MIGRATION_0006_SQL.contains("salary_before_promotion"));
+        assert!(MIGRATION_0006_SQL.contains("salary_after_promotion"));
+        assert!(MIGRATION_0006_SQL.contains("previous_grade_id"));
+        assert!(MIGRATION_0006_SQL.contains("promoted_grade_id"));
+        assert!(MIGRATION_0006_SQL.contains("previous_job_family_id"));
+        assert!(MIGRATION_0006_SQL.contains("promoted_job_family_id"));
+        assert!(!MIGRATION_0006_SQL.contains("REAL"));
+    }
+
+    #[test]
+    fn migration_0007_is_present_and_ordered_after_0006() {
+        assert_eq!(MIGRATION_0007_VERSION, 7);
+        assert_eq!(MIGRATION_0007_DESCRIPTION, "simulation_contract_v4_results");
+        assert!(MIGRATION_0007_VERSION > MIGRATION_0006_VERSION);
+        assert!(MIGRATION_0007_SQL.contains("compensation_simulation_employee_month_results"));
+        assert!(MIGRATION_0007_SQL.contains("retroactivity_start_month"));
+        assert!(MIGRATION_0007_SQL.contains("minimum_increase_mode"));
+        assert!(MIGRATION_0007_SQL.contains("promotion_payment_timing"));
+        assert!(MIGRATION_0007_SQL.contains("ON DELETE CASCADE"));
+        assert!(MIGRATION_0007_SQL.contains("UNIQUE (employee_result_id, month)"));
+        assert!(!MIGRATION_0007_SQL.contains("REAL"));
+    }
+
+    #[test]
+    fn migration_0008_is_present_and_ordered_after_0007() {
+        assert_eq!(MIGRATION_0008_VERSION, 8);
+        assert_eq!(MIGRATION_0008_DESCRIPTION, "nine_box_neutralization");
+        assert!(MIGRATION_0008_VERSION > MIGRATION_0007_VERSION);
+        assert!(MIGRATION_0008_SQL.contains("neutralize_nine_box_effect"));
+        assert!(MIGRATION_0008_SQL.contains("source_nine_box_code"));
+        assert!(MIGRATION_0008_SQL.contains("nine_box_treatment_kind"));
+        assert!(MIGRATION_0008_SQL.contains("neutralize_nine_box_effect_employee_count"));
+        assert!(MIGRATION_0008_SQL.contains("nine_box_effect_neutralized"));
+        assert!(MIGRATION_0008_SQL.contains("hr_import_employees"));
+        assert!(!MIGRATION_0008_SQL.contains("REAL"));
+    }
+
+    #[test]
+    fn migration_0009_is_present_and_ordered_after_0008() {
+        assert_eq!(MIGRATION_0009_VERSION, 9);
+        assert_eq!(MIGRATION_0009_DESCRIPTION, "nine_box_confirmation_factor");
+        assert!(MIGRATION_0009_VERSION > MIGRATION_0008_VERSION);
+        assert!(MIGRATION_0009_SQL.contains("nine_box_confirmation_factor_milli"));
+        assert!(MIGRATION_0009_SQL.contains("campaign_reference_config"));
+        assert!(MIGRATION_0009_SQL.contains("compensation_simulation_runs"));
+        assert!(MIGRATION_0009_SQL.contains("performance_pending_confirmation"));
+        assert!(MIGRATION_0009_SQL.contains("BETWEEN 500 AND 1000"));
+        assert!(!MIGRATION_0009_SQL.contains("REAL"));
+    }
+
+    #[test]
+    fn migration_0010_is_present_and_ordered_after_0009() {
+        assert_eq!(MIGRATION_0010_VERSION, 10);
+        assert_eq!(MIGRATION_0010_DESCRIPTION, "local_access_state");
+        assert!(MIGRATION_0010_VERSION > MIGRATION_0009_VERSION);
+        assert!(MIGRATION_0010_SQL.contains("local_access_state"));
+        assert!(MIGRATION_0010_SQL.contains("installation_id"));
+        assert!(MIGRATION_0010_SQL.contains("password_hash"));
+        assert!(MIGRATION_0010_SQL.contains("current_valid_until"));
+        assert!(MIGRATION_0010_SQL.contains("last_observed_at"));
+        assert!(MIGRATION_0010_SQL.contains("clock_anomaly_detected"));
+        assert!(MIGRATION_0010_SQL.contains("CREATE TABLE IF NOT EXISTS"));
+        assert!(!MIGRATION_0010_SQL.contains("REAL"));
+    }
+
+    #[test]
+    fn migration_0011_is_present_and_ordered_after_0010() {
+        assert_eq!(MIGRATION_0011_VERSION, 11);
+        assert_eq!(MIGRATION_0011_DESCRIPTION, "license_activations");
+        assert!(MIGRATION_0011_VERSION > MIGRATION_0010_VERSION);
+        assert!(MIGRATION_0011_SQL.contains("license_activations"));
+        assert!(MIGRATION_0011_SQL.contains("license_id"));
+        assert!(MIGRATION_0011_SQL.contains("installation_id"));
+        assert!(MIGRATION_0011_SQL.contains("duration_months"));
+        assert!(MIGRATION_0011_SQL.contains("previous_valid_until"));
+        assert!(MIGRATION_0011_SQL.contains("new_valid_until"));
+        assert!(MIGRATION_0011_SQL.contains("UNIQUE"));
+        assert!(MIGRATION_0011_SQL.contains("BETWEEN 1 AND 120"));
+        assert!(MIGRATION_0011_SQL.contains("CREATE TABLE IF NOT EXISTS"));
+        assert!(!MIGRATION_0011_SQL.contains("REAL"));
+    }
+
+    #[test]
+    fn migration_0012_is_present_and_ordered_after_0011() {
+        assert_eq!(MIGRATION_0012_VERSION, 12);
+        assert_eq!(
+            MIGRATION_0012_DESCRIPTION,
+            "minimum_guarantee_effective_month"
+        );
+        assert!(MIGRATION_0012_VERSION > MIGRATION_0011_VERSION);
+        assert!(MIGRATION_0012_SQL.contains("minimum_guarantee_effective_month"));
+        assert!(MIGRATION_0012_SQL.contains("compensation_simulation_runs"));
+        assert!(MIGRATION_0012_SQL.contains("BETWEEN 1 AND 12"));
+        assert!(MIGRATION_0012_SQL.contains("ADD COLUMN"));
+        assert!(!MIGRATION_0012_SQL.contains("DEFAULT"));
+        assert!(!MIGRATION_0012_SQL.contains("REAL"));
+        assert!(!MIGRATION_0012_SQL.contains("local_access"));
+        assert!(!MIGRATION_0012_SQL.contains("license_activations"));
+    }
+
+    #[test]
     fn migration_config_is_valid() {
         assert!(MIGRATION_0001_VERSION > 0);
         assert!(!MIGRATION_0001_DESCRIPTION.is_empty());
@@ -90,15 +245,236 @@ mod tests {
         assert!(MIGRATION_0004_VERSION > 0);
         assert!(!MIGRATION_0004_DESCRIPTION.is_empty());
         assert!(!MIGRATION_0004_SQL.trim().is_empty());
+        assert!(MIGRATION_0005_VERSION > 0);
+        assert!(!MIGRATION_0005_DESCRIPTION.is_empty());
+        assert!(!MIGRATION_0005_SQL.trim().is_empty());
+        assert!(MIGRATION_0006_VERSION > 0);
+        assert!(!MIGRATION_0006_DESCRIPTION.is_empty());
+        assert!(!MIGRATION_0006_SQL.trim().is_empty());
+        assert!(MIGRATION_0007_VERSION > 0);
+        assert!(!MIGRATION_0007_DESCRIPTION.is_empty());
+        assert!(!MIGRATION_0007_SQL.trim().is_empty());
+        assert!(MIGRATION_0008_VERSION > 0);
+        assert!(!MIGRATION_0008_DESCRIPTION.is_empty());
+        assert!(!MIGRATION_0008_SQL.trim().is_empty());
+        assert!(MIGRATION_0009_VERSION > 0);
+        assert!(!MIGRATION_0009_DESCRIPTION.is_empty());
+        assert!(!MIGRATION_0009_SQL.trim().is_empty());
+        assert!(MIGRATION_0010_VERSION > 0);
+        assert!(!MIGRATION_0010_DESCRIPTION.is_empty());
+        assert!(!MIGRATION_0010_SQL.trim().is_empty());
+        assert!(MIGRATION_0011_VERSION > 0);
+        assert!(!MIGRATION_0011_DESCRIPTION.is_empty());
+        assert!(!MIGRATION_0011_SQL.trim().is_empty());
+        assert!(MIGRATION_0012_VERSION > 0);
+        assert!(!MIGRATION_0012_DESCRIPTION.is_empty());
+        assert!(!MIGRATION_0012_SQL.trim().is_empty());
         assert!(DATABASE_URL.starts_with("sqlite:"));
         assert_eq!(DATABASE_URL, "sqlite:jrb-compensation-studio.db");
     }
 
     #[test]
-    fn migration_order_is_exactly_0001_0002_0003_0004() {
+    fn migration_order_is_exactly_0001_to_0012() {
         assert_eq!(MIGRATION_0001_VERSION, 1);
         assert_eq!(MIGRATION_0002_VERSION, 2);
         assert_eq!(MIGRATION_0003_VERSION, 3);
         assert_eq!(MIGRATION_0004_VERSION, 4);
+        assert_eq!(MIGRATION_0005_VERSION, 5);
+        assert_eq!(MIGRATION_0006_VERSION, 6);
+        assert_eq!(MIGRATION_0007_VERSION, 7);
+        assert_eq!(MIGRATION_0008_VERSION, 8);
+        assert_eq!(MIGRATION_0009_VERSION, 9);
+        assert_eq!(MIGRATION_0010_VERSION, 10);
+        assert_eq!(MIGRATION_0011_VERSION, 11);
+        assert_eq!(MIGRATION_0012_VERSION, 12);
+    }
+
+    #[tokio::test]
+    async fn migration_0006_preserves_existing_rows_without_promotion() {
+        use sqlx::sqlite::SqliteConnectOptions;
+        use sqlx::{ConnectOptions, SqlitePool};
+        use std::str::FromStr;
+
+        let dir = tempfile::tempdir().expect("temp dir");
+        let db_path = dir.path().join("migrate-0006.db");
+        let url = format!("sqlite:{}", db_path.to_str().unwrap());
+
+        {
+            let options = SqliteConnectOptions::from_str(&url)
+                .unwrap()
+                .create_if_missing(true)
+                .foreign_keys(true);
+            let mut conn = options.connect().await.expect("create db");
+            // Schéma minimal pré-0006 (colonnes 0003 sans promotion structurée).
+            sqlx::query(
+                r#"
+                CREATE TABLE campaigns (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    reference_year INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    notes TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                "#,
+            )
+            .execute(&mut conn)
+            .await
+            .unwrap();
+            sqlx::query(
+                r#"
+                CREATE TABLE campaign_job_families (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
+                    code TEXT NOT NULL,
+                    label TEXT NOT NULL,
+                    sort_order INTEGER NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                "#,
+            )
+            .execute(&mut conn)
+            .await
+            .unwrap();
+            sqlx::query(
+                r#"
+                CREATE TABLE campaign_grades (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
+                    code TEXT NOT NULL,
+                    label TEXT NOT NULL,
+                    sort_order INTEGER NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                "#,
+            )
+            .execute(&mut conn)
+            .await
+            .unwrap();
+            sqlx::query(
+                r#"
+                CREATE TABLE hr_import_batches (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
+                    status TEXT NOT NULL,
+                    source_file_name TEXT NOT NULL,
+                    source_format TEXT NOT NULL,
+                    source_sheet_name TEXT,
+                    file_size_bytes INTEGER NOT NULL,
+                    source_row_count INTEGER NOT NULL,
+                    imported_row_count INTEGER NOT NULL,
+                    warning_count INTEGER NOT NULL,
+                    imported_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                "#,
+            )
+            .execute(&mut conn)
+            .await
+            .unwrap();
+            sqlx::query(
+                r#"
+                CREATE TABLE hr_import_employees (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    import_batch_id INTEGER NOT NULL REFERENCES hr_import_batches(id),
+                    campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
+                    employee_number TEXT NOT NULL,
+                    employee_label TEXT NOT NULL,
+                    job_family_id INTEGER NOT NULL REFERENCES campaign_job_families(id),
+                    grade_id INTEGER NOT NULL REFERENCES campaign_grades(id),
+                    contract_type TEXT NOT NULL,
+                    employment_status TEXT NOT NULL,
+                    hire_date TEXT NOT NULL,
+                    december_base_salary INTEGER NOT NULL,
+                    nine_box_code INTEGER,
+                    confirmed_underperformer INTEGER NOT NULL DEFAULT 0,
+                    promotion_amount INTEGER NOT NULL DEFAULT 0,
+                    correction_amount INTEGER NOT NULL DEFAULT 0,
+                    social_measure_amount INTEGER NOT NULL DEFAULT 0,
+                    source_row_number INTEGER NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                "#,
+            )
+            .execute(&mut conn)
+            .await
+            .unwrap();
+
+            let now = "2026-01-01T00:00:00.000Z";
+            sqlx::query(
+                "INSERT INTO campaigns (name, reference_year, status, created_at, updated_at) VALUES ('C', 2026, 'draft', ?1, ?1)",
+            )
+            .bind(now)
+            .execute(&mut conn)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO campaign_job_families (campaign_id, code, label, sort_order, created_at, updated_at) VALUES (1, 'F1', 'F1', 1, ?1, ?1)",
+            )
+            .bind(now)
+            .execute(&mut conn)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO campaign_grades (campaign_id, code, label, sort_order, created_at, updated_at) VALUES (1, 'G1', 'G1', 1, ?1, ?1)",
+            )
+            .bind(now)
+            .execute(&mut conn)
+            .await
+            .unwrap();
+            sqlx::query(
+                "INSERT INTO hr_import_batches (campaign_id, status, source_file_name, source_format, source_sheet_name, file_size_bytes, source_row_count, imported_row_count, warning_count, imported_at, created_at) VALUES (1, 'current', 'a.xlsx', 'xlsx', 'P', 1, 1, 1, 0, ?1, ?1)",
+            )
+            .bind(now)
+            .execute(&mut conn)
+            .await
+            .unwrap();
+            sqlx::query(
+                r#"
+                INSERT INTO hr_import_employees (
+                    import_batch_id, campaign_id, employee_number, employee_label,
+                    job_family_id, grade_id, contract_type, employment_status, hire_date,
+                    december_base_salary, confirmed_underperformer, source_row_number, created_at
+                ) VALUES (1, 1, 'E1', 'Emp', 1, 1, 'cdi', 'active', '2020-01-01', 500000, 0, 2, ?1)
+                "#,
+            )
+            .bind(now)
+            .execute(&mut conn)
+            .await
+            .unwrap();
+
+            for statement in MIGRATION_0006_SQL.split(';') {
+                let trimmed = statement.trim();
+                if trimmed.is_empty() || !trimmed.to_uppercase().contains("ALTER TABLE") {
+                    continue;
+                }
+                sqlx::query(trimmed)
+                    .execute(&mut conn)
+                    .await
+                    .unwrap_or_else(|e| panic!("0006 statement failed: {trimmed} — {e}"));
+            }
+        }
+
+        let pool = SqlitePool::connect(&url).await.unwrap();
+        let row: (Option<String>, Option<i64>, Option<i64>) = sqlx::query_as(
+            "SELECT promotion_date, salary_before_promotion, previous_grade_id FROM hr_import_employees WHERE employee_number = 'E1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(row.0.is_none());
+        assert!(row.1.is_none());
+        assert!(row.2.is_none());
+        let salary: i64 = sqlx::query_scalar(
+            "SELECT december_base_salary FROM hr_import_employees WHERE employee_number = 'E1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(salary, 500_000);
+        pool.close().await;
     }
 }

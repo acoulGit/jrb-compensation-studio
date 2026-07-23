@@ -8,8 +8,11 @@ consultable dans l’application (aperçu, population courante, historique des
 lots).
 
 Hors périmètre : calcul d’éligibilité, positionnement, proposition
-matricielle, budget, simulation, promotion, ancienneté, export, sauvegarde
-automatisée, chiffrement, conservation du fichier source sur disque.
+matricielle, ancienneté (autre lot), export, sauvegarde automatisée,
+chiffrement, conservation du fichier source sur disque. La **promotion
+structurée** (Lot 2A-H2C-1) est importée et persistée ; son coût est intégré
+au budget par le moteur de calcul (Lot 2A-H2C-2, cf.
+`docs/CALCULATION_CONTRACT.md`), pas au stade de l’import.
 
 ## Principe d’import local
 
@@ -80,9 +83,46 @@ Si la colonne est absente du mapping, des valeurs par défaut s’appliquent.
 | --- | --- | --- |
 | `nineBoxCode` | Code 9-Box | `null` |
 | `confirmedUnderperformer` | Sous-performant confirmé | `false` |
-| `promotionAmount` | Montant de promotion | `0` |
+| `neutralizeNineBoxEffect` | Neutraliser effet 9-Box | `false` |
+| `promotionAmount` | Montant de promotion | `0` ; si promo structurée → delta dérivé (canonique) |
 | `correctionAmount` | Montant de correction | `0` |
 | `socialMeasureAmount` | Montant mesure RH / sociale | `0` |
+| `promotionDate` | Date de promotion | `null` (pas de promotion) |
+| `salaryBeforePromotion` | Salaire avant promotion | `null` |
+| `salaryAfterPromotion` | Salaire après promotion | `null` |
+| `previousGradeCode` | Ancien grade | `null` |
+| `promotedGradeCode` | Nouveau grade | `null` |
+| `previousJobFamilyCode` | Ancienne famille | famille courante si absente |
+| `promotedJobFamilyCode` | Nouvelle famille | famille courante si absente |
+
+`neutralizeNineBoxEffect` (Lot 2B-RC1-H1, colonne « Neutraliser effet 9-Box »)
+— **aucun changement de colonne ni de libellé d’import** au Lot 2B-RC1-H2 :
+le déclencheur reste identique, seule la sémantique du traitement de calcul
+évolue. Sous contrat de calcul v6, `neutralizeNineBoxEffect = Oui` applique
+désormais le **coefficient provisoire 9-Box** paramétrable de la campagne
+(`nineBoxConfirmationFactorMilli`, défaut 0,900 — page Références), au lieu
+du facteur neutre 1 utilisé par le Lot H1. Le code 9-Box source, s’il est
+présent, reste ignoré pour le calcul mais conservé pour affichage (« Performance
+à confirmer »).
+
+Groupe promotion (Lot 2A-H2C-1, évolué Lot 2B-RC1-H3) : optionnel mais
+cohérent. Si `promotionDate` est renseignée, salaires avant/après sont
+obligatoires. L’ancien grade est obligatoire (ou déduit du grade courant).
+Le **nouveau grade est facultatif** : cellule vide → conservation de l’ancien
+grade (promotion salariale sans changement de grade). Un même grade
+explicite (ex. G3 → G3) est accepté. Les familles avant/après restent
+résolues avec fallback vers la famille courante / précédente.
+Les familles absentes réutilisent la famille courante.
+
+`promotionAmount` est un **champ historique de compatibilité**. Sans promotion
+structurée, sa valeur importée est conservée telle quelle (défaut 0) et aucun
+`PromotionEvent` / trajectoire / coût H2C n’est produit. Avec une promotion
+structurée, le montant **canonique** est toujours dérivé :
+`salaryAfterPromotion − salaryBeforePromotion`. Une cellule historique absente,
+vide ou à zéro est acceptée et remplacée par ce delta ; une valeur explicite
+égale au delta est acceptée ; une valeur explicite différente est rejetée
+(`PROMOTION_AMOUNT_MISMATCH`, sans correction silencieuse). Fenêtre N-1/N
+selon `campaign.referenceYear`.
 
 Les familles et grades sont résolus par **code** (comparaison insensible à la
 casse) vers les identifiants persistés du référentiel Lot 1B de la campagne.
@@ -108,9 +148,17 @@ Exemples d’alias reconnus (liste non exhaustive) :
 | `decemberBaseSalary` | Salaire de base décembre, december base salary |
 | `nineBoxCode` | 9-Box, Code 9-Box, nine box code |
 | `confirmedUnderperformer` | Sous-performant confirmé, underperformer |
+| `neutralizeNineBoxEffect` | Neutraliser effet 9-Box, neutralize nine box |
 | `promotionAmount` | Montant promotion, promotion amount |
 | `correctionAmount` | Montant correction, correction amount |
 | `socialMeasureAmount` | Mesure RH, mesure sociale, social measure |
+| `promotionDate` | Date de promotion, Date promotion, Promotion date |
+| `salaryBeforePromotion` | Salaire avant promotion, Salaire de base avant promotion |
+| `salaryAfterPromotion` | Salaire après promotion, Salaire promu |
+| `previousGradeCode` | Ancien grade, Grade avant promotion |
+| `promotedGradeCode` | Nouveau grade, Grade promu, Grade après promotion |
+| `previousJobFamilyCode` | Ancienne famille, Famille avant promotion |
+| `promotedJobFamilyCode` | Nouvelle famille, Famille après promotion |
 
 L’utilisateur peut corriger manuellement le mapping avant confirmation.
 
@@ -141,9 +189,11 @@ respectivement à `temporary` et `contractor` dans le modèle d’import.
 | `departed` | Départ | sorti, parti, departed |
 | `other` | Autre | autre, other |
 
-La disponibilité hors groupe (`external_availability`) sera exploitée par le
-futur moteur pour geler les actions ; l’import ne calcule pas encore
-d’éligibilité.
+La disponibilité hors groupe (`external_availability`) est exploitée par le
+moteur (Lot 2A-H2C-2A) pour geler l’éligibilité à la mesure compensatoire via
+`isCompensatoryMeasureEligible`. L’import lui-même ne calcule pas l’éligibilité
+au moment de la normalisation : le mapping campagne → entrée préparée et le
+moteur appliquent le prédicat documenté.
 
 ## Règles de validation
 
@@ -282,13 +332,16 @@ campagne sans affecter les autres.
 
 ## Moteur de calcul
 
-Aucun calcul salarié n’est exécuté dans ce lot. Les données importées
-alimentent le futur moteur décrit dans `docs/CALCULATION_CONTRACT.md`
-(éligibilité, positionnement, proposition, budget, etc.).
+Aucun calcul salarié n’est exécuté dans le Lot 1C. Les données importées
+alimentent d’abord la **préparation de simulation** (Lot 2B-1 :
+`mapImportedEmployeeToPreparedInput`, rapport de readiness), puis le moteur
+Lot 2A-4 à partir du sous-lot 2B-2. Voir `docs/CAMPAIGN_SIMULATION.md` et
+`docs/CALCULATION_CONTRACT.md`.
 
 ## Documentation associée
 
 - Schéma : `docs/DATABASE_SCHEMA.md` (tables `hr_import_*`)
 - Dictionnaire : `docs/DATA_DICTIONARY.md`
 - Architecture : `docs/ARCHITECTURE.md`
+- Simulation : `docs/CAMPAIGN_SIMULATION.md`
 - Journal : `docs/DEVELOPMENT_LOG.md` (entrée Lot 1C)

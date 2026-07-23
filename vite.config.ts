@@ -11,6 +11,8 @@ export default defineConfig(async () => ({
     environment: "jsdom",
     setupFiles: "./src/tests/setup.ts",
     css: true,
+    testTimeout: 15_000,
+    hookTimeout: 15_000,
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

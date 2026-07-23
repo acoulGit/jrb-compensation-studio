@@ -1,0 +1,23 @@
+[package]
+name = "jrb-license-generator"
+version = "0.1.0"
+edition = "2021"
+description = "Générateur hors ligne de licences JRB Compensation Studio (hors bundle client)."
+publish = false
+
+[[bin]]
+name = "jrb-license-generator"
+path = "src/main.rs"
+
+[dependencies]
+base64ct = { version = "1.6", features = ["alloc"] }
+clap = { version = "4", features = ["derive"] }
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+jrb-license-core = { path = "../../crates/jrb-license-core" }
+rand = "0.8"
+serde_json = "1"
+time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
+zeroize = { version = "1.8", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3"

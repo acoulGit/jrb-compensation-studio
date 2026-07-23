@@ -461,7 +461,12 @@ export function ImportPage() {
                       <th>Statut</th>
                       <th>Embauche</th>
                       <th>Salaire</th>
+                      <th>Promo</th>
+                      <th>Δ promo</th>
                       <th>9-Box</th>
+                      <th title="Renseigné via la colonne d’import « Neutraliser effet 9-Box » : la performance de ce salarié est en cours de confirmation.">
+                        Performance à confirmer
+                      </th>
                       <th>Validation</th>
                     </tr>
                   </thead>
@@ -589,6 +594,9 @@ export function ImportPage() {
                       <th>Embauche</th>
                       <th>Salaire déc. N-1</th>
                       <th>9-Box</th>
+                      <th title="Renseigné via la colonne d’import « Neutraliser effet 9-Box » : la performance de ce salarié est en cours de confirmation.">
+                        Performance à confirmer
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -611,6 +619,9 @@ export function ImportPage() {
                           {employee.decemberBaseSalary.toLocaleString("fr-FR")}
                         </td>
                         <td>{employee.nineBoxCode ?? "—"}</td>
+                        <td>
+                          {employee.neutralizeNineBoxEffect ? "Oui" : "Non"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -736,7 +747,14 @@ function PreviewRow({ row }: { row: NormalizedImportRow }) {
           ? "—"
           : row.decemberBaseSalary.toLocaleString("fr-FR")}
       </td>
+      <td>{row.promotionDate ?? "—"}</td>
+      <td>
+        {row.promotionDate
+          ? row.promotionAmount.toLocaleString("fr-FR")
+          : "—"}
+      </td>
       <td>{row.nineBoxCode ?? "—"}</td>
+      <td>{row.neutralizeNineBoxEffect ? "Oui" : "Non"}</td>
       <td>{row.isValid ? "Valide" : "Erreur"}</td>
     </tr>
   );

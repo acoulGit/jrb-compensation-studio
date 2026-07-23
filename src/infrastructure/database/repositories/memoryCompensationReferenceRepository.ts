@@ -2,6 +2,7 @@ import { computeReferenceCompleteness } from "../../../domain/compensationRefere
 import {
   DEFAULT_GRADES,
   DEFAULT_JOB_FAMILIES,
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_NINE_BOX_MODE,
   DEFAULT_NINE_BOX_ORIENTATION,
@@ -144,6 +145,7 @@ export class MemoryCompensationReferenceRepository
         campaignId,
         nineBoxMode: DEFAULT_NINE_BOX_MODE,
         nineBoxOrientation: DEFAULT_NINE_BOX_ORIENTATION,
+        nineBoxConfirmationFactorMilli: DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
         createdAt: now,
         updatedAt: now,
       },
@@ -331,6 +333,20 @@ export class MemoryCompensationReferenceRepository
     store.config = {
       ...store.config,
       nineBoxOrientation: orientation,
+      updatedAt: now,
+    };
+    return this.cloneSet(campaignId, store);
+  }
+
+  async updateNineBoxConfirmationFactorMilli(
+    campaignId: number,
+    factorMilli: number,
+  ): Promise<CompensationReferenceSet> {
+    const store = this.requireStore(campaignId);
+    const now = new Date().toISOString();
+    store.config = {
+      ...store.config,
+      nineBoxConfirmationFactorMilli: factorMilli,
       updatedAt: now,
     };
     return this.cloneSet(campaignId, store);

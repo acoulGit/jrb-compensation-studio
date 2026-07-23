@@ -1,6 +1,7 @@
 import {
   DEFAULT_GRADES,
   DEFAULT_JOB_FAMILIES,
+  DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_NINE_BOX_FACTORS,
   DEFAULT_NINE_BOX_MODE,
   DEFAULT_NINE_BOX_ORIENTATION,
@@ -21,12 +22,14 @@ export async function seedCampaignReferences(
 ): Promise<void> {
   await db.execute(
     `INSERT OR IGNORE INTO campaign_reference_config
-       (campaign_id, nine_box_mode, nine_box_orientation, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5)`,
+       (campaign_id, nine_box_mode, nine_box_orientation,
+        nine_box_confirmation_factor_milli, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
     [
       campaignId,
       DEFAULT_NINE_BOX_MODE,
       DEFAULT_NINE_BOX_ORIENTATION,
+      DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
       now,
       now,
     ],

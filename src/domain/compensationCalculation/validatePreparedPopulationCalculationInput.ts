@@ -9,6 +9,7 @@ import type {
 import { ROUNDING_MODES } from "./populationAllocationModels";
 import { BUDGET_TARGET_MODES } from "./budgetTargetModels";
 import { NINE_BOX_MODES } from "../compensationReference/models";
+import { PROMOTION_BUDGET_EMPLOYMENT_STATUSES } from "./promotionBudgetPopulation";
 
 function issue(
   partial: PopulationCalculationIssue,
@@ -127,6 +128,89 @@ export function validatePreparedPopulationCalculationInput(
     );
   }
 
+  if (
+    !Number.isInteger(input.campaignYear) ||
+    input.campaignYear < 2000 ||
+    input.campaignYear > 2100
+  ) {
+    issues.push(
+      issue({
+        code: "INVALID_CAMPAIGN_YEAR",
+        message:
+          "L’année de campagne doit être un entier entre 2000 et 2100.",
+        field: "campaignYear",
+        step: "validate_input",
+      }),
+    );
+  }
+
+  if (
+    !Number.isInteger(input.technicalApplicationMonth) ||
+    input.technicalApplicationMonth < 1 ||
+    input.technicalApplicationMonth > 12
+  ) {
+    issues.push(
+      issue({
+        code: "INVALID_TECHNICAL_APPLICATION_MONTH",
+        message:
+          "Le mois d’application technique doit être un entier entre 1 et 12.",
+        field: "technicalApplicationMonth",
+        step: "validate_input",
+      }),
+    );
+  }
+
+  const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
+  if (
+    !Number.isInteger(retroactivityStartMonth) ||
+    retroactivityStartMonth < 1 ||
+    retroactivityStartMonth > 12
+  ) {
+    issues.push(
+      issue({
+        code: "INVALID_RETROACTIVITY_START_MONTH",
+        message:
+          "Le mois de début de rétroactivité doit être un entier entre 1 et 12.",
+        field: "retroactivityStartMonth",
+        step: "validate_input",
+      }),
+    );
+  } else if (
+    Number.isInteger(input.technicalApplicationMonth) &&
+    input.technicalApplicationMonth >= 1 &&
+    input.technicalApplicationMonth <= 12 &&
+    retroactivityStartMonth > input.technicalApplicationMonth
+  ) {
+    issues.push(
+      issue({
+        code: "RETROACTIVITY_MONTH_AFTER_APPLICATION_MONTH",
+        message:
+          "Le début de rétroactivité ne peut pas être postérieur au mois d’application technique.",
+        field: "retroactivityStartMonth",
+        step: "validate_input",
+      }),
+    );
+  }
+
+  const minimumGuaranteeEffectiveMonth =
+    input.minimumGuaranteeEffectiveMonth ?? input.technicalApplicationMonth;
+  if (
+    input.minimumGuaranteeEffectiveMonth !== undefined &&
+    (!Number.isInteger(minimumGuaranteeEffectiveMonth) ||
+      minimumGuaranteeEffectiveMonth < 1 ||
+      minimumGuaranteeEffectiveMonth > 12)
+  ) {
+    issues.push(
+      issue({
+        code: "INVALID_MINIMUM_GUARANTEE_EFFECTIVE_MONTH",
+        message:
+          "Le mois d’effet du minimum garanti doit être compris entre janvier et décembre.",
+        field: "minimumGuaranteeEffectiveMonth",
+        step: "validate_input",
+      }),
+    );
+  }
+
   const seenIds = new Set<string>();
   for (const employee of input.employees ?? []) {
     if (
@@ -202,18 +286,79 @@ export function validatePreparedPopulationCalculationInput(
       );
     }
 
-    if (typeof employee.confirmedUnderperformer !== "boolean") {
-      issues.push(
-        issue({
-          employeeId: employee.employeeId,
-          code: "EMPLOYEE_CALCULATION_FAILED",
-          field: "confirmedUnderperformer",
-          message: "confirmedUnderperformer doit être un booléen explicite.",
-          step: "validate_input",
-        }),
-      );
-    }
+  if (
+    typeof employee.confirmedUnderperformer !== "boolean"
+  ) {
+    issues.push(
+      issue({
+        employeeId: employee.employeeId,
+        code: "EMPLOYEE_CALCULATION_FAILED",
+        field: "confirmedUnderperformer",
+        message: "confirmedUnderperformer doit être un booléen explicite.",
+        step: "validate_input",
+      }),
+    );
   }
+
+  if (
+    typeof employee.hireDate !== "string" ||
+    employee.hireDate.trim() === ""
+  ) {
+    issues.push(
+      issue({
+        employeeId: employee.employeeId,
+        code: "MISSING_HIRE_DATE",
+        field: "hireDate",
+        message:
+          "La date d’embauche est obligatoire pour l’incidence d’ancienneté.",
+        step: "validate_input",
+      }),
+    );
+  } else if (!/^\d{4}-\d{2}-\d{2}$/.test(employee.hireDate.trim())) {
+    issues.push(
+      issue({
+        employeeId: employee.employeeId,
+        code: "INVALID_HIRE_DATE",
+        field: "hireDate",
+        message: "La date d’embauche doit être au format ISO YYYY-MM-DD.",
+        step: "validate_input",
+      }),
+    );
+  }
+
+  if (
+    employee.employmentStatus !== undefined &&
+    employee.employmentStatus !== null &&
+    !(PROMOTION_BUDGET_EMPLOYMENT_STATUSES as readonly string[]).includes(
+      employee.employmentStatus,
+    )
+  ) {
+    issues.push(
+      issue({
+        employeeId: employee.employeeId,
+        code: "INVALID_EMPLOYMENT_STATUS",
+        field: "employmentStatus",
+        message: `Statut d’emploi non supporté : ${String(employee.employmentStatus)}.`,
+        step: "validate_input",
+      }),
+    );
+  }
+
+  if (
+    employee.compensatoryMeasureEligible !== undefined &&
+    typeof employee.compensatoryMeasureEligible !== "boolean"
+  ) {
+    issues.push(
+      issue({
+        employeeId: employee.employeeId,
+        code: "INVALID_COMPENSATORY_MEASURE_ELIGIBLE",
+        field: "compensatoryMeasureEligible",
+        message: "compensatoryMeasureEligible doit être un booléen si renseigné.",
+        step: "validate_input",
+      }),
+    );
+  }
+}
 
   return { isValid: issues.length === 0, issues };
 }

@@ -21,8 +21,10 @@ télémétrie. Le serveur Vite local est exclusivement un outil de développemen
 - `src/pages` compose les écrans fonctionnels.
 - `src/domain` expose les modèles métier purs, dont
   `src/domain/compensationReference` (Lot 1B + orientation 9-Box Lot 2A-1),
-  `src/domain/compensationCalculation` (Lot 2A-2 — moteur individuel pur) et
+  `src/domain/compensationCalculation` (Lots 2A-2 à 2A-4 — moteur pur) et
   `src/domain/hrImport` (Lot 1C).
+- `src/application` orchestre les cas d’usage multi-services sans UI, notamment
+  `campaignSimulation` (Lot 2B-1 — readiness de simulation).
 - `src/services` orchestre validations et cas d’usage, sans dépendre de React,
   notamment `compensationReferenceService`, `campaignService` et
   `hrImportService`.
@@ -83,13 +85,114 @@ SQLite, Tauri, navigateur, filesystem, date courante, locale ou réseau.
 - `resolveEmployeeS0` — lookup S0 par famille/grade ;
 - `validatePreparedPopulationCalculationInput` ;
 - `calculatePreparedEmployeeCompensation` ;
-- `calculatePreparedPopulationCompensation` — assemble 2A-2 + 2A-3 ;
-- convention `allocationWeight = salary × effectiveMatrixWeight`.
+- `calculatePreparedPopulationCompensation` — assemble 2A-2 + 2A-3 + H1 ;
+- convention `allocationWeight = monthlySalary × effectiveMatrixWeight` ;
+- correctif **2A-H1** : budget annuel, allocation annuelle, ÷12, arrondi
+  mensuel, coût annuel = mensuel × 12 (`CALCULATION_CONTRACT_VERSION = 2`).
 
 Erreurs typées `CompensationCalculationError` (codes stables). Pas de
 duplication Rust, ni UI, ni persistance, ni commande Tauri.
 
 Voir `docs/CALCULATION_CONTRACT.md` et `docs/BUSINESS_RULES.md`.
+
+## Couche préparation de simulation (Lot 2B-1)
+
+Module applicatif `src/application/campaignSimulation/` : pont entre campagne,
+population RH courante, référentiels persistés et contrats d’entrée du moteur
+2A-4, **sans** exécuter le calcul d’allocation.
+
+- `buildCampaignSimulationReadiness` — charge campagne / lot courant /
+  population / référentiels via ports injectés ; produit
+  `CampaignSimulationReadinessReport` ;
+- `mapImportedEmployeeToPreparedInput` — mapping déterministe
+  `EmployeeSnapshot` → `PreparedEmployeeCalculationInput` ;
+- `buildPopulationCalculationReferences` — projection des référentiels campagne
+  vers `PopulationCalculationReferences` (orientation 9-Box exclue du moteur) ;
+- normalisation explicite des niveaux Performance/Potentiel (`low` / `medium` /
+  `high`).
+
+Pas de dépendance React, SQLite directe, Tauri, date système ni locale.
+Aucune migration, UI ou commande Tauri dans ce sous-lot.
+
+Voir `docs/CAMPAIGN_SIMULATION.md`.
+
+## Couche configuration UI de simulation (Lot 2B-2)
+
+- **Page** `SimulationPage` (navigation « Simulation »).
+- **Provider** `SimulationConfigurationProvider` : brouillons et snapshots
+  validés **en mémoire de session**, isolés par `campaignId`, sans persistance.
+- Parsing exact (`parseNonNegativeFcfaAmount`, `parseBudgetRatePercentToBps`,
+  `parseRoundingStepFcfa`) et aperçu budget via `resolveBudgetTarget` +
+  `formatExactAmountAsFcfa`.
+- Réutilise `buildCampaignSimulationReadiness` ; n’appelle pas le moteur
+  d’allocation.
+
+## Couche exécution de simulation (Lot 2B-3 / 2B-RC1-H4)
+
+- **Service** `executeCampaignSimulation` : recharge sources, vérifie empreintes,
+  appelle **une fois** `calculatePreparedPopulationCompensation`, construit une
+  vue consultable — **aucune persistance**.
+- Calendrier simulation (2A-H2A / 2B-RC1-H4) : `retroactivityStartMonth`,
+  `technicalApplicationMonth`, `minimumGuaranteeEffectiveMonth` (défaut =
+  mois technique pour une nouvelle configuration).
+- **Fingerprint** `buildSimulationSourceFingerprint` (sources + config).
+- **Provider** `SimulationExecutionProvider` : état / résultat / issues par
+  `campaignId`, `runSequence` de session, invalidation stale.
+- **UI** : synthèse, tableau (recherche / pagination), drawer de détail
+  quasi plein écran (Lot **2B-UX1**) ; pages Simulation / Historique en largeur
+  fluide ; barre latérale repliable (état session dans `AppShell`).
+- Formatage exact : `formatFcfaInteger`, `formatExactAmountAsFcfa`,
+  `formatExactRateAsPercent`, `formatFactorMilli`, `formatExactWeight`.
+
+## Couche persistance de simulation (Lots 2B-4A + 2B-P1)
+
+- Migrations `0005_campaign_simulations.sql` puis
+  `0007_simulation_contract_v4_results.sql` (consolidation schema v3 : colonnes
+  contrat v4 + table `compensation_simulation_employee_month_results`),
+  `0008_nine_box_neutralization.sql` (schema v4 / contrat v5 : colonnes
+  `neutralize_nine_box_effect`, `source_nine_box_code`,
+  `nine_box_treatment_kind` + compteur run),
+  `0009_nine_box_confirmation_factor.sql` (schema v5 / contrat v6 :
+  coefficient provisoire `nine_box_confirmation_factor_milli` sur
+  `campaign_reference_config` et sur le run de simulation ; Lot 2B-RC1-H2).
+  Promotion salariale sans changement de grade autorisée (contrat v7, schema v5
+  inchangé ; Lot 2B-RC1-H3),
+  `0012_minimum_guarantee_effective_month.sql` (schema v6 / contrat v8 :
+  mois d’effet configurable du minimum garanti ; Lot 2B-RC1-H4).
+- Commande Rust `save_simulation_run` (transaction SQLx dédiée) : écrit le run
+  (`result_schema_version = 6` pour les nouveaux snapshots contrat v8), les
+  salariés et **12 mois** par salarié en une
+  seule transaction, sans recalcul.
+- Service `saveCurrentCampaignSimulation` + DTO chaînes canoniques (run /
+  salarié / mensuel).
+- `SimulationHistoryRepository` (memory / sqlite) — lecture paginée et
+  mensuelle.
+- **2B-4B** : `SimulationSaveProvider`, `AppNavigationProvider`,
+  `SimulationHistoryRefreshProvider`, `SimulationHistoryPage` et composants
+  partagés courant / historique (`SimulationSummaryPanel`,
+  `SimulationEmployeeTable`, `SimulationEmployeeDetailDrawer`) — enregistrement
+  explicite et consultation en lecture seule, compatibles schema v3–v6 (période
+  configurable, promotions, minimum garanti et mois d’effet, ancienneté,
+  trajectoire mensuelle) avec dégradation explicite pour les snapshots v1/v2.
+- Voir `docs/SIMULATION_PERSISTENCE.md`.
+
+Voir `docs/CAMPAIGN_SIMULATION.md`.
+
+## Couche export Excel RH (Lot 2B-E1)
+
+- Module Rust `src-tauri/src/simulation_excel_export/` : chargement du snapshot
+  v3, génération du classeur XLSX (4 feuilles), chiffrement agile optionnel,
+  écriture atomique, génération / validation du mot de passe. Aucun recalcul.
+- Commandes `export_simulation_run_excel` (entrée camelCase, résultat structuré,
+  erreurs FR sans détail sensible) et `generate_hr_export_password`.
+- Frontend `src/application/campaignSimulation/hrExcelExport*`,
+  `exportSimulationRunExcel`, `generateHrExportPassword` : fonctions pures
+  invoquant `invoke` / `save`, testées avec mocks jsdom.
+- UI : `SimulationExcelExportDialog` + intégration dans `SimulationHistoryPage`
+  (export réservé aux snapshots v3, protection mot de passe par défaut, export
+  non protégé confirmé explicitement). Le mot de passe n’est jamais journalisé
+  ni conservé après fermeture du dialogue.
+- Voir `docs/HR_EXCEL_EXPORT.md`.
 
 ## Couche import RH (Lot 1C)
 
@@ -126,16 +229,45 @@ Voir `docs/HR_IMPORT.md` pour le périmètre fonctionnel détaillé.
 - Requêtes exclusivement paramétrées
 - Voir `docs/DATABASE_SCHEMA.md`
 
+## Accès local et fenêtres (Lot 2B-RC1-SEC1-A)
+
+Deux fenêtres Tauri, chacune avec sa propre capacité (isolation stricte) :
+
+- `access` : fenêtre unique créée au démarrage (`tauri.conf.json`). Écran de
+  verrou local (configuration initiale, saisie du mot de passe, période
+  expirée, anomalie d’horloge). N’a **aucune** permission `sql:*` : elle ne
+  précharge jamais la base métier.
+- `main` : fenêtre applicative complète, créée uniquement après un
+  `setup_local_access` ou `unlock_local_access` réussi (`local_access::windows`).
+
+Voir `docs/LOCAL_ACCESS_SECURITY.md` pour le détail fonctionnel et sécurité
+(mot de passe Argon2id, période initiale de 10 mois civils, détection
+d’anomalie d’horloge, garde `require_unlocked_and_licensed`).
+
 ## Réseau et capacités Tauri
 
-Aucune fonction produit ne nécessite le réseau. Permissions actuelles :
+Aucune fonction produit ne nécessite le réseau. Capacités déclarées :
 
-- `core:default`
-- `sql:default`
-- `sql:allow-execute`
+- `capabilities/access.json` (fenêtre `access`) : `core:default`,
+  `allow-get-local-access-status`, `allow-setup-local-access`,
+  `allow-unlock-local-access`, `allow-activate-offline-license` — pas de
+  `sql:*`, pas de change/lock.
+- `capabilities/main.json` (fenêtre `main`) : `core:default`, `sql:default`,
+  `sql:allow-execute`, `allow-replace-current-population`,
+  `allow-campaign-write`, `allow-save-simulation-run`,
+  `allow-export-simulation-run-excel`, `allow-get-local-access-status`,
+  `allow-change-local-password`, `allow-lock-local-access`,
+  `allow-activate-offline-license`, `dialog:allow-save`.
+  Aucune permission `setup` ni `unlock`.
 
-Aucune permission HTTP, shell, opener, filesystem, upload, updater ou
-websocket n’est déclarée.
+La clé publique Ed25519 des licences est embarquée dans
+`src-tauri/license/license_public_key.b64` (voir `docs/OFFLINE_LICENSES.md`).
+Le générateur `tools/license-generator` n’est **pas** inclus dans le bundle.
+
+`dialog:allow-save` est la seule capacité de dialogue déclarée : elle ouvre le
+sélecteur natif de destination `.xlsx` pour l’export RH (aucune ouverture ni
+lecture de fichier). Aucune permission HTTP, shell, opener, filesystem
+(lecture/écriture arbitraire), upload, updater ou websocket n’est déclarée.
 
 Le schéma distant référencé dans `tauri.conf.json` sert uniquement à l’aide de
 validation des outils ; il n’est pas chargé par l’application exécutée. La CSP

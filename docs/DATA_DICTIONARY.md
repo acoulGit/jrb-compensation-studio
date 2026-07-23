@@ -204,9 +204,16 @@ périmètre fonctionnel et les règles de validation.
 | `decemberBaseSalary` | `december_base_salary` | Donnée importée (FCFA entier > 0) |
 | `nineBoxCode` | `nine_box_code` | Donnée importée (1–9 ou `null`) |
 | `confirmedUnderperformer` | `confirmed_underperformer` | Donnée importée (booléen 0/1) |
-| `promotionAmount` | `promotion_amount` | Donnée importée (FCFA ≥ 0) |
+| `promotionAmount` | `promotion_amount` | Historique de compatibilité (FCFA ≥ 0). Avec promo structurée : canonique = delta salaires |
 | `correctionAmount` | `correction_amount` | Donnée importée (FCFA ≥ 0) |
 | `socialMeasureAmount` | `social_measure_amount` | Donnée importée (FCFA ≥ 0) |
+| `promotionDate` | `promotion_date` | Optionnel ISO ; null = pas de promotion (H2C-1) |
+| `salaryBeforePromotion` | `salary_before_promotion` | Optionnel FCFA ; groupe promo |
+| `salaryAfterPromotion` | `salary_after_promotion` | Optionnel FCFA ; groupe promo |
+| `previousGradeId` | `previous_grade_id` | FK grade avant promo |
+| `promotedGradeId` | `promoted_grade_id` | FK grade après promo |
+| `previousJobFamilyId` | `previous_job_family_id` | FK famille avant promo |
+| `promotedJobFamilyId` | `promoted_job_family_id` | FK famille après promo |
 | `sourceRowNumber` | `source_row_number` | Traçabilité ligne fichier |
 | `createdAt` | `created_at` | Technique |
 
@@ -236,9 +243,12 @@ de calcul ; ils sont désormais persistés par le Lot 1C :
 | `decemberBaseSalary` | `december_base_salary` | FCFA entier strictement positif |
 | `nineBoxCode` | `nine_box_code` | Optionnel |
 | `confirmedUnderperformer` | `confirmed_underperformer` | Optionnel, défaut false |
-| `promotionAmount` | `promotion_amount` | Optionnel, défaut 0 |
+| `promotionAmount` | `promotion_amount` | Optionnel, défaut 0 ; si promo structurée → delta canonique (mismatch rejeté) |
 | `correctionAmount` | `correction_amount` | Optionnel, défaut 0 |
 | `socialMeasureAmount` | `social_measure_amount` | Optionnel, défaut 0 |
+| `promotionDate` | `promotion_date` | Optionnel ; groupe H2C-1 |
+| `salaryBeforePromotion` / `salaryAfterPromotion` | colonnes homonymes | Obligatoires si date présente |
+| Grades / familles avant–après | `previous_*` / `promoted_*` | Grades obligatoires si date ; familles = courante si absentes |
 
 ## Paramètres métier futurs
 
@@ -282,16 +292,155 @@ Résultats de domaine purs (non stockés) :
 | Concept | Nature |
 | --- | --- |
 | `PreparedEmployeeCalculationInput` | Salarié préparé (hors import RH) |
-| `allocationWeight` | `salary × effectiveMatrixWeight` (ExactAmount) |
-| `calibrationCoefficient` | `budget / Σ allocationWeight` |
-| `theoreticalIncreaseRate` | `calibration × effectiveMatrixWeight` |
-| `theoreticalIncreaseAmount` | Part théorique exacte |
-| `finalRoundedIncreaseAmountFcfa` | Montant matriciel final |
-| `PopulationCalculationSummary` | Synthèse population |
+| `allocationWeight` | `monthlySalary × effectiveMatrixWeight` (ExactAmount) |
+| `calibrationCoefficient` | `annualBudget / Σ allocationWeight` |
+| `annualTheoreticalAllocation` | Part annuelle exacte |
+| `monthlyTheoreticalIncrease` | `annualTheoreticalAllocation / 12` |
+| `monthlyTheoreticalIncreaseRate` | `monthlyIncrease / monthlySalary` |
+| `monthlyFinalRoundedIncreaseFcfa` | Augmentation mensuelle arrondie |
+| `annualActualCostFcfa` | `monthlyFinalRounded × 12` |
+| `monthlyFinalSalaryFcfa` | Nouveau salaire mensuel |
+| `campaignYear` | Année de campagne explicite (H2A) |
+| `technicalApplicationMonth` | Mois d’application technique 1–12 (H2A) |
+| `retroactiveMonths` | `technicalApplicationMonth - 1` |
+| `remainingDirectPaymentMonths` | `13 - technicalApplicationMonth` |
+| `baseSalaryReminderFcfa` | Rappel salaire de base (décalage, pas coût additionnel) |
+| `remainingYearDirectIncreaseCostFcfa` | Coût payé directement sur le reste de l’année |
+| `annualActualBaseIncreaseCostFcfa` | Alias de `annualActualCostFcfa` |
+| `totalBaseSalaryReminderFcfa` | Σ rappels population |
+| `totalRemainingYearDirectIncreaseCostFcfa` | Σ coûts directs population |
+| `totalAnnualActualBaseIncreaseCostFcfa` | Σ coûts annuels base (= coût opération) |
+| `hireDate` | Date d’embauche ISO (entrée préparée / résultat) |
+| `technicalApplicationMonthSeniorityRatePercent` | Taux au mois d’application |
+| `monthlySeniorityImpactSchedule` | Calendrier mensuel janvier–décembre |
+| `seniorityReminderFcfa` | Rappel d’incidence d’ancienneté (hors budget) |
+| `remainingYearDirectSeniorityImpactFcfa` | Incidence directe reste d’année |
+| `annualSeniorityImpactFcfa` | Incidence annuelle totale d’ancienneté |
+| `totalSeniorityReminderFcfa` | Σ rappels ancienneté population |
+| `totalRemainingYearDirectSeniorityImpactFcfa` | Σ directs ancienneté |
+| `totalAnnualSeniorityImpactFcfa` | Σ annuel ancienneté |
+| `SENIORITY_IMPACT_CONTRACT_VERSION` | `1` (H2B) |
+
+### Lot 2A-H2C-2 (non persisté)
+
+| Concept | Nature |
+| --- | --- |
+| `employmentStatus` | Entrée préparée, optionnel ; défaut `active` si absent/`null` |
+| `compensatoryMeasureEligible` | Entrée préparée / résultat ; calculé par `isCompensatoryMeasureEligible` |
+| `contractType` | Entrée préparée optionnelle (obligatoire à l’import RH) ; CDI/CDD vs exclus |
+| `isCompensatoryMeasureEligible` | Prédicat domaine : contrat + ancienneté 12 mois N-1 + gel disponibilité |
+| `isPromotionBudgetPopulationEmployee` | Dérivé : `active` / `group_detachment` / `legal_leave` |
+| `PROMOTION_BUDGET_POPULATION_STATUSES` | Constante des statuts consommant le budget |
+| `annualPromotionBudgetCostFcfa` | Coût annuel **imputable** à l’enveloppe (0 si hors population budget ou promo exclue) |
+| `promotionInclusion.promotionCampaignCostFcfa` | Coût brut informatif H2C-1 (peut rester > 0 hors population) |
+| `totalAnnualPromotionBudgetCostFcfa` | Σ exacte des `annualPromotionBudgetCostFcfa` salariés |
+| `totalAnnualPromotionBudgetCostFcfa` | Σ coût annuel promotion, population consommant le budget |
+| `availableAnnualCompensatoryBudget` | `budget annuel cible − totalAnnualPromotionBudgetCostFcfa` |
+| `compensatoryCalibrationRate` | Taux unique de calibrage compensatoire (`ExactAmount`) |
+| `PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION` | `1` (H2C-2) |
+| `MonthlyCompensationTrajectoryEntry` | Détail mensuel (salaire, facteurs, offset promo, complément, ancienneté ventilée) |
+| `PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION` | `1` (H2C-2) |
+| `combinedAnnualActualCostFcfa` | Coût annuel salarié = promotion + complément compensatoire |
+| `totalCombinedAnnualActualCostFcfa` | Σ coût annuel combiné population |
+| `annualPromotionSeniorityImpactFcfa` | Part ancienneté attribuable à la promotion |
+| `compensatorySeniorityImpactFcfa` (mensuel) | Part ancienneté attribuable au complément compensatoire |
+| `combinedAnnualSeniorityImpactFcfa` | Σ ancienneté promotion + compensatoire (salarié) |
+| `totalAnnualPromotionSeniorityImpactFcfa` | Σ population, part promotion |
+| `totalCombinedAnnualSeniorityImpactFcfa` | Σ population, part combinée |
+| `promotedIncludedEmployeeCount` | Nombre de salariés avec promotion incluse |
+| `PROMOTION_COST_EXCEEDS_BUDGET` | Coût promotion > budget annuel cible (bloquant) |
+| `NO_COMPENSATORY_ALLOCATION_CAPACITY` | Reliquat positif sans capacité d’allocation ; contexte `annualBudgetTargetFcfa`, `totalAnnualPromotionBudgetCostFcfa`, `availableAnnualCompensatoryBudgetFcfa`, `eligibleExposureCount` |
+| `PROMOTION_BUDGET_INVARIANT_FAILED` | Invariant interne coût promotion/budget rompu |
+
+### Concepts transverses
+
+| Concept | Nature |
+| --- | --- |
+| `PopulationCalculationSummary` | Synthèse annuelle/mensuelle + calendrier |
+| `CALCULATION_CONTRACT_VERSION` | `4` (H2D-2 — minimum garanti optionnel) |
+| `MINIMUM_INCREASE_CONTRACT_VERSION` | `1` |
+| `RESULT_SCHEMA_VERSION` | `3` (Lot 2B-P1 ; contrat v4 persistable — run + salariés + trajectoire mensuelle, migration `0007`) |
+| `RESULT_SCHEMA_VERSION_V2` | `2` (lecture legacy : snapshot incomplet, présenté avec message, sans recalcul) |
+| `retroactivityStartMonth` | Début de rétroactivité 1–12 (défaut 1) |
+| `campaignCoveredMonthCount` | `13 − retroactivityStartMonth` |
+| `fullYearRunRate*` | Indicateurs plein effet décembre × 12 (hors calibrage) |
 | `POPULATION_CALCULATION_FAILED` | Échec atomique + `issues[]` |
 
-Éligibilité, masse auto, promotion, ancienneté, persistance des résultats et
-alertes budgétaires restent à produire dans des lots ultérieurs.
+Éligibilité, masse auto, TPA/CNSS/charges, prime historique, persistance des
+champs H2A/H2B/H2C-2 en colonnes dédiées et alertes budgétaires restent à
+produire dans des lots ultérieurs. La promotion structurée (coût, trajectoire
+mensuelle, calibrage compensatoire) est intégrée au moteur depuis les Lots
+2A-H2C-1/H2C-2, mais reste calculée en mémoire (non persistée en résultat).
+
+### Lot 2B-1 (non persisté — readiness)
+
+| Concept | Nature |
+| --- | --- |
+| `CampaignSimulationReadinessReport` | Rapport de préparation campagne |
+| `CampaignSimulationReadinessIssue` | Issue structurée (scope, code, severity) |
+| `SimulationConfigurationReadiness` | Budget / arrondi encore nécessaires |
+| `preparedEmployees` | Entrées moteur triées, sans montants |
+| `preparedReferences` | `PopulationCalculationReferences` ou null |
+| `nineBoxOrientation` | Métadonnée informative (hors calcul) |
+
+### Lot 2B-2 (non persisté — session UI)
+
+| Concept | Nature |
+| --- | --- |
+| `CampaignSimulationConfigurationDraft` | Brouillon saisi par campagne |
+| `ValidatedCampaignSimulationConfiguration` | Snapshot mémoire après validation |
+| `validatedAtSessionSequence` | Compteur de session (non temporel) |
+| `configurationFingerprint` | Empreinte stable des paramètres |
+| `sourceFingerprint` | Empreinte sources + config à la validation |
+
+### Lot 2B-3 (non persisté — exécution session)
+
+| Concept | Nature |
+| --- | --- |
+| `CampaignSimulationExecutionResult` | Vue consultable post-calcul |
+| `EmployeeSimulationResultView` | Ligne salarié + champs H2C-2B (promotion, éligibilité, trajectoire formatée) |
+| `PromotionAwareEnvelopeSummaryView` | Synthèse enveloppe (budget, promo imputée, complément, delta signé) |
+| `PaymentCalendarSummaryView` | Calendrier promo déjà payée / reste + rappel complément |
+| `SeniorityImpactSummaryView` | Incidences ancienneté hors budget |
+| `MonthlyCompensationTrajectoryView` | Mois formaté (taux, montants, statuts de paiement) |
+| `SimulationBudgetSummaryView` | Budget cible / théorique / réel / écart |
+| `SimulationPopulationSummaryView` | Compteurs et totaux population |
+| `runSequence` | Compteur local de session par campagne |
+| `CampaignSimulationExecutionState` | idle/running/success/error/stale |
+
+### Lot 2B-4A (persisté — append-only)
+
+| Concept | Nature |
+| --- | --- |
+| `compensation_simulation_runs` | Snapshot run (empreintes, budget, synthèse) |
+| `compensation_simulation_employee_results` | Lignes salariés immuables |
+| `SaveSimulationRunDto` | DTO sans BigInt JS (chaînes) |
+| `PersistedSimulationRunSummary` / `Detail` | Modèles de lecture |
+| `run_number` | Séquence durable par campagne |
+
+### Lot 2B-P1 (schema v3 — contrat v4, migration `0007`)
+
+| Concept | Nature |
+| --- | --- |
+| `compensation_simulation_employee_month_results` | Trajectoire mensuelle persistée (12 lignes/salarié) |
+| `SaveSimulationEmployeeMonthDto` | DTO mensuel (montants/fractions en chaînes) |
+| `PersistedSimulationEmployeeMonthResult` | Modèle de lecture mensuel |
+| `paymentTiming` | `outside_campaign` / `reminder` / `direct` |
+| `promotionPaymentTiming` | `outside_campaign` / `reminder` / `direct` / `not_applicable` (dérivé, sans recalcul) |
+| Colonnes contrat v4 (runs / employee_results) | Config période, enveloppe promotion-aware, ancienneté, minimum garanti, plein effet — NULL sur snapshots v1/v2 |
+| `listSimulationEmployeeMonthResults` | Port de lecture mensuelle (tri `month` 1→12) |
+
+### Lot 2B-4B (UI session save / historique)
+
+| Concept | Nature |
+| --- | --- |
+| `CampaignSimulationSaveState` | État sauvegarde session (non persisté) |
+| `buildSimulationResultIdentity` | Clé anti double-enregistrement (`campaignId` + `runSequence` + empreintes source/config) |
+| `SimulationResultViewModel` | Vue partagée courant / historique (schema v3, dégradation v1/v2) |
+| `ResultSchemaCompatibility` | `current` / `incomplete` / `incompatible` / `unknown` |
+| `simulation-history` | Page navigation Historique (lecture seule) |
+
+Voir `docs/SIMULATION_PERSISTENCE.md` et `docs/CAMPAIGN_SIMULATION.md`.
 
 ## Décisions RH
 

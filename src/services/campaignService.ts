@@ -26,6 +26,11 @@ export class CampaignService {
     return this.repository.getActiveCampaign();
   }
 
+  /** Lecture seule pour la préparation de simulation (Lot 2B-1). */
+  getCampaign(id: number): Promise<Campaign | null> {
+    return this.repository.getCampaign(id);
+  }
+
   async listFiltered(filter: CampaignListFilter): Promise<Campaign[]> {
     const campaigns = await this.repository.listCampaigns();
     if (filter === "all") return campaigns;

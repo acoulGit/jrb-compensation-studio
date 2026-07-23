@@ -51,6 +51,7 @@ button:focus-visible {
   min-height: 100vh;
   padding-left: var(--sidebar-width);
   transition: padding-left 180ms ease;
+  overflow-x: hidden;
 }
 
 .app-shell--collapsed {
@@ -268,6 +269,7 @@ button:focus-visible {
 
 .app-shell__workspace {
   min-width: 0;
+  width: 100%;
 }
 
 .top-header {
@@ -360,6 +362,13 @@ button:focus-visible {
   max-width: 1500px;
   margin: 0 auto;
   padding: 30px;
+}
+
+/* Pages Simulation / Historique : toute la largeur utile du shell (Lot 2B-UX1). */
+.main-content--fluid {
+  max-width: none;
+  margin: 0;
+  padding: 24px 28px 32px;
 }
 
 .page-header {
@@ -635,6 +644,14 @@ button:focus-visible {
   text-transform: uppercase;
 }
 
+.boot-screen__hints {
+  margin: 14px 0 0;
+  padding-left: 1.2em;
+  color: var(--gray-500);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
 .boot-screen__card--error .button {
   margin-top: 22px;
 }
@@ -779,13 +796,172 @@ button:focus-visible {
   background: #fdecec;
 }
 
+.form-feedback--warning {
+  color: #7a4a10;
+  background: var(--orange-100);
+}
+
+/* Accessibilité : texte réservé aux lecteurs d’écran. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.field--checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Lot 2B-E1 — modale centrée (export RH). */
+.app-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+.app-modal {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 32px);
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-modal__header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.app-modal__header h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+  color: var(--navy-900);
+}
+
+.app-modal__body {
+  padding: 16px 18px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-modal__password-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.app-modal__password-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--gray-200);
+}
+
 .data-table-wrap {
   overflow-x: auto;
+}
+
+.data-table-wrap--scroll-x {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.data-table--compact th,
+.data-table--compact td {
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Trajectoire mensuelle — densité maximale, scroll local uniquement si nécessaire. */
+.data-table--trajectory {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.data-table--trajectory th,
+.data-table--trajectory td {
+  padding: 6px 4px;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: normal;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.data-table--trajectory th {
+  white-space: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  hyphens: auto;
+}
+
+.data-table--trajectory td.data-table__num,
+.data-table--trajectory th.data-table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table--trajectory td.data-table__month,
+.data-table--trajectory th.data-table__month {
+  width: 3.2rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (min-width: 1280px) {
+  .simulation-drawer--max .data-table-wrap--scroll-x:has(.data-table--trajectory) {
+    overflow-x: visible;
+  }
+}
+
+@media (max-width: 1279px) {
+  .data-table--trajectory {
+    table-layout: auto;
+    min-width: 980px;
+  }
 }
 
 .data-table th,
@@ -915,6 +1091,132 @@ button:focus-visible {
 
 .references-completeness {
   padding: 8px 22px 22px;
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 24px;
+  margin: 16px 0 0;
+}
+
+.detail-list dt {
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.detail-list dd {
+  margin: 2px 0 0;
+  color: var(--gray-800);
+  font-size: 14px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.muted {
+  color: var(--gray-500);
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--brand-700, #1a4d7c);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.simulation-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 12px clamp(8px, 2vw, 24px);
+}
+
+.simulation-drawer {
+  width: min(440px, 100%);
+  height: 100%;
+  max-height: calc(100vh - 24px);
+  margin: auto 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.simulation-drawer--wide {
+  width: min(960px, 100%);
+}
+
+/* Lot 2B-UX1 — détail salarié quasi plein écran (~94 % de la largeur utile). */
+.simulation-drawer--max {
+  width: min(96vw, 100%);
+  max-width: none;
+  height: calc(100vh - 24px);
+  max-height: calc(100vh - 24px);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18);
+}
+
+.simulation-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--gray-200);
+  flex: 0 0 auto;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.simulation-drawer__header h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.simulation-drawer__body {
+  padding: 16px 18px 24px;
+  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .simulation-drawer-backdrop {
+    padding: 0;
+    justify-content: flex-end;
+  }
+
+  .simulation-drawer--max {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
 }
 
 .references-completeness ul {

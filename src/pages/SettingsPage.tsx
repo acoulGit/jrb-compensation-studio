@@ -4,6 +4,8 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import type { OrganizationProfileInput } from "../infrastructure/database/types";
 import { pageDefinitions } from "./pageDefinitions";
+import { changeLocalPassword, lockLocalAccess, activateOfflineLicense, getLocalAccessStatus } from "../application/localAccess";
+import type { LocalAccessStatusDto } from "../application/localAccess";
 
 function toFormValues(
   organization: OrganizationProfileInput,
@@ -161,6 +163,247 @@ export function SettingsPage() {
           </div>
         </form>
       </SectionCard>
+      <SecuritySection />
+      <LicenseSection />
     </>
+  );
+}
+
+function SecuritySection() {
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirmation, setNewPasswordConfirmation] = useState("");
+  const [changing, setChanging] = useState(false);
+  const [changeSuccess, setChangeSuccess] = useState<string | null>(null);
+  const [changeError, setChangeError] = useState<string | null>(null);
+
+  const [locking, setLocking] = useState(false);
+  const [lockError, setLockError] = useState<string | null>(null);
+
+  async function handleChangePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (changing) return;
+    setChanging(true);
+    setChangeSuccess(null);
+    setChangeError(null);
+
+    const outcome = await changeLocalPassword({
+      oldPassword,
+      newPassword,
+      newPasswordConfirmation,
+    });
+    setOldPassword("");
+    setNewPassword("");
+    setNewPasswordConfirmation("");
+    setChanging(false);
+
+    if (!outcome.ok) {
+      setChangeError(outcome.message);
+      return;
+    }
+    setChangeSuccess("Le mot de passe a été modifié.");
+  }
+
+  async function handleLock() {
+    if (locking) return;
+    setLocking(true);
+    setLockError(null);
+
+    const outcome = await lockLocalAccess();
+    setLocking(false);
+
+    if (!outcome.ok) {
+      setLockError(outcome.message);
+    }
+  }
+
+  return (
+    <SectionCard
+      title="Sécurité"
+      description="Le mot de passe local protège l’accès à l’application sur ce poste. Il n’est jamais transmis en dehors de cet ordinateur."
+    >
+      <form className="form-grid" onSubmit={handleChangePassword} noValidate>
+        <label className="field field--full">
+          <span>Ancien mot de passe</span>
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={oldPassword}
+            onChange={(event) => setOldPassword(event.target.value)}
+            required
+          />
+        </label>
+        <label className="field">
+          <span>Nouveau mot de passe</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            minLength={8}
+            maxLength={128}
+            required
+          />
+        </label>
+        <label className="field">
+          <span>Confirmer le nouveau mot de passe</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={newPasswordConfirmation}
+            onChange={(event) => setNewPasswordConfirmation(event.target.value)}
+            minLength={8}
+            maxLength={128}
+            required
+          />
+        </label>
+
+        {changeSuccess && (
+          <p className="form-feedback form-feedback--success field--full" role="status">
+            {changeSuccess}
+          </p>
+        )}
+        {changeError && (
+          <p className="form-feedback form-feedback--error field--full" role="alert">
+            {changeError}
+          </p>
+        )}
+
+        <div className="form-actions field--full">
+          <button type="submit" className="button button--primary" disabled={changing}>
+            {changing ? "Modification…" : "Modifier le mot de passe"}
+          </button>
+        </div>
+      </form>
+
+      <div className="form-actions" style={{ marginTop: 8 }}>
+        {lockError && (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {lockError}
+          </p>
+        )}
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={() => void handleLock()}
+          disabled={locking}
+        >
+          {locking ? "Verrouillage…" : "Verrouiller l’application"}
+        </button>
+      </div>
+    </SectionCard>
+  );
+}
+
+function formatValidUntil(value: string | null): string {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("fr-FR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function LicenseSection() {
+  const [status, setStatus] = useState<LocalAccessStatusDto | null>(null);
+  const [licenseCode, setLicenseCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  async function refreshStatus() {
+    try {
+      setStatus(await getLocalAccessStatus());
+    } catch {
+      setStatus(null);
+    }
+  }
+
+  useEffect(() => {
+    void refreshStatus();
+  }, []);
+
+  async function handleRenew(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    const outcome = await activateOfflineLicense({ licenseCode });
+    setLicenseCode("");
+    setSubmitting(false);
+    if (!outcome.ok) {
+      setErrorMessage(outcome.message);
+      return;
+    }
+    setSuccessMessage(
+      `Licence renouvelée. Le droit d’utilisation est prolongé jusqu’au ${formatValidUntil(
+        outcome.activation.newValidUntil,
+      )}.`,
+    );
+    await refreshStatus();
+  }
+
+  return (
+    <SectionCard
+      title="Licence d’utilisation"
+      description="Renouvelez le droit d’utilisation avec un code signé fourni par JRB XSolutions. Aucune connexion Internet n’est requise."
+    >
+      <div className="form-grid">
+        <p className="field field--full">
+          Identifiant d’installation :{" "}
+          <strong>{status?.installationId ?? "—"}</strong>
+        </p>
+        <p className="field field--full">
+          Droit valide jusqu’au {formatValidUntil(status?.currentValidUntil ?? null)}.
+        </p>
+        {typeof status?.remainingDays === "number" && (
+          <p className="field field--full">
+            {status.remainingDays === 1
+              ? "1 jour restant."
+              : `${status.remainingDays} jours restants.`}
+          </p>
+        )}
+        {status?.lastLicenseId && (
+          <p className="field field--full">
+            Dernière licence activée : <strong>{status.lastLicenseId}</strong>
+            {status.lastLicenseActivatedAt
+              ? ` (${formatValidUntil(status.lastLicenseActivatedAt)})`
+              : ""}
+          </p>
+        )}
+      </div>
+
+      <form className="form-grid" onSubmit={handleRenew} noValidate>
+        <label className="field field--full">
+          <span>Code de licence</span>
+          <textarea
+            rows={3}
+            value={licenseCode}
+            onChange={(event) => setLicenseCode(event.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            required
+          />
+        </label>
+        {successMessage && (
+          <p className="form-feedback form-feedback--success field--full" role="status">
+            {successMessage}
+          </p>
+        )}
+        {errorMessage && (
+          <p className="form-feedback form-feedback--error field--full" role="alert">
+            {errorMessage}
+          </p>
+        )}
+        <div className="form-actions field--full">
+          <button type="submit" className="button button--primary" disabled={submitting}>
+            {submitting ? "Renouvellement…" : "Renouveler la licence"}
+          </button>
+        </div>
+      </form>
+    </SectionCard>
   );
 }

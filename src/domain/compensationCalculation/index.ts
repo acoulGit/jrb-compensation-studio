@@ -18,7 +18,134 @@ export {
   buildAllocationWeight,
   calculatePreparedEmployeeCompensation,
 } from "./calculatePreparedEmployeeCompensation";
+export {
+  ANNUAL_BUDGET_PERIOD_MONTHS,
+  CALCULATION_CONTRACT_VERSION,
+  CALCULATION_CONTRACT_VERSION_V7,
+  EMPLOYER_CHARGES_INCLUDED,
+  FULL_YEAR_MONTH_COUNT,
+  RESULT_SCHEMA_VERSION,
+  RESULT_SCHEMA_VERSION_V5,
+  RESULT_SCHEMA_VERSION_V4,
+  RESULT_SCHEMA_VERSION_V3,
+  RESULT_SCHEMA_VERSION_V2,
+  RESULT_SCHEMA_VERSION_LEGACY,
+} from "./calculationContract";
+export {
+  NINE_BOX_TREATMENT_LABELS,
+  formatNineBoxTreatmentLabel,
+  resolveNineBoxTreatmentKind,
+  type NineBoxTreatmentKind,
+} from "./nineBoxTreatment";
 export { calculatePreparedPopulationCompensation } from "./calculatePreparedPopulationCompensation";
+export {
+  CAMPAIGN_YEAR_MAX,
+  CAMPAIGN_YEAR_MIN,
+  TECHNICAL_APPLICATION_MONTH_LABELS_FR,
+  TECHNICAL_APPLICATION_MONTH_MAX,
+  TECHNICAL_APPLICATION_MONTH_MIN,
+  computeBaseSalaryReminderBreakdown,
+  technicalApplicationMonthLabelFr,
+  validateApplicationCalendar,
+  validateCampaignYear,
+  validateTechnicalApplicationMonth,
+  type ApplicationCalendarInput,
+  type BaseSalaryReminderBreakdown,
+} from "./baseSalaryReminder";
+export {
+  computeCampaignPeriodBreakdown,
+  computePromotionBudgetStartMonth,
+  computePromotionCampaignPeriodMonthCount,
+  isMonthCoveredByMinimumGuarantee,
+  isMonthInCampaignPeriod,
+  validateCampaignPeriod,
+  validateRetroactivityStartMonth,
+  type CampaignPeriodBreakdown,
+  type CampaignPeriodInput,
+} from "./campaignPeriod";
+export {
+  SENIORITY_IMPACT_CONTRACT_VERSION,
+  anniversaryEffectYearMonth,
+  ceilFcfaPercentOfAmount,
+  computeSeniorityImpactBreakdown,
+  effectiveAnniversaryCountAt,
+  parseHireDateIso,
+  seniorityRatePercentAt,
+  seniorityRatePercentFromEffectiveAnniversaryCount,
+  validateHireDateForCampaign,
+  type MonthlySeniorityImpactEntry,
+  type ParsedHireDate,
+  type SeniorityImpactBreakdown,
+  type SeniorityPaymentTiming,
+} from "./seniorityImpact";
+export {
+  PROMOTION_TRAJECTORY_CONTRACT_VERSION,
+  PromotionValidationError,
+  buildPromotionAwareMonthlySalaryTrajectory,
+  buildPromotionEvent,
+  parsePromotionDateIso,
+  promotionRateFromAmounts,
+  validatePromotionAgainstDecemberSnapshot,
+  type MonthlySalaryTrajectoryEntry,
+  type PromotionAwareTrajectoryResult,
+  type PromotionCampaignCostPreview,
+  type PromotionEvent,
+  type PromotionInclusionStatus,
+} from "./promotionTrajectory";
+export {
+  PROMOTION_BUDGET_EMPLOYMENT_STATUSES,
+  PROMOTION_BUDGET_POPULATION_STATUSES,
+  isPromotionBudgetPopulationEmployee,
+  type PromotionBudgetEmploymentStatus,
+} from "./promotionBudgetPopulation";
+export {
+  COMPENSATORY_ELIGIBLE_CONTRACT_TYPES,
+  COMPENSATORY_MEASURE_ELIGIBILITY_CONTRACT_VERSION,
+  hasMinimumSeniorityAtDecemberNMinus1,
+  isCompensatoryMeasureEligible,
+  type CompensatoryEligibleContractType,
+  type CompensatoryMeasureEligibilityInput,
+} from "./compensatoryMeasureEligibility";
+export {
+  MINIMUM_INCREASE_CONTRACT_VERSION,
+  MINIMUM_INCREASE_CONTRACT_VERSION_V1,
+  MINIMUM_INCREASE_ELIGIBLE_CONTRACT_TYPES,
+  MINIMUM_INCREASE_POPULATION_STATUSES,
+  isMinimumIncreasePopulationEmployee,
+  resolveMinimumIncreaseExclusionReason,
+  type MinimumIncreaseEligibleContractType,
+  type MinimumIncreaseExclusionReason,
+  type MinimumIncreasePopulationInput,
+} from "./minimumIncreasePopulation";
+export {
+  MINIMUM_INCREASE_MODES,
+  NO_MINIMUM_INCREASE_POLICY,
+  ceilFractionToConfiguredRoundingStep,
+  computeGuaranteedTotalIncreaseExact,
+  computeMinimumComplementFloorFcfa,
+  computeRequiredMinimumComplementExact,
+  minimumIncreaseRateFromPercentParts,
+  validateMinimumIncreasePolicy,
+  type MinimumIncreaseMode,
+  type MinimumIncreasePolicy,
+} from "./minimumIncrease";
+export {
+  PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION,
+  promotionAnnualBudgetCostFcfa,
+  solvePromotionAwareCompensatoryCalibrationRate,
+  sumPromotionAnnualBudgetCostFcfa,
+  type PromotionCompensatoryExposure,
+} from "./promotionCompensatoryCalibration";
+export {
+  PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION,
+  buildEmployeePromotionAwareExposures,
+  finalizeEmployeePromotionAwareCompensation,
+  type BuildEmployeePromotionAwareExposuresInput,
+  type EmployeeMonthlyExposureContext,
+  type EmployeePromotionAwareExposureResult,
+  type FinalizeEmployeePromotionAwareCompensationInput,
+  type FinalizeEmployeePromotionAwareCompensationResult,
+} from "./promotionAwareEmployeeCompensation";
 export { calculatePopulationBudgetAllocation } from "./calculatePopulationBudgetAllocation";
 export {
   CompensationCalculationError,
@@ -80,6 +207,7 @@ export {
   type AllocationBasis,
   type EmployeeCompensationCalculationResult,
   type EmployeeS0Resolution,
+  type MonthlyCompensationTrajectoryEntry,
   type PopulationCalculationIssue,
   type PopulationCalculationReferences,
   type PopulationCalculationSummary,
