@@ -1,13 +1,37 @@
+import { useEffect, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { useAppData } from "../app/AppDataProvider";
+import { APP_PUBLISHER, APP_VERSION } from "../app/appVersion";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { pageDefinitions } from "./pageDefinitions";
 
+async function resolveDisplayedAppVersion(): Promise<string> {
+  try {
+    return await getVersion();
+  } catch {
+    return APP_VERSION;
+  }
+}
+
 export function AboutPage() {
   const { organization } = useAppData();
   const definition = pageDefinitions.about;
+  const [appVersion, setAppVersion] = useState<string>(APP_VERSION);
+
+  useEffect(() => {
+    let cancelled = false;
+    void resolveDisplayedAppVersion().then((version) => {
+      if (!cancelled) {
+        setAppVersion(version);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <>
@@ -16,7 +40,11 @@ export function AboutPage() {
         <dl className="about-details">
           <div>
             <dt>Version</dt>
-            <dd>0.1.0</dd>
+            <dd data-testid="about-version">{appVersion}</dd>
+          </div>
+          <div>
+            <dt>Éditeur</dt>
+            <dd data-testid="about-publisher">{APP_PUBLISHER}</dd>
           </div>
           <div>
             <dt>Organisation</dt>

@@ -82,6 +82,19 @@ describe("socle applicatif", () => {
     );
   });
 
+  it("affiche la version applicative et l’éditeur sur À propos", async () => {
+    const { user } = await renderApp();
+
+    await user.click(screen.getByRole("button", { name: "À propos" }));
+    expect(screen.getByTestId("about-version")).toHaveTextContent(
+      "0.9.1-prerecette.1",
+    );
+    expect(screen.getByTestId("about-publisher")).toHaveTextContent(
+      "JRB XSolutions",
+    );
+    expect(screen.queryByText("0.1.0")).not.toBeInTheDocument();
+  });
+
   it("affiche les garanties de confidentialité", async () => {
     const { user } = await renderApp();
 
