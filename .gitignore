@@ -45,5 +45,14 @@ coverage
 .env.*
 !.env.example
 
+# Lot 2B-RC1-SEC1-B — clés privées de signature de licence (jamais commitées).
+# La clé PUBLIQUE embarquée (src-tauri/license/license_public_key.b64) n'est
+# volontairement PAS ignorée : elle ne contient aucun secret.
+*.private-key
+*.secret-key
+signing-key*
+private-key*
+*.pem
+
 # Fichiers temporaires Microsoft Office
 ~$*

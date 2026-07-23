@@ -14,6 +14,9 @@ pub const CODE_ALREADY_SET_UP: &str = "ALREADY_SET_UP";
 pub const CODE_NOT_SET_UP: &str = "NOT_SET_UP";
 pub const CODE_INVALID_ACCESS_WINDOW: &str = "INVALID_ACCESS_WINDOW";
 pub const CODE_DATABASE: &str = "DATABASE";
+// Lot 2B-RC1-SEC1-B — activation de licence hors ligne.
+pub const CODE_LICENSE_INSTALLATION_MISMATCH: &str = "LICENSE_INSTALLATION_MISMATCH";
+pub const CODE_LICENSE_ALREADY_USED: &str = "LICENSE_ALREADY_USED";
 
 pub const MSG_SESSION_LOCKED: &str =
     "L’application est verrouillée. Veuillez saisir votre mot de passe.";
@@ -27,6 +30,9 @@ const MSG_INVALID_CREDENTIALS: &str = "Mot de passe incorrect.";
 const MSG_ALREADY_SET_UP: &str = "L’accès local est déjà configuré sur ce poste.";
 const MSG_NOT_SET_UP: &str = "L’accès local n’est pas encore configuré sur ce poste.";
 const MSG_DATABASE_GENERIC: &str = "L’opération sur l’accès local a échoué.";
+const MSG_LICENSE_INSTALLATION_MISMATCH: &str =
+    "Ce code de licence ne correspond pas à cette installation.";
+const MSG_LICENSE_ALREADY_USED: &str = "Ce code de licence a déjà été utilisé.";
 
 /// Erreurs internes au module. `user_message()` ne renvoie jamais de secret ni
 /// de détail SQL — seul `code()` (stable) doit être journalisé côté diagnostic.
@@ -41,6 +47,11 @@ pub enum LocalAccessError {
     NotSetUp,
     InvalidAccessWindow,
     Database(String),
+    /// Code de licence invalide (format, signature, version, durée…) —
+    /// message stable déjà en français, fourni par `jrb-license-core`.
+    License(jrb_license_core::LicenseCoreError),
+    LicenseInstallationMismatch,
+    LicenseAlreadyUsed,
 }
 
 impl LocalAccessError {
@@ -55,6 +66,9 @@ impl LocalAccessError {
             Self::NotSetUp => CODE_NOT_SET_UP,
             Self::InvalidAccessWindow => CODE_INVALID_ACCESS_WINDOW,
             Self::Database(_) => CODE_DATABASE,
+            Self::License(error) => error.code().as_str(),
+            Self::LicenseInstallationMismatch => CODE_LICENSE_INSTALLATION_MISMATCH,
+            Self::LicenseAlreadyUsed => CODE_LICENSE_ALREADY_USED,
         }
     }
 
@@ -69,6 +83,9 @@ impl LocalAccessError {
             Self::NotSetUp => MSG_NOT_SET_UP.to_string(),
             Self::InvalidAccessWindow => MSG_INVALID_ACCESS_WINDOW.to_string(),
             Self::Database(_) => MSG_DATABASE_GENERIC.to_string(),
+            Self::License(error) => error.user_message().to_string(),
+            Self::LicenseInstallationMismatch => MSG_LICENSE_INSTALLATION_MISMATCH.to_string(),
+            Self::LicenseAlreadyUsed => MSG_LICENSE_ALREADY_USED.to_string(),
         }
     }
 }
@@ -88,6 +105,12 @@ impl From<SqliteLocalError> for LocalAccessError {
 impl From<sqlx::Error> for LocalAccessError {
     fn from(value: sqlx::Error) -> Self {
         Self::Database(value.to_string())
+    }
+}
+
+impl From<jrb_license_core::LicenseCoreError> for LocalAccessError {
+    fn from(value: jrb_license_core::LicenseCoreError) -> Self {
+        Self::License(value)
     }
 }
 

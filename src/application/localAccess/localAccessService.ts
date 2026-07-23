@@ -1,14 +1,17 @@
 /**
- * Invocation des commandes Tauri d’accès local (Lot 2B-RC1-SEC1-A).
+ * Invocation des commandes Tauri d’accès local (Lots SEC1-A / SEC1-B).
  *
- * Aucun mot de passe n’est journalisé. Les erreurs renvoyées par le backend
- * sont déjà des messages en français prêts à afficher (jamais de secret ni de
- * détail technique).
+ * Aucun mot de passe ni code de licence n’est journalisé. Les erreurs
+ * renvoyées par le backend sont déjà des messages en français prêts à
+ * afficher (jamais de secret ni de détail cryptographique).
  */
 
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  ActivateOfflineLicenseInput,
   ChangeLocalPasswordInput,
+  LicenseActivationDto,
+  LicenseActivationOutcome,
   LocalAccessOutcome,
   LocalAccessStatusDto,
   LocalAccessVoidOutcome,
@@ -65,6 +68,19 @@ export async function lockLocalAccess(): Promise<LocalAccessVoidOutcome> {
   try {
     await invoke<void>("lock_local_access");
     return { ok: true };
+  } catch (error) {
+    return { ok: false, message: extractMessage(error) };
+  }
+}
+
+export async function activateOfflineLicense(
+  input: ActivateOfflineLicenseInput,
+): Promise<LicenseActivationOutcome> {
+  try {
+    const activation = await invoke<LicenseActivationDto>("activate_offline_license", {
+      input,
+    });
+    return { ok: true, activation };
   } catch (error) {
     return { ok: false, message: extractMessage(error) };
   }

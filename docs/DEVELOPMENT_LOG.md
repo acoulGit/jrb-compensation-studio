@@ -1356,3 +1356,25 @@ Le groupe `allow-local-access` accordait `setup_local_access` (et `unlock`)
 
 - `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
 - Aucun commit ; même branche SEC1.
+
+## 2026-07-23 — Lot 2B-RC1-SEC1-B : licence hors ligne signée
+
+### Objectif
+
+Activation et renouvellement par code Ed25519 lié à l’`installationId`,
+générateur séparé hors bundle, migration `0011_license_activations`.
+
+### Choix
+
+- Crate `crates/jrb-license-core` (format `JRB1.…`, vérification, sans secret).
+- Outil `tools/license-generator` (`keygen` / `issue` / `inspect`).
+- Commande `activate_offline_license` : access (expiré / anomalie) sans ouvrir
+  `main` ; main (session déverrouillée) pour renouvellement anticipé.
+- `base_date = max(current_valid_until, now)` + mois civils SEC1-A.
+- Activation valide lève `clock_anomaly_detected`.
+- Clé publique embarquée ; clé privée hors dépôt uniquement.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt|check|test` (app + générateur)
+- Aucun commit ; branche `feature/lot-2b-rc1-sec1b-offline-license`.

@@ -14,10 +14,10 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode};
-use sqlx::{ConnectOptions, Row, SqliteConnection};
+use sqlx::{ConnectOptions, Row, Sqlite, SqliteConnection, Transaction};
 use tauri::AppHandle;
 
-use crate::persistence::MIGRATION_0010_SQL;
+use crate::persistence::{MIGRATION_0010_SQL, MIGRATION_0011_SQL};
 use crate::sqlite_local::{resolve_app_database_path, sqlite_url_from_path};
 
 use super::error::LocalAccessError;
@@ -62,6 +62,16 @@ async fn open_create_if_missing(url: &str) -> Result<SqliteConnection, LocalAcce
 
 async fn ensure_schema(conn: &mut SqliteConnection) -> Result<(), LocalAccessError> {
     for statement in MIGRATION_0010_SQL.split(';') {
+        let trimmed = statement.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        sqlx::query(trimmed).execute(&mut *conn).await?;
+    }
+    // Lot 2B-RC1-SEC1-B — rejoue aussi la migration 0011 (`license_activations`)
+    // de façon idempotente, pour les mêmes raisons que la migration 0010 (la
+    // fenêtre `access` ne précharge jamais la base via le plugin SQL).
+    for statement in MIGRATION_0011_SQL.split(';') {
         let trimmed = statement.trim();
         if trimmed.is_empty() {
             continue;
@@ -173,6 +183,133 @@ pub async fn update_clock_observation(
     .execute(&mut *conn)
     .await?;
     Ok(())
+}
+
+/// Met à jour la période de validité et lève toute anomalie d’horloge après
+/// une activation de licence réussie, sans jamais toucher `password_hash`,
+/// `installation_id` ni `initial_valid_until`. `last_observed_at` ne recule
+/// jamais : il est porté au maximum de la valeur persistée et de `now_text`.
+pub async fn update_validity_after_license_activation(
+    tx: &mut Transaction<'_, Sqlite>,
+    new_current_valid_until: &str,
+    now_text: &str,
+) -> Result<(), LocalAccessError> {
+    let updated = sqlx::query(
+        r#"
+        UPDATE local_access_state
+        SET current_valid_until = ?1,
+            last_observed_at = CASE
+                WHEN ?2 > last_observed_at THEN ?2
+                ELSE last_observed_at
+            END,
+            clock_anomaly_detected = 0,
+            updated_at = ?2
+        WHERE singleton_id = 1
+        "#,
+    )
+    .bind(new_current_valid_until)
+    .bind(now_text)
+    .execute(&mut **tx)
+    .await?;
+    if updated.rows_affected() != 1 {
+        return Err(LocalAccessError::Database(
+            "update_validity_after_license_activation: rows_affected != 1".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Ligne d’historique d’une activation de licence (`license_activations`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LicenseActivationRow {
+    pub license_id: String,
+    pub installation_id: String,
+    pub payload_json: String,
+    pub payload_sha256: String,
+    pub duration_months: u32,
+    pub customer: Option<String>,
+    pub issued_at: String,
+    pub previous_valid_until: String,
+    pub new_valid_until: String,
+    pub activated_at: String,
+}
+
+/// Insère une ligne d’historique d’activation. Échoue si `license_id` existe
+/// déjà (contrainte `UNIQUE`) — l’appelant doit avoir vérifié au préalable via
+/// [`license_id_exists`] pour renvoyer un message métier clair.
+pub async fn insert_license_activation(
+    tx: &mut Transaction<'_, Sqlite>,
+    row: &LicenseActivationRow,
+    created_at: &str,
+) -> Result<(), LocalAccessError> {
+    sqlx::query(
+        r#"
+        INSERT INTO license_activations (
+            license_id, installation_id, payload_json, payload_sha256,
+            activated_at, issued_at, duration_months, previous_valid_until,
+            new_valid_until, customer, created_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+        "#,
+    )
+    .bind(&row.license_id)
+    .bind(&row.installation_id)
+    .bind(&row.payload_json)
+    .bind(&row.payload_sha256)
+    .bind(&row.activated_at)
+    .bind(&row.issued_at)
+    .bind(row.duration_months as i64)
+    .bind(&row.previous_valid_until)
+    .bind(&row.new_valid_until)
+    .bind(&row.customer)
+    .bind(created_at)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+/// `true` si une activation porte déjà cet identifiant de licence (rejeu d’un
+/// même code de licence, y compris depuis une autre installation).
+pub async fn license_id_exists(
+    conn: &mut SqliteConnection,
+    license_id: &str,
+) -> Result<bool, LocalAccessError> {
+    let row = sqlx::query("SELECT 1 FROM license_activations WHERE license_id = ?1 LIMIT 1")
+        .bind(license_id)
+        .fetch_optional(&mut *conn)
+        .await?;
+    Ok(row.is_some())
+}
+
+/// La dernière activation enregistrée (la plus récente par `id`), utilisée
+/// pour l’affichage diagnostic (statut) — jamais de secret dans cette ligne.
+pub async fn fetch_latest_activation(
+    conn: &mut SqliteConnection,
+) -> Result<Option<LicenseActivationRow>, LocalAccessError> {
+    let row = sqlx::query(
+        r#"
+        SELECT license_id, installation_id, payload_json, payload_sha256,
+               duration_months, customer, issued_at,
+               previous_valid_until, new_valid_until, activated_at
+        FROM license_activations
+        ORDER BY id DESC
+        LIMIT 1
+        "#,
+    )
+    .fetch_optional(&mut *conn)
+    .await?;
+
+    Ok(row.map(|row| LicenseActivationRow {
+        license_id: row.get("license_id"),
+        installation_id: row.get("installation_id"),
+        payload_json: row.get("payload_json"),
+        payload_sha256: row.get("payload_sha256"),
+        duration_months: row.get::<i64, _>("duration_months") as u32,
+        customer: row.get("customer"),
+        issued_at: row.get("issued_at"),
+        previous_valid_until: row.get("previous_valid_until"),
+        new_valid_until: row.get("new_valid_until"),
+        activated_at: row.get("activated_at"),
+    }))
 }
 
 #[cfg(test)]

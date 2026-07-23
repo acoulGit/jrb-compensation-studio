@@ -1,9 +1,11 @@
-//! Accès local : mot de passe + période initiale (Lot 2B-RC1-SEC1-A).
+//! Accès local : mot de passe + période initiale + licence (Lots
+//! 2B-RC1-SEC1-A et 2B-RC1-SEC1-B).
 //!
 //! Ce module gère :
 //! - le verrouillage applicatif local (mot de passe Argon2id, session en mémoire) ;
-//! - la période de validité initiale (10 mois civils depuis l’installation),
-//!   avant activation d’une licence (Lot 2B-RC1-SEC1-B, hors périmètre ici) ;
+//! - la période de validité initiale (10 mois civils depuis l’installation) ;
+//! - l’activation d’une licence hors ligne (`license.rs`), qui prolonge la
+//!   période de validité au-delà de la période initiale ;
 //! - la détection d’anomalie d’horloge système (recul de plus de 24h).
 //!
 //! Toute commande métier existante doit appeler [`require_unlocked_and_licensed`]
@@ -16,11 +18,15 @@ mod calendar;
 // `#[tauri::command]` ne survivent pas à un ré-export via `pub use`).
 pub(crate) mod commands;
 mod error;
+// Lot 2B-RC1-SEC1-B — activation de licence hors ligne.
+mod license;
 mod password;
 mod state;
 mod store;
 mod windows;
 
+#[cfg(test)]
+mod license_tests;
 #[cfg(test)]
 mod tests;
 

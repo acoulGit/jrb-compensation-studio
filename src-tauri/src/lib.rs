@@ -72,6 +72,12 @@ pub fn run() {
             sql: persistence::MIGRATION_0010_SQL,
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: persistence::MIGRATION_0011_VERSION,
+            description: persistence::MIGRATION_0011_DESCRIPTION,
+            sql: persistence::MIGRATION_0011_SQL,
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -88,6 +94,7 @@ pub fn run() {
             local_access::commands::unlock_local_access,
             local_access::commands::change_local_password,
             local_access::commands::lock_local_access,
+            local_access::commands::activate_offline_license,
             hr_import::replace_current_population,
             campaign_write::archive_campaign,
             campaign_write::restore_campaign,

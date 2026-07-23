@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-activate-offline-license"
+description = "Autorise l’activation d’un code de licence hors ligne — fenêtre access (période expirée ou anomalie d’horloge) ou fenêtre main (session déverrouillée)."
+commands.allow = ["activate_offline_license"]

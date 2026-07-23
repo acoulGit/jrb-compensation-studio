@@ -25,6 +25,9 @@ const STATUS: LocalAccessStatusDto = {
   initialValidUntil: "2027-05-01T00:00:00Z",
   currentValidUntil: "2027-05-01T00:00:00Z",
   remainingDays: 120,
+  canActivateLicense: true,
+  lastLicenseId: null,
+  lastLicenseActivatedAt: null,
 };
 
 beforeEach(() => {
@@ -133,5 +136,35 @@ describe("lockLocalAccess", () => {
     invokeMock.mockRejectedValueOnce(new Error("échec inattendu"));
     const outcome = await lockLocalAccess();
     expect(outcome).toEqual({ ok: false, message: "échec inattendu" });
+  });
+});
+
+describe("activateOfflineLicense", () => {
+  it("transmet le code et renvoie l’activation", async () => {
+    const activation = {
+      licenseId: "LIC-20260723-AABBCCDD",
+      durationMonths: 12,
+      previousValidUntil: "2027-01-01T00:00:00Z",
+      newValidUntil: "2028-01-01T00:00:00Z",
+      customer: "Client A",
+      activatedAt: "2026-07-23T12:00:00Z",
+    };
+    invokeMock.mockResolvedValueOnce(activation);
+    const { activateOfflineLicense } = await import("../application/localAccess");
+    const outcome = await activateOfflineLicense({ licenseCode: "JRB1.aaa.bbb" });
+    expect(invokeMock).toHaveBeenCalledWith("activate_offline_license", {
+      input: { licenseCode: "JRB1.aaa.bbb" },
+    });
+    expect(outcome).toEqual({ ok: true, activation });
+  });
+
+  it("renvoie une erreur française sans détail cryptographique", async () => {
+    invokeMock.mockRejectedValueOnce("La signature du code de licence est invalide.");
+    const { activateOfflineLicense } = await import("../application/localAccess");
+    const outcome = await activateOfflineLicense({ licenseCode: "mauvais" });
+    expect(outcome).toEqual({
+      ok: false,
+      message: "La signature du code de licence est invalide.",
+    });
   });
 });

@@ -388,6 +388,7 @@ idempotente avant toute lecture/écriture — voir `docs/LOCAL_ACCESS_SECURITY.m
 | 8 | `0008_nine_box_neutralization.sql` | import + snapshot schema v4 (contrat v5) — neutralisation 9-Box |
 | 9 | `0009_nine_box_confirmation_factor.sql` | référentiel + snapshot schema v5 (contrat v6) — coefficient provisoire 9-Box |
 | 10 | `0010_local_access_state.sql` | `local_access_state` (accès local : mot de passe + période initiale) |
+| 11 | `0011_license_activations.sql` | `license_activations` (historique des licences hors ligne) |
 
 ### Neutralisation 9-Box (migration `0008`, schema v4 / contrat v5)
 
@@ -421,7 +422,7 @@ Lot H1 est remplacé par un coefficient provisoire paramétrable).
   valeur historique `nine_box_effect_neutralized` reste acceptée pour les
   snapshots v4.
 
-Évolution : ajouter un fichier `0011_....sql`, une constante associée et une
+Évolution : ajouter un fichier `0012_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.
 
 ### Accès local (migration `0010`, Lot 2B-RC1-SEC1-A)
@@ -437,8 +438,20 @@ singleton (`singleton_id = 1`, une seule ligne possible) :
 - `clock_anomaly_detected` INTEGER (0/1) — anomalie sticky (jamais réinitialisée
   automatiquement).
 
-`license_activations` sera ajoutée en Lot 2B-RC1-SEC1-B (activation de
-licence, hors périmètre de ce lot).
+`license_activations` est ajoutée en Lot 2B-RC1-SEC1-B (migration `0011`) :
+historique transactionnel des activations (`license_id` unique, `payload_json`,
+`payload_sha256`, durée 1–120 mois, dates de validité avant/après).
+
+### Licences hors ligne (migration `0011`, Lot 2B-RC1-SEC1-B)
+
+Table `license_activations` : une ligne par code activé. Aucune clé privée.
+Champs : `license_id` UNIQUE, `installation_id`, `payload_json`,
+`payload_sha256`, `activated_at`, `issued_at`, `duration_months` (1–120),
+`previous_valid_until`, `new_valid_until`, `customer` NULL, `created_at`.
+Voir `docs/OFFLINE_LICENSES.md`.
+
+Évolution : ajouter un fichier `0012_....sql`, une constante associée et une
+entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.
 
 ## Export Excel RH et mot de passe (Lot 2B-E1)
 

@@ -36,6 +36,9 @@ rand = "0.9"
 argon2 = "0.5"
 password-hash = { version = "0.5", features = ["getrandom"] }
 time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
+# LOT 2B-RC1-SEC1-B — activation de licence hors ligne (vérification Ed25519).
+jrb-license-core = { path = "../crates/jrb-license-core" }
+ed25519-dalek = "2"
 
 [dev-dependencies]
 tempfile = "3"

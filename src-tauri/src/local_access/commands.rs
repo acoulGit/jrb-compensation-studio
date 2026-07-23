@@ -19,9 +19,10 @@ use crate::sqlite_local::close_connection;
 use super::calendar;
 use super::error::LocalAccessError;
 use super::evaluate_and_persist_clock;
+use super::license::{self, LicenseActivationDto};
 use super::password;
 use super::state::AccessSessionState;
-use super::store::{self, LocalAccessStateRow};
+use super::store::{self, LicenseActivationRow, LocalAccessStateRow};
 use super::windows;
 use super::windows::{ACCESS_WINDOW_LABEL, MAIN_WINDOW_LABEL};
 
@@ -40,6 +41,15 @@ pub struct LocalAccessStatusDto {
     pub current_valid_until: Option<String>,
     /// Jours civils restants avant expiration (`None` si non calculable).
     pub remaining_days: Option<i64>,
+    /// `true` si une activation de licence peut être tentée dans l’état
+    /// courant : période expirée, anomalie d’horloge (fenêtre `access`), ou
+    /// session déverrouillée (renouvellement proactif depuis `main`).
+    pub can_activate_license: bool,
+    /// Identifiant de la dernière licence activée avec succès (aucun secret :
+    /// un identifiant de licence n’est pas sensible), `None` si aucune
+    /// activation n’a jamais réussi (Lot 2B-RC1-SEC1-B).
+    pub last_license_id: Option<String>,
+    pub last_license_activated_at: Option<String>,
 }
 
 impl LocalAccessStatusDto {
@@ -53,6 +63,9 @@ impl LocalAccessStatusDto {
             initial_valid_until: None,
             current_valid_until: None,
             remaining_days: None,
+            can_activate_license: false,
+            last_license_id: None,
+            last_license_activated_at: None,
         }
     }
 
@@ -61,9 +74,14 @@ impl LocalAccessStatusDto {
         is_unlocked: bool,
         is_expired: bool,
         clock_anomaly_detected: bool,
+        latest_activation: Option<&LicenseActivationRow>,
     ) -> Self {
         let remaining_days =
             calendar::remaining_days_until(calendar::now_utc(), &row.current_valid_until);
+        // Fenêtre `access` : uniquement pour sortir d’un état bloquant
+        // (expiré ou anomalie d’horloge). Fenêtre `main` : renouvellement
+        // proactif possible dès que la session est déverrouillée.
+        let can_activate_license = is_expired || clock_anomaly_detected || is_unlocked;
         Self {
             is_set_up: true,
             is_unlocked,
@@ -73,6 +91,10 @@ impl LocalAccessStatusDto {
             initial_valid_until: Some(row.initial_valid_until.clone()),
             current_valid_until: Some(row.current_valid_until.clone()),
             remaining_days,
+            can_activate_license,
+            last_license_id: latest_activation.map(|activation| activation.license_id.clone()),
+            last_license_activated_at: latest_activation
+                .map(|activation| activation.activated_at.clone()),
         }
     }
 }
@@ -92,6 +114,7 @@ pub(crate) struct StatusSnapshot {
     pub row: Option<LocalAccessStateRow>,
     pub expired: bool,
     pub clock_anomaly: bool,
+    pub latest_activation: Option<LicenseActivationRow>,
 }
 
 pub(crate) async fn load_status_on_url(
@@ -104,16 +127,19 @@ pub(crate) async fn load_status_on_url(
                 row: None,
                 expired: false,
                 clock_anomaly: false,
+                latest_activation: None,
             });
         };
         let evaluation = evaluate_and_persist_clock(&mut conn, &row).await?;
         // Relit la ligne : `evaluate_and_persist_clock` peut avoir avancé
         // `last_observed_at` (ou levé l’anomalie) depuis le `row` chargé plus haut.
         let refreshed = store::fetch_state(&mut conn).await?.unwrap_or(row);
+        let latest_activation = store::fetch_latest_activation(&mut conn).await?;
         Ok(StatusSnapshot {
             row: Some(refreshed),
             expired: evaluation.expired,
             clock_anomaly: evaluation.clock_anomaly,
+            latest_activation,
         })
     }
     .await;
@@ -137,6 +163,7 @@ pub async fn get_local_access_status(app: AppHandle) -> Result<LocalAccessStatus
             session.is_unlocked(),
             snapshot.expired,
             snapshot.clock_anomaly,
+            snapshot.latest_activation.as_ref(),
         ),
     })
 }
@@ -230,7 +257,9 @@ pub async fn setup_local_access(
     session.set_unlocked(true);
     windows::ensure_main_window(&app)?;
 
-    Ok(LocalAccessStatusDto::from_row(&row, true, false, false))
+    Ok(LocalAccessStatusDto::from_row(
+        &row, true, false, false, None,
+    ))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -309,7 +338,9 @@ pub async fn unlock_local_access(
     session.set_unlocked(true);
     windows::ensure_main_window(&app)?;
 
-    Ok(LocalAccessStatusDto::from_row(&row, true, false, false))
+    Ok(LocalAccessStatusDto::from_row(
+        &row, true, false, false, None,
+    ))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -416,4 +447,81 @@ pub fn lock_local_access(window: WebviewWindow, app: AppHandle) -> Result<(), St
         error.user_message()
     })?;
     windows::show_access_hide_main(&app)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivateOfflineLicenseInput {
+    pub license_code: String,
+}
+
+/// Variante testable de l’activation de licence : vérifie le label de fenêtre
+/// et l’état de session avant toute vérification du code de licence.
+///
+/// - `main` : autorisée uniquement si la session est déverrouillée
+///   (renouvellement proactif) ;
+/// - `access` : autorisée uniquement si la période est expirée ou qu’une
+///   anomalie d’horloge a été détectée (sortie d’un état bloquant) — jamais
+///   pour contourner un simple mot de passe oublié ;
+/// - toute autre fenêtre : refusée.
+///
+/// Ne modifie jamais la session en mémoire ni l’affichage des fenêtres : seul
+/// l’appelant (`unlock_local_access`, etc.) gère ces effets de bord.
+pub(crate) async fn activate_offline_license_for_window(
+    window_label: &str,
+    session: &AccessSessionState,
+    database_url: &str,
+    license_code: &str,
+    verifying_key: &ed25519_dalek::VerifyingKey,
+) -> Result<LicenseActivationDto, LocalAccessError> {
+    match window_label {
+        MAIN_WINDOW_LABEL => {
+            if !session.is_unlocked() {
+                return Err(LocalAccessError::SessionLocked);
+            }
+        }
+        ACCESS_WINDOW_LABEL => {
+            let evaluation = super::evaluate_license_status_on_url(database_url).await?;
+            if !(evaluation.expired || evaluation.clock_anomaly) {
+                return Err(LocalAccessError::InvalidAccessWindow);
+            }
+        }
+        _ => return Err(LocalAccessError::InvalidAccessWindow),
+    }
+
+    let now = calendar::now_utc();
+    license::activate_offline_license_on_url(database_url, license_code, verifying_key, now).await
+}
+
+/// Commande Tauri : active un code de licence hors ligne (Lot 2B-RC1-SEC1-B).
+///
+/// Ne déverrouille jamais la session et n’ouvre jamais la fenêtre `main` —
+/// contrairement à `setup_local_access` / `unlock_local_access`, l’activation
+/// seule ne donne pas accès à l’application : l’utilisateur doit ensuite
+/// (re)saisir son mot de passe depuis l’écran d’accès.
+#[tauri::command]
+pub async fn activate_offline_license(
+    window: WebviewWindow,
+    app: AppHandle,
+    input: ActivateOfflineLicenseInput,
+) -> Result<LicenseActivationDto, String> {
+    let url = store::resolve_database_url(&app).map_err(|error| error.user_message())?;
+    let session = app.state::<AccessSessionState>();
+    let verifying_key = license::embedded_verifying_key().map_err(|error| {
+        log_failure("activate_offline_license", &error);
+        error.user_message()
+    })?;
+
+    activate_offline_license_for_window(
+        window.label(),
+        &session,
+        &url,
+        &input.license_code,
+        &verifying_key,
+    )
+    .await
+    .map_err(|error| {
+        log_failure("activate_offline_license", &error);
+        error.user_message()
+    })
 }

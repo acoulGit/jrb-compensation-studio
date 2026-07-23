@@ -15,6 +15,7 @@ pub const MIGRATION_0008_SQL: &str = include_str!("../migrations/0008_nine_box_n
 pub const MIGRATION_0009_SQL: &str =
     include_str!("../migrations/0009_nine_box_confirmation_factor.sql");
 pub const MIGRATION_0010_SQL: &str = include_str!("../migrations/0010_local_access_state.sql");
+pub const MIGRATION_0011_SQL: &str = include_str!("../migrations/0011_license_activations.sql");
 
 pub const MIGRATION_0001_VERSION: i64 = 1;
 pub const MIGRATION_0001_DESCRIPTION: &str = "initial_persistence";
@@ -45,6 +46,9 @@ pub const MIGRATION_0009_DESCRIPTION: &str = "nine_box_confirmation_factor";
 
 pub const MIGRATION_0010_VERSION: i64 = 10;
 pub const MIGRATION_0010_DESCRIPTION: &str = "local_access_state";
+
+pub const MIGRATION_0011_VERSION: i64 = 11;
+pub const MIGRATION_0011_DESCRIPTION: &str = "license_activations";
 
 #[cfg(test)]
 mod tests {
@@ -188,6 +192,23 @@ mod tests {
     }
 
     #[test]
+    fn migration_0011_is_present_and_ordered_after_0010() {
+        assert_eq!(MIGRATION_0011_VERSION, 11);
+        assert_eq!(MIGRATION_0011_DESCRIPTION, "license_activations");
+        assert!(MIGRATION_0011_VERSION > MIGRATION_0010_VERSION);
+        assert!(MIGRATION_0011_SQL.contains("license_activations"));
+        assert!(MIGRATION_0011_SQL.contains("license_id"));
+        assert!(MIGRATION_0011_SQL.contains("installation_id"));
+        assert!(MIGRATION_0011_SQL.contains("duration_months"));
+        assert!(MIGRATION_0011_SQL.contains("previous_valid_until"));
+        assert!(MIGRATION_0011_SQL.contains("new_valid_until"));
+        assert!(MIGRATION_0011_SQL.contains("UNIQUE"));
+        assert!(MIGRATION_0011_SQL.contains("BETWEEN 1 AND 120"));
+        assert!(MIGRATION_0011_SQL.contains("CREATE TABLE IF NOT EXISTS"));
+        assert!(!MIGRATION_0011_SQL.contains("REAL"));
+    }
+
+    #[test]
     fn migration_config_is_valid() {
         assert!(MIGRATION_0001_VERSION > 0);
         assert!(!MIGRATION_0001_DESCRIPTION.is_empty());
@@ -219,12 +240,15 @@ mod tests {
         assert!(MIGRATION_0010_VERSION > 0);
         assert!(!MIGRATION_0010_DESCRIPTION.is_empty());
         assert!(!MIGRATION_0010_SQL.trim().is_empty());
+        assert!(MIGRATION_0011_VERSION > 0);
+        assert!(!MIGRATION_0011_DESCRIPTION.is_empty());
+        assert!(!MIGRATION_0011_SQL.trim().is_empty());
         assert!(DATABASE_URL.starts_with("sqlite:"));
         assert_eq!(DATABASE_URL, "sqlite:jrb-compensation-studio.db");
     }
 
     #[test]
-    fn migration_order_is_exactly_0001_to_0010() {
+    fn migration_order_is_exactly_0001_to_0011() {
         assert_eq!(MIGRATION_0001_VERSION, 1);
         assert_eq!(MIGRATION_0002_VERSION, 2);
         assert_eq!(MIGRATION_0003_VERSION, 3);
@@ -235,6 +259,7 @@ mod tests {
         assert_eq!(MIGRATION_0008_VERSION, 8);
         assert_eq!(MIGRATION_0009_VERSION, 9);
         assert_eq!(MIGRATION_0010_VERSION, 10);
+        assert_eq!(MIGRATION_0011_VERSION, 11);
     }
 
     #[tokio::test]

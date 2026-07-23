@@ -155,7 +155,10 @@ lecture ou écriture de mot de passe.
   changement de mot de passe et verrouillage manuel, accessibles une fois
   l’application déverrouillée.
 
-## Hors périmètre (Lot 2B-RC1-SEC1-B)
+## Hors périmètre (versions ultérieures)
 
-- Activation de licence (au-delà de la période initiale de 10 mois).
-- Table `license_activations` (non créée par la migration `0010`).
+- Rotation de clé sans nouvelle version applicative.
+- Portail d’émission en ligne (volontairement absent).
+
+Les licences hors ligne sont documentées dans `docs/OFFLINE_LICENSES.md`
+(Lot 2B-RC1-SEC1-B).

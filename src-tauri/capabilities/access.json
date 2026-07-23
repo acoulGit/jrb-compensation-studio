@@ -7,6 +7,7 @@
     "core:default",
     "allow-get-local-access-status",
     "allow-setup-local-access",
-    "allow-unlock-local-access"
+    "allow-unlock-local-access",
+    "allow-activate-offline-license"
   ]
 }

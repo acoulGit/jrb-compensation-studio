@@ -244,13 +244,19 @@ Aucune fonction produit ne nécessite le réseau. Capacités déclarées :
 
 - `capabilities/access.json` (fenêtre `access`) : `core:default`,
   `allow-get-local-access-status`, `allow-setup-local-access`,
-  `allow-unlock-local-access` — pas de `sql:*`, pas de change/lock.
+  `allow-unlock-local-access`, `allow-activate-offline-license` — pas de
+  `sql:*`, pas de change/lock.
 - `capabilities/main.json` (fenêtre `main`) : `core:default`, `sql:default`,
   `sql:allow-execute`, `allow-replace-current-population`,
   `allow-campaign-write`, `allow-save-simulation-run`,
   `allow-export-simulation-run-excel`, `allow-get-local-access-status`,
-  `allow-change-local-password`, `allow-lock-local-access`, `dialog:allow-save`.
+  `allow-change-local-password`, `allow-lock-local-access`,
+  `allow-activate-offline-license`, `dialog:allow-save`.
   Aucune permission `setup` ni `unlock`.
+
+La clé publique Ed25519 des licences est embarquée dans
+`src-tauri/license/license_public_key.b64` (voir `docs/OFFLINE_LICENSES.md`).
+Le générateur `tools/license-generator` n’est **pas** inclus dans le bundle.
 
 `dialog:allow-save` est la seule capacité de dialogue déclarée : elle ouvre le
 sélecteur natif de destination `.xlsx` pour l’export RH (aucune ouverture ni

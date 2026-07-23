@@ -1,5 +1,8 @@
 export type {
+  ActivateOfflineLicenseInput,
   ChangeLocalPasswordInput,
+  LicenseActivationDto,
+  LicenseActivationOutcome,
   LocalAccessOutcome,
   LocalAccessStatusDto,
   LocalAccessVoidOutcome,
@@ -7,6 +10,7 @@ export type {
   UnlockLocalAccessInput,
 } from "./localAccessModels";
 export {
+  activateOfflineLicense,
   changeLocalPassword,
   getLocalAccessStatus,
   lockLocalAccess,

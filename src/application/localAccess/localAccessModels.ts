@@ -1,10 +1,7 @@
 /**
- * Types partagés avec les commandes Tauri d’accès local (Lot 2B-RC1-SEC1-A).
+ * Types partagés avec les commandes Tauri d’accès local (Lots SEC1-A / SEC1-B).
  *
- * `LocalAccessStatusDto` ne contient jamais de secret (ni mot de passe, ni
- * hachage) : uniquement ce qui est nécessaire pour choisir l’écran d’accès à
- * afficher (configuration initiale, saisie du mot de passe, période expirée
- * ou anomalie d’horloge détectée).
+ * Aucun secret (mot de passe, hachage, signature, clé) n’est exposé ici.
  */
 
 export interface LocalAccessStatusDto {
@@ -17,6 +14,10 @@ export interface LocalAccessStatusDto {
   currentValidUntil: string | null;
   /** Jours restants avant expiration ; `null` si non calculable. */
   remainingDays: number | null;
+  /** True si l’écran d’activation / le renouvellement est pertinent. */
+  canActivateLicense: boolean;
+  lastLicenseId: string | null;
+  lastLicenseActivatedAt: string | null;
 }
 
 export interface SetupLocalAccessInput {
@@ -34,8 +35,25 @@ export interface ChangeLocalPasswordInput {
   newPasswordConfirmation: string;
 }
 
+export interface ActivateOfflineLicenseInput {
+  licenseCode: string;
+}
+
+export interface LicenseActivationDto {
+  licenseId: string;
+  durationMonths: number;
+  previousValidUntil: string;
+  newValidUntil: string;
+  customer: string | null;
+  activatedAt: string;
+}
+
 export type LocalAccessOutcome =
   | { ok: true; status: LocalAccessStatusDto }
   | { ok: false; message: string };
 
 export type LocalAccessVoidOutcome = { ok: true } | { ok: false; message: string };
+
+export type LicenseActivationOutcome =
+  | { ok: true; activation: LicenseActivationDto }
+  | { ok: false; message: string };
