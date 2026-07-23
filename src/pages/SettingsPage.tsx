@@ -4,6 +4,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import type { OrganizationProfileInput } from "../infrastructure/database/types";
 import { pageDefinitions } from "./pageDefinitions";
+import { changeLocalPassword, lockLocalAccess } from "../application/localAccess";
 
 function toFormValues(
   organization: OrganizationProfileInput,
@@ -161,6 +162,133 @@ export function SettingsPage() {
           </div>
         </form>
       </SectionCard>
+      <SecuritySection />
     </>
+  );
+}
+
+function SecuritySection() {
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirmation, setNewPasswordConfirmation] = useState("");
+  const [changing, setChanging] = useState(false);
+  const [changeSuccess, setChangeSuccess] = useState<string | null>(null);
+  const [changeError, setChangeError] = useState<string | null>(null);
+
+  const [locking, setLocking] = useState(false);
+  const [lockError, setLockError] = useState<string | null>(null);
+
+  async function handleChangePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (changing) return;
+    setChanging(true);
+    setChangeSuccess(null);
+    setChangeError(null);
+
+    const outcome = await changeLocalPassword({
+      oldPassword,
+      newPassword,
+      newPasswordConfirmation,
+    });
+    setOldPassword("");
+    setNewPassword("");
+    setNewPasswordConfirmation("");
+    setChanging(false);
+
+    if (!outcome.ok) {
+      setChangeError(outcome.message);
+      return;
+    }
+    setChangeSuccess("Le mot de passe a été modifié.");
+  }
+
+  async function handleLock() {
+    if (locking) return;
+    setLocking(true);
+    setLockError(null);
+
+    const outcome = await lockLocalAccess();
+    setLocking(false);
+
+    if (!outcome.ok) {
+      setLockError(outcome.message);
+    }
+  }
+
+  return (
+    <SectionCard
+      title="Sécurité"
+      description="Le mot de passe local protège l’accès à l’application sur ce poste. Il n’est jamais transmis en dehors de cet ordinateur."
+    >
+      <form className="form-grid" onSubmit={handleChangePassword} noValidate>
+        <label className="field field--full">
+          <span>Ancien mot de passe</span>
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={oldPassword}
+            onChange={(event) => setOldPassword(event.target.value)}
+            required
+          />
+        </label>
+        <label className="field">
+          <span>Nouveau mot de passe</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            minLength={8}
+            maxLength={128}
+            required
+          />
+        </label>
+        <label className="field">
+          <span>Confirmer le nouveau mot de passe</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={newPasswordConfirmation}
+            onChange={(event) => setNewPasswordConfirmation(event.target.value)}
+            minLength={8}
+            maxLength={128}
+            required
+          />
+        </label>
+
+        {changeSuccess && (
+          <p className="form-feedback form-feedback--success field--full" role="status">
+            {changeSuccess}
+          </p>
+        )}
+        {changeError && (
+          <p className="form-feedback form-feedback--error field--full" role="alert">
+            {changeError}
+          </p>
+        )}
+
+        <div className="form-actions field--full">
+          <button type="submit" className="button button--primary" disabled={changing}>
+            {changing ? "Modification…" : "Modifier le mot de passe"}
+          </button>
+        </div>
+      </form>
+
+      <div className="form-actions" style={{ marginTop: 8 }}>
+        {lockError && (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {lockError}
+          </p>
+        )}
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={() => void handleLock()}
+          disabled={locking}
+        >
+          {locking ? "Verrouillage…" : "Verrouiller l’application"}
+        </button>
+      </div>
+    </SectionCard>
   );
 }

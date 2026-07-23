@@ -317,6 +317,7 @@ pub async fn archive_campaign(
     app: AppHandle,
     input: CampaignIdInput,
 ) -> Result<CampaignDto, String> {
+    crate::local_access::require_unlocked_and_licensed(&app).await?;
     let path = resolve_app_database_path(&app).map_err(|e| e.to_string())?;
     let url = sqlite_url_from_path(&path).map_err(|e| e.to_string())?;
     archive_campaign_on_url(&url, input.campaign_id)
@@ -329,6 +330,7 @@ pub async fn restore_campaign(
     app: AppHandle,
     input: CampaignIdInput,
 ) -> Result<CampaignDto, String> {
+    crate::local_access::require_unlocked_and_licensed(&app).await?;
     let path = resolve_app_database_path(&app).map_err(|e| e.to_string())?;
     let url = sqlite_url_from_path(&path).map_err(|e| e.to_string())?;
     restore_campaign_on_url(&url, input.campaign_id)
@@ -341,6 +343,7 @@ pub async fn activate_campaign(
     app: AppHandle,
     input: CampaignIdInput,
 ) -> Result<CampaignDto, String> {
+    crate::local_access::require_unlocked_and_licensed(&app).await?;
     let path = resolve_app_database_path(&app).map_err(|e| e.to_string())?;
     let url = sqlite_url_from_path(&path).map_err(|e| e.to_string())?;
     activate_campaign_on_url(&url, input.campaign_id)

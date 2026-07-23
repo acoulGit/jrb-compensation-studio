@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-unlock-local-access"
+description = "Autorise le déverrouillage par mot de passe — réservé à la fenêtre access."
+commands.allow = ["unlock_local_access"]

@@ -1283,3 +1283,76 @@ identique au grade avant, ou vide (conservation du grade d’origine).
 
 - `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
 - Aucun commit ; branche `feature/lot-2b-rc1-h3-same-grade-promotion`.
+
+## 2026-07-23 — Lot 2B-RC1-SEC1-A : accès local (mot de passe + période initiale)
+
+### Objectif
+
+Verrouiller l’application par mot de passe local dès le démarrage et limiter
+son usage à une période initiale de 10 mois civils avant activation d’une
+licence (Lot 2B-RC1-SEC1-B, hors périmètre ici), avec détection d’anomalie
+d’horloge système.
+
+### Choix
+
+- Nouveau module `local_access` (Rust) : `state` (session en mémoire,
+  `unlocked` par défaut à `false`), `password` (Argon2id PHC via `argon2`,
+  buffers `Zeroizing`, politique 8–128 caractères, rejet des mots de passe
+  uniquement composés d’espaces), `calendar` (dates civiles UTC via `time`,
+  ajout de 10 mois avec calage sur le dernier jour du mois cible, anomalie
+  d’horloge si recul de plus de 24h par rapport à la dernière observation
+  persistée), `store` (persistance SQLite dédiée, migration `0010` rejouée
+  de façon idempotente), `commands` (5 commandes Tauri), `windows` (bascule
+  entre les fenêtres `access` et `main`).
+- Deux fenêtres Tauri strictement isolées : `access` (seule créée au
+  démarrage, sans capacité `sql:*`) et `main` (créée uniquement après
+  configuration/déverrouillage réussi). La fenêtre `access` ne charge jamais
+  `AppDataProvider` ni la base métier.
+- Garde `require_unlocked_and_licensed` ajoutée en tête de toutes les
+  commandes métier existantes : `replace_current_population`,
+  `archive_campaign`, `restore_campaign`, `activate_campaign`,
+  `save_simulation_run`, `export_simulation_run_excel`,
+  `generate_hr_export_password`. Messages français stables (verrou, licence
+  expirée, anomalie d’horloge), jamais de secret journalisé.
+- Migration additive `0010_local_access_state.sql` : table singleton
+  `local_access_state` (voir `docs/DATABASE_SCHEMA.md`).
+- Frontend : `src/access/AccessApp.tsx` (écrans configuration, déverrouillage,
+  expiration, anomalie d’horloge — mots de passe systématiquement effacés
+  après tentative), `src/application/localAccess/*` (invocations typées,
+  aucun secret journalisé), section « Sécurité » dans la page Paramètres
+  (changement de mot de passe + verrouillage manuel).
+- Aucun changement de `CALCULATION_CONTRACT_VERSION` (7) ni de
+  `RESULT_SCHEMA_VERSION` (5) ; aucune logique métier de calcul/import/export
+  modifiée au-delà de l’appel de garde.
+- Activation de licence (Lot 2B-RC1-SEC1-B) explicitement hors périmètre.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check --locked` /
+  `cargo test --locked`
+- Aucun commit ; branche `feature/lot-2b-rc1-sec1-local-access-license`.
+
+## 2026-07-23 — Lot 2B-RC1-SEC1-A-HF1 : permissions granulaires par fenêtre
+
+### Cause racine
+
+Le groupe `allow-local-access` accordait `setup_local_access` (et `unlock`)
+également à la fenêtre `main`, malgré le refus métier `AlreadySetUp`.
+
+### Correction
+
+- Permissions Tauri granulaires : `allow-get-local-access-status`,
+  `allow-setup-local-access`, `allow-unlock-local-access`,
+  `allow-change-local-password`, `allow-lock-local-access`.
+- Suppression de `allow-local-access.toml`.
+- Capability `access` : statut + setup + unlock uniquement (pas de SQL).
+- Capability `main` : statut + change + lock (+ SQL / métier) ; pas de setup/unlock.
+- Garde Rust `require_window_label` + erreur `INVALID_ACCESS_WINDOW` sur
+  setup/unlock (`access`) et change/lock (`main`), avant toute lecture de
+  mot de passe.
+- Migration `0010` et contrats de calcul inchangés.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
+- Aucun commit ; même branche SEC1.

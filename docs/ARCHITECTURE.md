@@ -223,16 +223,34 @@ Voir `docs/HR_IMPORT.md` pour le périmètre fonctionnel détaillé.
 - Requêtes exclusivement paramétrées
 - Voir `docs/DATABASE_SCHEMA.md`
 
+## Accès local et fenêtres (Lot 2B-RC1-SEC1-A)
+
+Deux fenêtres Tauri, chacune avec sa propre capacité (isolation stricte) :
+
+- `access` : fenêtre unique créée au démarrage (`tauri.conf.json`). Écran de
+  verrou local (configuration initiale, saisie du mot de passe, période
+  expirée, anomalie d’horloge). N’a **aucune** permission `sql:*` : elle ne
+  précharge jamais la base métier.
+- `main` : fenêtre applicative complète, créée uniquement après un
+  `setup_local_access` ou `unlock_local_access` réussi (`local_access::windows`).
+
+Voir `docs/LOCAL_ACCESS_SECURITY.md` pour le détail fonctionnel et sécurité
+(mot de passe Argon2id, période initiale de 10 mois civils, détection
+d’anomalie d’horloge, garde `require_unlocked_and_licensed`).
+
 ## Réseau et capacités Tauri
 
-Aucune fonction produit ne nécessite le réseau. Permissions actuelles :
+Aucune fonction produit ne nécessite le réseau. Capacités déclarées :
 
-- `core:default`
-- `sql:default`
-- `sql:allow-execute`
-- `allow-save-simulation-run`
-- `allow-export-simulation-run-excel`
-- `dialog:allow-save`
+- `capabilities/access.json` (fenêtre `access`) : `core:default`,
+  `allow-get-local-access-status`, `allow-setup-local-access`,
+  `allow-unlock-local-access` — pas de `sql:*`, pas de change/lock.
+- `capabilities/main.json` (fenêtre `main`) : `core:default`, `sql:default`,
+  `sql:allow-execute`, `allow-replace-current-population`,
+  `allow-campaign-write`, `allow-save-simulation-run`,
+  `allow-export-simulation-run-excel`, `allow-get-local-access-status`,
+  `allow-change-local-password`, `allow-lock-local-access`, `dialog:allow-save`.
+  Aucune permission `setup` ni `unlock`.
 
 `dialog:allow-save` est la seule capacité de dialogue déclarée : elle ouvre le
 sélecteur natif de destination `.xlsx` pour l’export RH (aucune ouverture ni

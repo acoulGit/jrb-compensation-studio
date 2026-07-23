@@ -578,6 +578,7 @@ pub async fn replace_current_population(
     app: AppHandle,
     input: ReplacePopulationInput,
 ) -> Result<ReplacePopulationResult, String> {
+    crate::local_access::require_unlocked_and_licensed(&app).await?;
     let path = resolve_app_database_path(&app).map_err(|error| error.user_message())?;
     let url = sqlite_url_from_path(&path).map_err(|error| error.user_message())?;
 

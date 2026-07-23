@@ -192,6 +192,7 @@ pub async fn export_simulation_run_excel(
     app: AppHandle,
     input: ExportSimulationRunExcelInput,
 ) -> Result<ExportSimulationRunExcelResult, String> {
+    crate::local_access::require_unlocked_and_licensed(&app).await?;
     let path = resolve_app_database_path(&app).map_err(|error| error.user_message())?;
     let url = sqlite_url_from_path(&path).map_err(|error| error.user_message())?;
 
@@ -209,10 +210,13 @@ pub async fn export_simulation_run_excel(
 
 /// Commande Tauri : génère un mot de passe RH robuste (>= 20 caractères).
 #[tauri::command]
-pub fn generate_hr_export_password() -> GenerateHrExportPasswordResult {
+pub async fn generate_hr_export_password(
+    app: AppHandle,
+) -> Result<GenerateHrExportPasswordResult, String> {
+    crate::local_access::require_unlocked_and_licensed(&app).await?;
     let password = generate_password();
     let length = password.chars().count() as u32;
-    GenerateHrExportPasswordResult { password, length }
+    Ok(GenerateHrExportPasswordResult { password, length })
 }
 
 #[cfg(test)]

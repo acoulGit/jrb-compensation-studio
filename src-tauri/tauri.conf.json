@@ -12,11 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "JRB Compensation Studio",
-        "width": 1280,
-        "height": 800,
-        "minWidth": 960,
-        "minHeight": 650,
+        "label": "access",
+        "title": "JRB Compensation Studio — Accès",
+        "width": 520,
+        "height": 640,
+        "resizable": false,
         "center": true
       }
     ],
@@ -38,9 +38,5 @@
       "icons/icon.ico"
     ]
   },
-  "plugins": {
-    "sql": {
-      "preload": ["sqlite:jrb-compensation-studio.db"]
-    }
-  }
+  "plugins": {}
 }

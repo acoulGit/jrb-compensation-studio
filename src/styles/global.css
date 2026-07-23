@@ -644,6 +644,14 @@ button:focus-visible {
   text-transform: uppercase;
 }
 
+.boot-screen__hints {
+  margin: 14px 0 0;
+  padding-left: 1.2em;
+  color: var(--gray-500);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
 .boot-screen__card--error .button {
   margin-top: 22px;
 }

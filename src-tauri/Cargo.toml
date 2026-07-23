@@ -32,6 +32,10 @@ rust_xlsxwriter = "0.96.0"
 ms-offcrypto-writer = "1.0.7"
 zeroize = { version = "1.8.1", features = ["derive"] }
 rand = "0.9"
+# LOT 2B-RC1-SEC1-A — mot de passe local + dates civiles
+argon2 = "0.5"
+password-hash = { version = "0.5", features = ["getrandom"] }
+time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
 
 [dev-dependencies]
 tempfile = "3"

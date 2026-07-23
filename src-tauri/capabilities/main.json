@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "Capability for the main window",
+  "identifier": "main",
+  "description": "Capability for the main application window",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -11,6 +11,9 @@
     "allow-campaign-write",
     "allow-save-simulation-run",
     "allow-export-simulation-run-excel",
+    "allow-get-local-access-status",
+    "allow-change-local-password",
+    "allow-lock-local-access",
     "dialog:allow-save"
   ]
 }

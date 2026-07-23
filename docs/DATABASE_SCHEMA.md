@@ -368,7 +368,13 @@ dans le Lot 2B-4A).
 Les migrations SQL versionnées sont placées dans `src-tauri/migrations/` et
 intégrées au build Rust via `include_str!`. Elles sont enregistrées dans le
 builder `tauri-plugin-sql` avec la même chaîne de connexion que le frontend.
-Le préchargement est déclaré dans `tauri.conf.json` (`plugins.sql.preload`).
+Depuis le Lot 2B-RC1-SEC1-A, la fenêtre `access` (démarrage) n’utilise **pas**
+le plugin SQL et ne précharge jamais la base ; seule la fenêtre `main` (après
+déverrouillage) déclenche le préchargement + les migrations 0001–0010 via le
+plugin. Les commandes d’accès local (`get_local_access_status`,
+`setup_local_access`, `unlock_local_access`) ouvrent une connexion SQLite
+dédiée (`create_if_missing`) et rejouent la migration `0010` de façon
+idempotente avant toute lecture/écriture — voir `docs/LOCAL_ACCESS_SECURITY.md`.
 
 | Version | Fichier | Description |
 | --- | --- | --- |
@@ -381,6 +387,7 @@ Le préchargement est déclaré dans `tauri.conf.json` (`plugins.sql.preload`).
 | 7 | `0007_simulation_contract_v4_results.sql` | consolidation snapshot schema v3 (contrat v4 + trajectoire mensuelle) |
 | 8 | `0008_nine_box_neutralization.sql` | import + snapshot schema v4 (contrat v5) — neutralisation 9-Box |
 | 9 | `0009_nine_box_confirmation_factor.sql` | référentiel + snapshot schema v5 (contrat v6) — coefficient provisoire 9-Box |
+| 10 | `0010_local_access_state.sql` | `local_access_state` (accès local : mot de passe + période initiale) |
 
 ### Neutralisation 9-Box (migration `0008`, schema v4 / contrat v5)
 
@@ -414,8 +421,24 @@ Lot H1 est remplacé par un coefficient provisoire paramétrable).
   valeur historique `nine_box_effect_neutralized` reste acceptée pour les
   snapshots v4.
 
-Évolution : ajouter un fichier `0010_....sql`, une constante associée et une
+Évolution : ajouter un fichier `0011_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.
+
+### Accès local (migration `0010`, Lot 2B-RC1-SEC1-A)
+
+Additive, non destructive. Aucune table métier existante modifiée. Table
+singleton (`singleton_id = 1`, une seule ligne possible) :
+
+- `installation_id` TEXT UNIQUE — format `JRB-CS-{8hex}-{8hex}`.
+- `password_hash` TEXT — hachage Argon2id (format PHC), jamais le mot de
+  passe en clair.
+- `installed_at`, `initial_valid_until`, `current_valid_until`,
+  `last_observed_at` TEXT — dates RFC3339 UTC.
+- `clock_anomaly_detected` INTEGER (0/1) — anomalie sticky (jamais réinitialisée
+  automatiquement).
+
+`license_activations` sera ajoutée en Lot 2B-RC1-SEC1-B (activation de
+licence, hors périmètre de ce lot).
 
 ## Export Excel RH et mot de passe (Lot 2B-E1)
 

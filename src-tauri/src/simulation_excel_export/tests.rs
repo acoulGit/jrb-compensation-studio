@@ -927,12 +927,12 @@ fn suggested_file_name_is_sanitized() {
 
 #[test]
 fn generate_password_command_meets_contract() {
-    let result = generate_hr_export_password();
-    assert!(result.length >= 20);
-    assert_eq!(result.length as usize, result.password.chars().count());
+    let password = generate_password();
+    let length = password.chars().count() as u32;
+    assert!(length >= 20);
 
-    let other = generate_hr_export_password();
-    assert_ne!(result.password, other.password);
+    let other = generate_password();
+    assert_ne!(password, other);
 }
 
 // ===========================================================================
