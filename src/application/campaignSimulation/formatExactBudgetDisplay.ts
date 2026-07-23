@@ -235,6 +235,18 @@ export function buildConfigurationFingerprint(parts: {
   minimumIncreaseRateDenominator?: bigint | null;
   /** Version du contrat minimum garanti. */
   minimumIncreaseContractVersion?: number;
+  /** Mécanisme social exclusif (Lot 2B-RC1-H5). */
+  socialMechanismKind?: string;
+  /** Montant mensuel du forfait social universel. */
+  universalFixedAmountMonthlyAmount?: bigint | null;
+  /** Mois d’effet du forfait (1–12). */
+  universalFixedAmountEffectiveMonth?: number | null;
+  /** Ancienneté minimale du forfait (mois). */
+  universalFixedAmountMinimumSeniorityMonths?: number | null;
+  /** Date de référence ISO pour l’éligibilité d’ancienneté du forfait. */
+  universalFixedAmountSeniorityReferenceDate?: string | null;
+  /** Version du contrat forfait social universel. */
+  universalFixedAmountContractVersion?: number;
 }): string {
   return [
     `contract:v${parts.calculationContractVersion ?? 4}`,
@@ -266,5 +278,11 @@ export function buildConfigurationFingerprint(parts: {
         : ""
     }`,
     `minInc:v${parts.minimumIncreaseContractVersion ?? 1}`,
+    `social:${parts.socialMechanismKind ?? "none"}`,
+    `forfaitAmt:${parts.universalFixedAmountMonthlyAmount?.toString() ?? ""}`,
+    `forfaitMonth:${parts.universalFixedAmountEffectiveMonth ?? ""}`,
+    `forfaitSeniority:${parts.universalFixedAmountMinimumSeniorityMonths ?? ""}`,
+    `forfaitSeniorityRef:${parts.universalFixedAmountSeniorityReferenceDate ?? ""}`,
+    `forfaitInc:v${parts.universalFixedAmountContractVersion ?? 1}`,
   ].join("|");
 }

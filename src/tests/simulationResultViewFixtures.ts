@@ -33,6 +33,13 @@ export function emptyEnvelopeSummary(
     actualMinimumComplementPaidCostLabel: ZERO_LABEL,
     actualCompensationAboveMinimumCostFcfa: 0n,
     actualCompensationAboveMinimumCostLabel: ZERO_LABEL,
+    totalUniversalFixedAmountCostFcfa: 0n,
+    totalUniversalFixedAmountCostLabel: ZERO_LABEL,
+    availableBudgetAfterPromotionsAndSocialMechanismFcfa: {
+      numerator: 0n,
+      denominator: 1n,
+    },
+    availableBudgetAfterPromotionsAndSocialMechanismLabel: ZERO_LABEL,
     totalAnnualTheoreticalCompensatoryCostFcfa: {
       numerator: 0n,
       denominator: 1n,
@@ -90,6 +97,43 @@ export function emptySeniorityImpactSummary(
     totalRemainingYearDirectCompensatorySeniorityImpactFcfa: 0n,
     totalRemainingYearDirectCompensatorySeniorityImpactLabel: ZERO_LABEL,
     ...overrides,
+  };
+}
+
+/** Valeurs par défaut H5 pour populationSummary dans les fixtures de persistance. */
+export function emptyPopulationSocialMechanismDefaults(): {
+  socialMechanismKind: "none";
+  universalFixedAmountMonthlyAmountFcfa: bigint;
+  universalFixedAmountEffectiveMonth: number;
+  universalFixedAmountMinimumSeniorityMonths: number;
+  universalFixedAmountSeniorityReferenceDate: string;
+  universalFixedAmountEligibleEmployeeCount: number;
+  universalFixedAmountExposureCount: number;
+  totalUniversalFixedAmountCostFcfa: bigint;
+  availableBudgetAfterPromotionsAndSocialMechanismFcfa: {
+    numerator: bigint;
+    denominator: bigint;
+  };
+  totalUniversalFixedAmountReminderFcfa: bigint;
+  totalUniversalFixedAmountRemainingYearDirectCostFcfa: bigint;
+  fullYearRunRateUniversalFixedAmountCostFcfa: bigint;
+} {
+  return {
+    socialMechanismKind: "none",
+    universalFixedAmountMonthlyAmountFcfa: 0n,
+    universalFixedAmountEffectiveMonth: 1,
+    universalFixedAmountMinimumSeniorityMonths: 0,
+    universalFixedAmountSeniorityReferenceDate: "2025-12-31",
+    universalFixedAmountEligibleEmployeeCount: 0,
+    universalFixedAmountExposureCount: 0,
+    totalUniversalFixedAmountCostFcfa: 0n,
+    availableBudgetAfterPromotionsAndSocialMechanismFcfa: {
+      numerator: 0n,
+      denominator: 1n,
+    },
+    totalUniversalFixedAmountReminderFcfa: 0n,
+    totalUniversalFixedAmountRemainingYearDirectCostFcfa: 0n,
+    fullYearRunRateUniversalFixedAmountCostFcfa: 0n,
   };
 }
 
@@ -262,6 +306,21 @@ export function withPromotionAwareEmployeeDefaults(
     | "nineBoxTreatmentKind"
     | "nineBoxTreatmentLabel"
     | "minimumGuaranteeEffectiveMonth"
+    | "socialMechanismKind"
+    | "isUniversalFixedAmountEligible"
+    | "universalFixedAmountExclusionReason"
+    | "universalFixedAmountMonthlyAmountFcfa"
+    | "universalFixedAmountEffectiveMonth"
+    | "universalFixedAmountMinimumSeniorityMonths"
+    | "universalFixedAmountSeniorityReferenceDate"
+    | "campaignPeriodUniversalFixedAmountCostFcfa"
+    | "campaignPeriodUniversalFixedAmountCostLabel"
+    | "universalFixedAmountReminderFcfa"
+    | "universalFixedAmountReminderLabel"
+    | "universalFixedAmountRemainingYearDirectCostFcfa"
+    | "universalFixedAmountRemainingYearDirectCostLabel"
+    | "fullYearRunRateUniversalFixedAmountCostFcfa"
+    | "fullYearRunRateUniversalFixedAmountCostLabel"
   > &
     Partial<EmployeeSimulationResultView>,
 ): EmployeeSimulationResultView {
@@ -331,6 +390,21 @@ export function withPromotionAwareEmployeeDefaults(
     fullYearRunRateMinimumComplementCostLabel: ZERO_LABEL,
     fullYearRunRateCompensationAboveMinimumCostFcfa: 0n,
     fullYearRunRateCompensationAboveMinimumCostLabel: ZERO_LABEL,
+    socialMechanismKind: "none",
+    isUniversalFixedAmountEligible: false,
+    universalFixedAmountExclusionReason: null,
+    universalFixedAmountMonthlyAmountFcfa: 0n,
+    universalFixedAmountEffectiveMonth: 1,
+    universalFixedAmountMinimumSeniorityMonths: 0,
+    universalFixedAmountSeniorityReferenceDate: "2025-12-31",
+    campaignPeriodUniversalFixedAmountCostFcfa: 0n,
+    campaignPeriodUniversalFixedAmountCostLabel: ZERO_LABEL,
+    universalFixedAmountReminderFcfa: 0n,
+    universalFixedAmountReminderLabel: ZERO_LABEL,
+    universalFixedAmountRemainingYearDirectCostFcfa: 0n,
+    universalFixedAmountRemainingYearDirectCostLabel: ZERO_LABEL,
+    fullYearRunRateUniversalFixedAmountCostFcfa: 0n,
+    fullYearRunRateUniversalFixedAmountCostLabel: ZERO_LABEL,
     monthlyCompensationTrajectory: [],
     retroactivityStartMonth: employee.retroactivityStartMonth ?? 1,
     minimumGuaranteeEffectiveMonth:

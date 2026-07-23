@@ -391,6 +391,25 @@ idempotente avant toute lecture/écriture — voir `docs/LOCAL_ACCESS_SECURITY.m
 | 10 | `0010_local_access_state.sql` | `local_access_state` (accès local : mot de passe + période initiale) |
 | 11 | `0011_license_activations.sql` | `license_activations` (historique des licences hors ligne) |
 | 12 | `0012_minimum_guarantee_effective_month.sql` | mois d’effet explicite du minimum garanti (schema v6 / contrat v8) |
+| 13 | `0013_universal_fixed_amount.sql` | mécanisme social exclusif + forfait social universel (schema v7 / contrat v9) |
+
+### Forfait social universel (migration `0013`, schema v7 / contrat v9)
+
+Additive, non destructive. Aucun `DEFAULT`, aucun backfill artificiel.
+Les snapshots historiques conservent `NULL` sur les nouveaux champs ;
+à la relecture, `social_mechanism_kind` absent se dérive de
+`minimum_increase_mode` (`minimum_guaranteed` / `none`) — **jamais**
+`universal_fixed_amount` inventé.
+
+Colonnes principales sur `compensation_simulation_runs` :
+`social_mechanism_kind`, paramètres forfait (montant, mois d’effet,
+ancienneté minimale, **date de référence d’ancienneté**
+`universal_fixed_amount_seniority_reference_date`), compteurs / totaux forfait,
+budget résiduel après mécanisme social. Miroir salarié
+(`universal_fixed_amount_seniority_reference_date`) et trajectoire mensuelle
+(`universal_fixed_amount_fcfa_text`) pour audit.
+
+L’ancienneté minimale d’éligibilité au forfait social universel est évaluée en mois calendaires révolus à une date de référence configurable. Par défaut, cette date est fixée au 31 décembre de l’année précédant la campagne. Le mois d’effet du forfait détermine uniquement sa durée d’incidence budgétaire.
 
 ### Mois d’effet du minimum garanti (migration `0012`, schema v6 / contrat v8)
 

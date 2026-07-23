@@ -16,6 +16,8 @@ pub const EXPECTED_RESULT_SCHEMA_VERSION_V4: i64 = 4;
 pub const EXPECTED_RESULT_SCHEMA_VERSION_V5: i64 = 5;
 /// Schema v6 — mois d’effet explicite du minimum garanti (Lot 2B-RC1-H4).
 pub const EXPECTED_RESULT_SCHEMA_VERSION_V6: i64 = 6;
+/// Schema v7 — mécanisme social exclusif + forfait universel (Lot 2B-RC1-H5).
+pub const EXPECTED_RESULT_SCHEMA_VERSION_V7: i64 = 7;
 pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V4: i64 = 4;
 pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V5: i64 = 5;
 /// Contrat v6 — coefficient provisoire 9-Box (Lot 2B-RC1-H2).
@@ -24,6 +26,8 @@ pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V6: i64 = 6;
 pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V7: i64 = 7;
 /// Contrat v8 — mois d’effet configurable du minimum garanti (Lot 2B-RC1-H4).
 pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V8: i64 = 8;
+/// Contrat v9 — mécanisme social exclusif + forfait universel (Lot 2B-RC1-H5).
+pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V9: i64 = 9;
 pub const EXPECTED_SENIORITY_IMPACT_CONTRACT_VERSION: i64 = 1;
 pub const EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION_V1: i64 = 1;
 /// Contrat minimum v2 — mois d’effet configurable (Lot 2B-RC1-H4).
@@ -73,7 +77,8 @@ fn validate_versions(run: &RunRow) -> Result<(), ExportError> {
     let schema_ok = run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V3
         || run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V4
         || run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V5
-        || run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V6;
+        || run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V6
+        || run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V7;
     if !schema_ok {
         return Err(ExportError::SchemaNotSupported);
     }
@@ -82,7 +87,8 @@ fn validate_versions(run: &RunRow) -> Result<(), ExportError> {
         || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V5)
         || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V6)
         || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V7)
-        || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V8);
+        || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V8)
+        || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V9);
     if !contract_ok {
         return Err(ExportError::ContractNotSupported);
     }

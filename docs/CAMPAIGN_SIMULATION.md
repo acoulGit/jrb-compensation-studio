@@ -17,8 +17,13 @@ d’augmentation.
 | **2B-RC1-H2** | Coefficient provisoire 9-Box « Performance à confirmer » (contrat v6 / schema v5, migration `0009`) |
 | **2B-RC1-H3** | Promotion salariale sans changement de grade (contrat v7 / schema v5, **pas** de migration) |
 | **2B-RC1-H4** | Mois d’effet configurable du minimum garanti (contrat v8 / schema v6, migration `0012`) |
+| **2B-RC1-H5** | Forfait social universel + mécanisme social exclusif (contrat v9 / schema v7, migration `0013`) |
 | **2B-4B** | Bouton Enregistrer + page Historique (lecture seule, compatible schema v3 / dégradation v1-v2) |
 | **2B-UX1** | Confort UI : sidebar repliable, pages résultats fluides, détail salarié quasi plein écran (sans changement métier) |
+
+L’ancienneté minimale d’éligibilité au forfait social universel est évaluée en mois calendaires révolus à une date de référence configurable. Par défaut, cette date est fixée au 31 décembre de l’année précédant la campagne. Le mois d’effet du forfait détermine uniquement sa durée d’incidence budgétaire.
+
+L’incidence d’ancienneté (1 %) est calculée sur l’augmentation totale attribuée au salarié (augmentation matricielle arrondie, complément de minimum garanti le cas échéant, et forfait social universel le cas échéant). Elle demeure hors enveloppe budgétaire.
 
 ## Séparation import / préparation / configuration / calcul
 

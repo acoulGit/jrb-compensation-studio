@@ -92,6 +92,8 @@ const SIMULATION_SCHEMA_V5: &str =
     include_str!("../../migrations/0009_nine_box_confirmation_factor.sql");
 const SIMULATION_SCHEMA_V6: &str =
     include_str!("../../migrations/0012_minimum_guarantee_effective_month.sql");
+const SIMULATION_SCHEMA_V7_ALTS: &str =
+    include_str!("../../migrations/0013_universal_fixed_amount.sql");
 // Stub minimal : la migration 0009 modifie aussi campaign_reference_config,
 // absente du schéma minimal de ces tests d’intégration ciblés export.
 const CAMPAIGN_REFERENCE_CONFIG_STUB: &str = r#"
@@ -132,6 +134,7 @@ async fn setup_temp_db() -> (tempfile::TempDir, String) {
         apply_sql(&mut conn, CAMPAIGN_REFERENCE_CONFIG_STUB).await;
         apply_sql(&mut conn, SIMULATION_SCHEMA_V5).await;
         apply_sql(&mut conn, SIMULATION_SCHEMA_V6).await;
+        apply_sql(&mut conn, SIMULATION_SCHEMA_V7_ALTS).await;
     }
 
     (dir, url)
@@ -255,6 +258,7 @@ fn sample_month(month: i64) -> SaveSimulationEmployeeMonthDto {
         theoretical_complement_numerator_text: "13500".into(),
         theoretical_complement_denominator_text: "1".into(),
         actual_complement_above_minimum_fcfa_text: "13500".into(),
+        universal_fixed_amount_fcfa_text: None,
     }
 }
 

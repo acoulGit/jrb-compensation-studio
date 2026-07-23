@@ -4,7 +4,10 @@ import type {
   BudgetTargetInput,
   MinimumIncreasePolicy,
   RoundingPolicy,
+  SocialMechanismKind,
+  UniversalFixedAmountPolicy,
 } from "../../domain/compensationCalculation";
+import { defaultUniversalFixedAmountSeniorityReferenceDate } from "../../domain/compensationCalculation";
 import type { CampaignSimulationReadinessReport } from "./campaignSimulationModels";
 import type {
   BudgetTargetModeChoice,
@@ -36,8 +39,12 @@ export interface ValidatedCampaignSimulationConfiguration {
    * Défaut = mois technique (Lot 2B-RC1-H4).
    */
   minimumGuaranteeEffectiveMonth: number;
+  /** Mécanisme social exclusif (Lot 2B-RC1-H5). */
+  socialMechanismKind: SocialMechanismKind;
   /** Politique de minimum garanti d’augmentation (Lot 2A-H2D-2). */
   minimumIncreasePolicy: MinimumIncreasePolicy;
+  /** Politique du forfait social universel (Lot 2B-RC1-H5). */
+  universalFixedAmountPolicy: UniversalFixedAmountPolicy;
   readinessReport: CampaignSimulationReadinessReport;
   /** Compteur de session (non temporel) incrémenté à chaque validation. */
   validatedAtSessionSequence: number;
@@ -55,6 +62,12 @@ export function createEmptyConfigurationDraft(
 ): CampaignSimulationConfigurationDraft {
   const uiDefaultYear =
     options?.campaignYear ?? new Date().getFullYear();
+  const defaultSeniorityReferenceDate =
+    Number.isInteger(uiDefaultYear) &&
+    uiDefaultYear >= 2000 &&
+    uiDefaultYear <= 2100
+      ? defaultUniversalFixedAmountSeniorityReferenceDate(uiDefaultYear)
+      : "";
   return {
     campaignId,
     budgetTargetMode: null,
@@ -67,9 +80,14 @@ export function createEmptyConfigurationDraft(
     retroactivityStartMonthInput: "1",
     technicalApplicationMonthInput: "1",
     minimumGuaranteeEffectiveMonthInput: "1",
+    socialMechanismKind: "none",
     minimumIncreaseMode: "none",
     minimumMonthlyAmountInput: "",
     minimumIncreaseRatePercentInput: "",
+    universalFixedAmountMonthlyAmountInput: "",
+    universalFixedAmountEffectiveMonthInput: "1",
+    universalFixedAmountMinimumSeniorityMonthsInput: "0",
+    universalFixedAmountSeniorityReferenceDateInput: defaultSeniorityReferenceDate,
   };
 }
 

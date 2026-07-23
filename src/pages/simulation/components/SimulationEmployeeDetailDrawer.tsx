@@ -248,30 +248,90 @@ export function SimulationEmployeeDetailDrawer({
                   : "Non disponible"}
               </dd>
             </div>
-            <div>
-              <dt>Mois d’effet du minimum garanti</dt>
-              <dd data-testid={`${testIdPrefix}-detail-minimum-effective-month`}>
-                {employee.minimumGuaranteeEffectiveMonthLabel
-                  ? employee.minimumGuaranteeEffectiveMonthOrigin ===
-                    "legacy_retroactivity"
-                    ? `${employee.minimumGuaranteeEffectiveMonthLabel} — historique aligné sur la rétroactivité`
-                    : employee.minimumGuaranteeEffectiveMonthLabel
-                  : "Non disponible"}
-              </dd>
-            </div>
-            <div>
-              <dt>Rappel du minimum garanti</dt>
-              <dd data-testid={`${testIdPrefix}-detail-minimum-reminder`}>
-                {employee.minimumCompensatoryReminderLabel ?? "Non disponible"}
-              </dd>
-            </div>
-            <div>
-              <dt>Rappel au-dessus du minimum</dt>
-              <dd data-testid={`${testIdPrefix}-detail-above-minimum-reminder`}>
-                {employee.aboveMinimumCompensatoryReminderLabel ??
-                  "Non disponible"}
-              </dd>
-            </div>
+            {employee.socialMechanismKind === "minimum_guaranteed" ? (
+              <>
+                <div>
+                  <dt>Mois d’effet du minimum garanti</dt>
+                  <dd data-testid={`${testIdPrefix}-detail-minimum-effective-month`}>
+                    {employee.minimumGuaranteeEffectiveMonthLabel
+                      ? employee.minimumGuaranteeEffectiveMonthOrigin ===
+                        "legacy_retroactivity"
+                        ? `${employee.minimumGuaranteeEffectiveMonthLabel} — historique aligné sur la rétroactivité`
+                        : employee.minimumGuaranteeEffectiveMonthLabel
+                      : "Non disponible"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Rappel du minimum garanti</dt>
+                  <dd data-testid={`${testIdPrefix}-detail-minimum-reminder`}>
+                    {employee.minimumCompensatoryReminderLabel ?? "Non disponible"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Rappel au-dessus du minimum</dt>
+                  <dd data-testid={`${testIdPrefix}-detail-above-minimum-reminder`}>
+                    {employee.aboveMinimumCompensatoryReminderLabel ??
+                      "Non disponible"}
+                  </dd>
+                </div>
+              </>
+            ) : null}
+            {employee.socialMechanismKind === "universal_fixed_amount" ? (
+              <>
+                <div>
+                  <dt>Éligibilité au forfait social universel</dt>
+                  <dd data-testid={`${testIdPrefix}-detail-forfait-eligibility`}>
+                    {employee.universalFixedAmountEligibilityLabel ??
+                      "Non disponible"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Montant mensuel du forfait</dt>
+                  <dd data-testid={`${testIdPrefix}-detail-forfait-amount`}>
+                    {employee.universalFixedAmountMonthlyAmountLabel ??
+                      "Non disponible"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Mois d’effet du forfait</dt>
+                  <dd data-testid={`${testIdPrefix}-detail-forfait-effective-month`}>
+                    {employee.universalFixedAmountEffectiveMonthLabel ??
+                      "Non disponible"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Date de référence de l’ancienneté</dt>
+                  <dd
+                    data-testid={`${testIdPrefix}-detail-forfait-seniority-reference-date`}
+                  >
+                    {employee.universalFixedAmountSeniorityReferenceDateLabel ??
+                      "Non disponible"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Coût forfait sur la période</dt>
+                  <dd data-testid={`${testIdPrefix}-detail-forfait-period-cost`}>
+                    {employee.campaignPeriodUniversalFixedAmountCostLabel ??
+                      "Non disponible"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Rappel du forfait social universel</dt>
+                  <dd data-testid={`${testIdPrefix}-detail-forfait-reminder`}>
+                    {employee.universalFixedAmountReminderLabel ?? "Non disponible"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Paiement direct restant du forfait</dt>
+                  <dd
+                    data-testid={`${testIdPrefix}-detail-forfait-remaining-direct`}
+                  >
+                    {employee.universalFixedAmountRemainingYearDirectCostLabel ??
+                      "Non disponible"}
+                  </dd>
+                </div>
+              </>
+            ) : null}
             <div>
               <dt>Rappel compensatoire total</dt>
               <dd data-testid={`${testIdPrefix}-detail-total-reminder`}>

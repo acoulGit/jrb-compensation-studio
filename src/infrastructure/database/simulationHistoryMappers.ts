@@ -6,6 +6,12 @@
 import type { CampaignStatus } from "../../domain/campaign/models";
 import type { NineBoxMode } from "../../domain/compensationReference/models";
 import {
+  deriveSocialMechanismKindFromMinimumIncreaseMode,
+  resolveUniversalFixedAmountSeniorityReferenceDate,
+  type ExactAmount,
+  type SocialMechanismKind,
+} from "../../domain/compensationCalculation";
+import {
   parseCanonicalExactAmount,
   parseCanonicalIntegerText,
 } from "../../application/campaignSimulation/canonicalDecimalText";
@@ -64,6 +70,22 @@ export interface SimulationRunRow {
   actual_compensation_above_minimum_cost_text?: string | null;
   actual_combined_campaign_period_cost_text?: string | null;
   full_year_run_rate_combined_base_measure_cost_text?: string | null;
+
+  /** Colonnes schema v7 (migration 0013) — nullables pour snapshots v6. */
+  minimum_increase_mode?: string | null;
+  social_mechanism_kind?: string | null;
+  universal_fixed_amount_monthly_fcfa?: number | null;
+  universal_fixed_amount_effective_month?: number | null;
+  universal_fixed_amount_minimum_seniority_months?: number | null;
+  universal_fixed_amount_seniority_reference_date?: string | null;
+  universal_fixed_amount_eligible_employee_count?: number | null;
+  universal_fixed_amount_exposure_count?: number | null;
+  total_universal_fixed_amount_cost_text?: string | null;
+  available_budget_after_promotions_and_social_mechanism_num_text?: string | null;
+  available_budget_after_promotions_and_social_mechanism_den_text?: string | null;
+  total_universal_fixed_amount_reminder_text?: string | null;
+  total_universal_fixed_amount_remaining_year_direct_cost_text?: string | null;
+  full_year_run_rate_universal_fixed_amount_cost_text?: string | null;
 }
 
 export interface SimulationEmployeeResultRow {
@@ -110,6 +132,14 @@ export interface SimulationEmployeeResultRow {
   base_salary_reminder_text?: string | null;
   minimum_compensatory_reminder_text?: string | null;
   above_minimum_compensatory_reminder_text?: string | null;
+  /** Colonnes schema v7 (migration 0013) — nullables pour snapshots v6. */
+  is_universal_fixed_amount_eligible?: number | null;
+  universal_fixed_amount_exclusion_reason?: string | null;
+  campaign_period_universal_fixed_amount_cost_text?: string | null;
+  universal_fixed_amount_reminder_text?: string | null;
+  universal_fixed_amount_remaining_year_direct_cost_text?: string | null;
+  full_year_run_rate_universal_fixed_amount_cost_text?: string | null;
+  universal_fixed_amount_seniority_reference_date?: string | null;
 }
 
 /** Ligne mensuelle persistée (schema v3, Lot 2B-P1). */
@@ -154,6 +184,7 @@ export interface SimulationEmployeeMonthResultRow {
   theoretical_complement_num_text: string;
   theoretical_complement_den_text: string;
   actual_complement_above_minimum_fcfa_text: string;
+  universal_fixed_amount_fcfa_text?: string | null;
 }
 
 function asPaymentTiming(
@@ -231,6 +262,48 @@ function parseExplanationSteps(
   } catch {
     return [];
   }
+}
+
+function resolvePersistedUniversalFixedAmountSeniorityReferenceDate(
+  stored: string | null | undefined,
+  campaignYear: number,
+): string {
+  if (stored !== undefined && stored !== null && stored.trim() !== "") {
+    return stored.trim();
+  }
+  return resolveUniversalFixedAmountSeniorityReferenceDate({ campaignYear }).date;
+}
+
+function resolvePersistedSocialMechanismKind(row: SimulationRunRow): SocialMechanismKind {
+  if (
+    row.social_mechanism_kind === "none" ||
+    row.social_mechanism_kind === "minimum_guaranteed" ||
+    row.social_mechanism_kind === "universal_fixed_amount"
+  ) {
+    return row.social_mechanism_kind;
+  }
+  return deriveSocialMechanismKindFromMinimumIncreaseMode(row.minimum_increase_mode);
+}
+
+function nullableExactAmount(
+  numeratorText: string | null | undefined,
+  denominatorText: string | null | undefined,
+): ExactAmount | null {
+  if (
+    numeratorText === null ||
+    numeratorText === undefined ||
+    numeratorText.trim() === "" ||
+    denominatorText === null ||
+    denominatorText === undefined ||
+    denominatorText.trim() === ""
+  ) {
+    return null;
+  }
+  return parseCanonicalExactAmount({
+    numeratorText,
+    denominatorText,
+    allowNegativeNumerator: true,
+  });
 }
 
 export function mapSimulationEmployeeMonthResult(
@@ -325,6 +398,7 @@ export function mapSimulationEmployeeMonthResult(
       row.actual_complement_above_minimum_fcfa_text,
       positiveIntegerText,
     ),
+    universalFixedAmountFcfa: nullableIntegerText(row.universal_fixed_amount_fcfa_text),
   };
 }
 
@@ -412,11 +486,47 @@ export function mapSimulationRunSummary(
     fullYearRunRateCombinedBaseMeasureCostFcfa: nullableIntegerText(
       row.full_year_run_rate_combined_base_measure_cost_text,
     ),
+    socialMechanismKind: resolvePersistedSocialMechanismKind(row),
+    universalFixedAmountMonthlyFcfa:
+      row.universal_fixed_amount_monthly_fcfa === null ||
+      row.universal_fixed_amount_monthly_fcfa === undefined
+        ? null
+        : BigInt(row.universal_fixed_amount_monthly_fcfa),
+    universalFixedAmountEffectiveMonth:
+      row.universal_fixed_amount_effective_month ?? null,
+    universalFixedAmountMinimumSeniorityMonths:
+      row.universal_fixed_amount_minimum_seniority_months ?? null,
+    universalFixedAmountSeniorityReferenceDate:
+      resolvePersistedUniversalFixedAmountSeniorityReferenceDate(
+        row.universal_fixed_amount_seniority_reference_date,
+        row.campaign_year,
+      ),
+    universalFixedAmountEligibleEmployeeCount:
+      row.universal_fixed_amount_eligible_employee_count ?? null,
+    universalFixedAmountExposureCount:
+      row.universal_fixed_amount_exposure_count ?? null,
+    totalUniversalFixedAmountCostFcfa: nullableIntegerText(
+      row.total_universal_fixed_amount_cost_text,
+    ),
+    availableBudgetAfterPromotionsAndSocialMechanism: nullableExactAmount(
+      row.available_budget_after_promotions_and_social_mechanism_num_text,
+      row.available_budget_after_promotions_and_social_mechanism_den_text,
+    ),
+    totalUniversalFixedAmountReminderFcfa: nullableIntegerText(
+      row.total_universal_fixed_amount_reminder_text,
+    ),
+    totalUniversalFixedAmountRemainingYearDirectCostFcfa: nullableIntegerText(
+      row.total_universal_fixed_amount_remaining_year_direct_cost_text,
+    ),
+    fullYearRunRateUniversalFixedAmountCostFcfa: nullableIntegerText(
+      row.full_year_run_rate_universal_fixed_amount_cost_text,
+    ),
   };
 }
 
 export function mapSimulationEmployeeResult(
   row: SimulationEmployeeResultRow,
+  options?: { campaignYear?: number },
 ): PersistedSimulationEmployeeResult {
   return {
     id: row.id,
@@ -493,6 +603,32 @@ export function mapSimulationEmployeeResult(
     ),
     aboveMinimumCompensatoryReminderFcfa: nullableIntegerText(
       row.above_minimum_compensatory_reminder_text,
+    ),
+    isUniversalFixedAmountEligible:
+      row.is_universal_fixed_amount_eligible === null ||
+      row.is_universal_fixed_amount_eligible === undefined
+        ? null
+        : row.is_universal_fixed_amount_eligible === 1,
+    universalFixedAmountExclusionReason:
+      row.universal_fixed_amount_exclusion_reason ?? null,
+    universalFixedAmountSeniorityReferenceDate:
+      options?.campaignYear !== undefined
+        ? resolvePersistedUniversalFixedAmountSeniorityReferenceDate(
+            row.universal_fixed_amount_seniority_reference_date,
+            options.campaignYear,
+          )
+        : row.universal_fixed_amount_seniority_reference_date ?? null,
+    campaignPeriodUniversalFixedAmountCostFcfa: nullableIntegerText(
+      row.campaign_period_universal_fixed_amount_cost_text,
+    ),
+    universalFixedAmountReminderFcfa: nullableIntegerText(
+      row.universal_fixed_amount_reminder_text,
+    ),
+    universalFixedAmountRemainingYearDirectCostFcfa: nullableIntegerText(
+      row.universal_fixed_amount_remaining_year_direct_cost_text,
+    ),
+    fullYearRunRateUniversalFixedAmountCostFcfa: nullableIntegerText(
+      row.full_year_run_rate_universal_fixed_amount_cost_text,
     ),
   };
 }

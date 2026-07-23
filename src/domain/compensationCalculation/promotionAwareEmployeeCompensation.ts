@@ -54,6 +54,21 @@ import {
   type MinimumIncreaseExclusionReason,
 } from "./minimumIncreasePopulation";
 import {
+  deriveSocialMechanismKindFromMinimumIncreaseMode,
+  type SocialMechanismKind,
+} from "./socialMechanism";
+import {
+  computeUniversalFixedAmountForMonth,
+  NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
+  type UniversalFixedAmountPolicy,
+} from "./universalFixedAmount";
+import {
+  isUniversalFixedAmountEligible,
+  resolveUniversalFixedAmountSeniorityReferenceDate,
+  resolveUniversalFixedAmountExclusionReason,
+  type UniversalFixedAmountExclusionReason,
+} from "./universalFixedAmountPopulation";
+import {
   buildPromotionAwareMonthlySalaryTrajectory,
   type PromotionCampaignCostPreview,
   type PromotionEvent,
@@ -100,6 +115,8 @@ export interface EmployeePromotionAwareExposureResult {
   compensatoryMeasureEligible: boolean;
   isMinimumIncreasePopulationEmployee: boolean;
   minimumIncreaseExclusionReason: MinimumIncreaseExclusionReason;
+  isUniversalFixedAmountEligible: boolean;
+  universalFixedAmountExclusionReason: UniversalFixedAmountExclusionReason;
 }
 
 export interface BuildEmployeePromotionAwareExposuresInput {
@@ -135,6 +152,13 @@ export interface BuildEmployeePromotionAwareExposuresInput {
   nineBoxFactors: readonly NineBoxFactorRef[];
   /** Politique de minimum (défaut = none). */
   minimumIncreasePolicy?: MinimumIncreasePolicy;
+  /**
+   * Mécanisme social exclusif résolu (Lot 2B-RC1-H5).
+   * Défaut = dérivé de `minimumIncreasePolicy.mode`.
+   */
+  socialMechanismKind?: SocialMechanismKind;
+  /** Politique forfait (éligibilité — inactive si kind ≠ forfait). */
+  universalFixedAmountPolicy?: UniversalFixedAmountPolicy;
   /** Pas d’arrondi requis pour calculer le plancher payable. */
   roundingStepFcfa?: bigint;
 }
@@ -163,6 +187,13 @@ export function buildEmployeePromotionAwareExposures(
   }
 
   const policy = input.minimumIncreasePolicy ?? NO_MINIMUM_INCREASE_POLICY;
+  const socialMechanismKind =
+    input.socialMechanismKind ??
+    deriveSocialMechanismKindFromMinimumIncreaseMode(policy.mode);
+  const minimumActive = socialMechanismKind === "minimum_guaranteed";
+  const effectiveMinimumPolicy = minimumActive ? policy : NO_MINIMUM_INCREASE_POLICY;
+  const universalFixedAmountPolicy =
+    input.universalFixedAmountPolicy ?? NO_UNIVERSAL_FIXED_AMOUNT_POLICY;
   const roundingStepFcfa = input.roundingStepFcfa ?? 1n;
 
   const trajectoryResult = buildPromotionAwareMonthlySalaryTrajectory({
@@ -193,6 +224,23 @@ export function buildEmployeePromotionAwareExposures(
   const minimumIncreaseExclusionReason = resolveMinimumIncreaseExclusionReason(
     minimumPopulationInput,
   );
+  const forfaitPopulationInput = {
+    contractType: input.contractType,
+    employmentStatus: input.employmentStatus,
+    hireDate: input.hireDate,
+    seniorityReferenceDate: resolveUniversalFixedAmountSeniorityReferenceDate({
+      campaignYear: input.campaignYear,
+      seniorityReferenceDate: universalFixedAmountPolicy.seniorityReferenceDate,
+    }).date,
+    minimumSeniorityMonths: universalFixedAmountPolicy.minimumSeniorityMonths,
+  };
+  const inForfaitPopulation =
+    socialMechanismKind === "universal_fixed_amount" &&
+    isUniversalFixedAmountEligible(forfaitPopulationInput);
+  const universalFixedAmountExclusionReason =
+    socialMechanismKind === "universal_fixed_amount"
+      ? resolveUniversalFixedAmountExclusionReason(forfaitPopulationInput)
+      : null;
 
   const months: EmployeeMonthlyExposureContext[] = trajectoryResult.trajectory.map(
     (entry) => {
@@ -249,7 +297,7 @@ export function buildEmployeePromotionAwareExposures(
         : 0n;
 
       const minimumComplementFloorFcfa = computeMinimumComplementFloorFcfa({
-        policy,
+        policy: effectiveMinimumPolicy,
         applicableMonthlyBaseSalaryFcfa: entry.baseSalaryFcfa,
         applicablePromotionIncrementFcfa: promotionAmountForMonthFcfa,
         roundingStepFcfa,
@@ -289,6 +337,8 @@ export function buildEmployeePromotionAwareExposures(
     compensatoryMeasureEligible,
     isMinimumIncreasePopulationEmployee: inMinimumPopulation,
     minimumIncreaseExclusionReason,
+    isUniversalFixedAmountEligible: inForfaitPopulation,
+    universalFixedAmountExclusionReason,
   };
 }
 
@@ -310,6 +360,12 @@ export interface FinalizeEmployeePromotionAwareCompensationInput {
   isPromotionBudgetPopulationEmployee: boolean;
   minimumIncreasePolicy?: MinimumIncreasePolicy;
   isMinimumIncreasePopulationEmployee?: boolean;
+  /** Mécanisme social exclusif résolu (Lot 2B-RC1-H5). */
+  socialMechanismKind: SocialMechanismKind;
+  /** Politique forfait (inactive si kind ≠ forfait). */
+  universalFixedAmountPolicy: UniversalFixedAmountPolicy;
+  /** Éligibilité population forfait. */
+  isUniversalFixedAmountEligible: boolean;
 }
 
 export interface FinalizeEmployeePromotionAwareCompensationResult {
@@ -342,6 +398,10 @@ export interface FinalizeEmployeePromotionAwareCompensationResult {
   aboveMinimumRemainingYearDirectCostFcfa: bigint;
   fullYearRunRateMinimumComplementCostFcfa: bigint;
   fullYearRunRateCompensationAboveMinimumCostFcfa: bigint;
+  campaignPeriodUniversalFixedAmountCostFcfa: bigint;
+  universalFixedAmountReminderFcfa: bigint;
+  universalFixedAmountRemainingYearDirectCostFcfa: bigint;
+  fullYearRunRateUniversalFixedAmountCostFcfa: bigint;
 }
 
 function maxZero(amount: ExactAmount): ExactAmount {
@@ -401,6 +461,8 @@ export function finalizeEmployeePromotionAwareCompensation(
   const stepFcfa = input.roundingPolicy.stepFcfa;
   const policy = input.minimumIncreasePolicy ?? NO_MINIMUM_INCREASE_POLICY;
   const inMinimumPopulation = input.isMinimumIncreasePopulationEmployee ?? false;
+  const isMinimumActive = input.socialMechanismKind === "minimum_guaranteed";
+  const isForfaitActive = input.socialMechanismKind === "universal_fixed_amount";
 
   const imputesPromotionToBudget = promotionAnnualBudgetCostFcfa({
     costPreview: input.costPreview,
@@ -438,41 +500,78 @@ export function finalizeEmployeePromotionAwareCompensation(
         ? month.promotionAmountForMonthFcfa
         : 0n;
 
+      const universalFixedAmountFcfa = computeUniversalFixedAmountForMonth({
+        policy: input.universalFixedAmountPolicy,
+        isEligible: input.isUniversalFixedAmountEligible,
+        month: month.month,
+        retroactivityStartMonth,
+        isActive: isForfaitActive,
+      });
+
       const guaranteedTotalIncreaseExact =
-        coveredByMinimumGuarantee && inMinimumPopulation
+        isMinimumActive && coveredByMinimumGuarantee && inMinimumPopulation
           ? computeGuaranteedTotalIncreaseExact({
               policy,
               applicableMonthlyBaseSalaryFcfa: month.baseSalaryFcfa,
             })
           : exactAmountFromInteger(0n);
-      const requiredMinimumComplementExact = computeRequiredMinimumComplementExact({
-        guaranteedTotalIncreaseExact,
-        applicablePromotionIncrementFcfa: coveredByMinimumGuarantee
-          ? applicablePromotionIncrementFcfa
-          : 0n,
-      });
-
-      // Préférer le plancher déjà calculé sur l’exposition (identique au solveur).
-      const minimumComplementFloorFcfa = coveredByMinimumGuarantee
-        ? (month.minimumComplementFloorFcfa ?? 0n)
-        : 0n;
-
-      const floorExact = exactAmountFromInteger(minimumComplementFloorFcfa);
-      const theoreticalComplementExact = coveredByCampaignPeriod
-        ? maxExact(floorExact, weightedComplementExact)
+      const requiredMinimumComplementExact = isMinimumActive
+        ? computeRequiredMinimumComplementExact({
+            guaranteedTotalIncreaseExact,
+            applicablePromotionIncrementFcfa: coveredByMinimumGuarantee
+              ? applicablePromotionIncrementFcfa
+              : 0n,
+          })
         : exactAmountFromInteger(0n);
 
-      const roundedFromTheoretical = coveredByCampaignPeriod
-        ? roundFractionToStepHalfUp(theoreticalComplementExact, stepFcfa)
-        : 0n;
-      const roundedCompensatoryComplementFcfa = coveredByCampaignPeriod
-        ? roundedFromTheoretical > minimumComplementFloorFcfa
-          ? roundedFromTheoretical
-          : minimumComplementFloorFcfa
-        : 0n;
-      const actualComplementAboveMinimumFcfa = nonNegative(
-        roundedCompensatoryComplementFcfa - minimumComplementFloorFcfa,
-      );
+      // Préférer le plancher déjà calculé sur l’exposition (identique au solveur).
+      const minimumComplementFloorFcfa =
+        isMinimumActive && coveredByMinimumGuarantee
+          ? (month.minimumComplementFloorFcfa ?? 0n)
+          : 0n;
+
+      const floorExact = exactAmountFromInteger(minimumComplementFloorFcfa);
+      let theoreticalComplementExact: ExactAmount;
+      let roundedCompensatoryComplementFcfa: bigint;
+      let actualComplementAboveMinimumFcfa: bigint;
+
+      if (coveredByCampaignPeriod && isForfaitActive) {
+        theoreticalComplementExact = addFractions(
+          weightedComplementExact,
+          exactAmountFromInteger(universalFixedAmountFcfa),
+        );
+        const roundedMatrix = roundFractionToStepHalfUp(
+          weightedComplementExact,
+          stepFcfa,
+        );
+        roundedCompensatoryComplementFcfa =
+          roundedMatrix + universalFixedAmountFcfa;
+        actualComplementAboveMinimumFcfa = roundedMatrix;
+      } else if (coveredByCampaignPeriod && isMinimumActive) {
+        theoreticalComplementExact = maxExact(floorExact, weightedComplementExact);
+        const roundedFromTheoretical = roundFractionToStepHalfUp(
+          theoreticalComplementExact,
+          stepFcfa,
+        );
+        roundedCompensatoryComplementFcfa =
+          roundedFromTheoretical > minimumComplementFloorFcfa
+            ? roundedFromTheoretical
+            : minimumComplementFloorFcfa;
+        actualComplementAboveMinimumFcfa = nonNegative(
+          roundedCompensatoryComplementFcfa - minimumComplementFloorFcfa,
+        );
+      } else if (coveredByCampaignPeriod) {
+        theoreticalComplementExact = weightedComplementExact;
+        roundedCompensatoryComplementFcfa = roundFractionToStepHalfUp(
+          weightedComplementExact,
+          stepFcfa,
+        );
+        actualComplementAboveMinimumFcfa = roundedCompensatoryComplementFcfa;
+      } else {
+        theoreticalComplementExact = exactAmountFromInteger(0n);
+        roundedCompensatoryComplementFcfa = 0n;
+        actualComplementAboveMinimumFcfa = 0n;
+      }
 
       const finalSalaryFcfa =
         month.baseSalaryFcfa + roundedCompensatoryComplementFcfa;
@@ -554,6 +653,8 @@ export function finalizeEmployeePromotionAwareCompensation(
         weightedComplementExact,
         theoreticalComplementExact,
         actualComplementAboveMinimumFcfa,
+        universalFixedAmountFcfa,
+        isUniversalFixedAmountEligible: input.isUniversalFixedAmountEligible,
       };
     },
   );
@@ -576,6 +677,9 @@ export function finalizeEmployeePromotionAwareCompensation(
   let aboveMinimumCompensatoryReminderFcfa = 0n;
   let minimumRemainingYearDirectCostFcfa = 0n;
   let aboveMinimumRemainingYearDirectCostFcfa = 0n;
+  let campaignPeriodUniversalFixedAmountCostFcfa = 0n;
+  let universalFixedAmountReminderFcfa = 0n;
+  let universalFixedAmountRemainingYearDirectCostFcfa = 0n;
 
   for (const entry of trajectory) {
     if (!entry.coveredByCampaignPeriod) {
@@ -592,6 +696,7 @@ export function finalizeEmployeePromotionAwareCompensation(
       entry.minimumComplementFloorFcfa;
     campaignPeriodCompensationAboveMinimumCostFcfa +=
       entry.actualComplementAboveMinimumFcfa;
+    campaignPeriodUniversalFixedAmountCostFcfa += entry.universalFixedAmountFcfa;
 
     if (entry.month < input.technicalApplicationMonth) {
       promotionCostAlreadyPaidBeforeTechnicalMonthFcfa +=
@@ -611,6 +716,7 @@ export function finalizeEmployeePromotionAwareCompensation(
       minimumCompensatoryReminderFcfa += entry.minimumComplementFloorFcfa;
       aboveMinimumCompensatoryReminderFcfa +=
         entry.actualComplementAboveMinimumFcfa;
+      universalFixedAmountReminderFcfa += entry.universalFixedAmountFcfa;
     } else if (entry.paymentTiming === "direct") {
       remainingYearDirectIncreaseCostFcfa +=
         entry.roundedCompensatoryComplementFcfa;
@@ -619,6 +725,8 @@ export function finalizeEmployeePromotionAwareCompensation(
       minimumRemainingYearDirectCostFcfa += entry.minimumComplementFloorFcfa;
       aboveMinimumRemainingYearDirectCostFcfa +=
         entry.actualComplementAboveMinimumFcfa;
+      universalFixedAmountRemainingYearDirectCostFcfa +=
+        entry.universalFixedAmountFcfa;
     }
   }
 
@@ -655,12 +763,23 @@ export function finalizeEmployeePromotionAwareCompensation(
 
   if (
     campaignPeriodMinimumComplementFloorCostFcfa +
-      campaignPeriodCompensationAboveMinimumCostFcfa !==
+      campaignPeriodCompensationAboveMinimumCostFcfa +
+      campaignPeriodUniversalFixedAmountCostFcfa !==
     annualActualCompensatoryCostFcfa
   ) {
     throw new CompensationCalculationError(
       "PROMOTION_BUDGET_INVARIANT_FAILED",
-      `Incohérence minimum / au-dessus pour ${input.employeeId}.`,
+      `Incohérence minimum / au-dessus / forfait pour ${input.employeeId}.`,
+    );
+  }
+
+  if (
+    universalFixedAmountReminderFcfa + universalFixedAmountRemainingYearDirectCostFcfa !==
+    campaignPeriodUniversalFixedAmountCostFcfa
+  ) {
+    throw new CompensationCalculationError(
+      "PROMOTION_BUDGET_INVARIANT_FAILED",
+      `Incohérence rappel/direct forfait pour ${input.employeeId}.`,
     );
   }
 
@@ -685,6 +804,8 @@ export function finalizeEmployeePromotionAwareCompensation(
   const fullYearRunRateCompensationAboveMinimumCostFcfa =
     decemberEntry.actualComplementAboveMinimumFcfa *
     BigInt(FULL_YEAR_MONTH_COUNT);
+  const fullYearRunRateUniversalFixedAmountCostFcfa =
+    decemberEntry.universalFixedAmountFcfa * BigInt(FULL_YEAR_MONTH_COUNT);
 
   const technicalApplicationMonthSeniorityRatePercent = seniorityRatePercentAt(
     hire,
@@ -722,5 +843,9 @@ export function finalizeEmployeePromotionAwareCompensation(
     aboveMinimumRemainingYearDirectCostFcfa,
     fullYearRunRateMinimumComplementCostFcfa,
     fullYearRunRateCompensationAboveMinimumCostFcfa,
+    campaignPeriodUniversalFixedAmountCostFcfa,
+    universalFixedAmountReminderFcfa,
+    universalFixedAmountRemainingYearDirectCostFcfa,
+    fullYearRunRateUniversalFixedAmountCostFcfa,
   };
 }

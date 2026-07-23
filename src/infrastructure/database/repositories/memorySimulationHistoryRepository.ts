@@ -161,6 +161,7 @@ function mapMonthDto(
       month.actualComplementAboveMinimumFcfaText,
       { allowNegative: false },
     ),
+    universalFixedAmountFcfa: nullableIntegerText(month.universalFixedAmountFcfaText),
   };
 }
 
@@ -278,6 +279,43 @@ export class MemorySimulationHistoryRepository
       neutralizeNineBoxEffectEmployeeCount:
         dto.neutralizeNineBoxEffectEmployeeCount ?? null,
       nineBoxConfirmationFactorMilli: dto.nineBoxConfirmationFactorMilli ?? null,
+      socialMechanismKind: dto.socialMechanismKind ?? null,
+      universalFixedAmountMonthlyFcfa:
+        dto.universalFixedAmountMonthlyFcfa === null ||
+        dto.universalFixedAmountMonthlyFcfa === undefined
+          ? null
+          : BigInt(dto.universalFixedAmountMonthlyFcfa),
+      universalFixedAmountEffectiveMonth: dto.universalFixedAmountEffectiveMonth ?? null,
+      universalFixedAmountMinimumSeniorityMonths:
+        dto.universalFixedAmountMinimumSeniorityMonths ?? null,
+      universalFixedAmountSeniorityReferenceDate:
+        dto.universalFixedAmountSeniorityReferenceDate ?? null,
+      universalFixedAmountEligibleEmployeeCount:
+        dto.universalFixedAmountEligibleEmployeeCount ?? null,
+      universalFixedAmountExposureCount: dto.universalFixedAmountExposureCount ?? null,
+      totalUniversalFixedAmountCostFcfa: nullableIntegerText(
+        dto.totalUniversalFixedAmountCostText,
+      ),
+      availableBudgetAfterPromotionsAndSocialMechanism:
+        dto.availableBudgetAfterPromotionsAndSocialMechanismNumeratorText &&
+        dto.availableBudgetAfterPromotionsAndSocialMechanismDenominatorText
+          ? parseCanonicalExactAmount({
+              numeratorText:
+                dto.availableBudgetAfterPromotionsAndSocialMechanismNumeratorText,
+              denominatorText:
+                dto.availableBudgetAfterPromotionsAndSocialMechanismDenominatorText,
+              allowNegativeNumerator: true,
+            })
+          : null,
+      totalUniversalFixedAmountReminderFcfa: nullableIntegerText(
+        dto.totalUniversalFixedAmountReminderText,
+      ),
+      totalUniversalFixedAmountRemainingYearDirectCostFcfa: nullableIntegerText(
+        dto.totalUniversalFixedAmountRemainingYearDirectCostText,
+      ),
+      fullYearRunRateUniversalFixedAmountCostFcfa: nullableIntegerText(
+        dto.fullYearRunRateUniversalFixedAmountCostText,
+      ),
     };
 
     const employees: PersistedSimulationEmployeeResult[] = dto.employees
@@ -380,6 +418,26 @@ export class MemorySimulationHistoryRepository
                   { allowNegative: false },
                 )
               : null,
+          isUniversalFixedAmountEligible:
+            employee.isUniversalFixedAmountEligible === undefined
+              ? null
+              : employee.isUniversalFixedAmountEligible,
+          universalFixedAmountExclusionReason:
+            employee.universalFixedAmountExclusionReason ?? null,
+          universalFixedAmountSeniorityReferenceDate:
+            employee.universalFixedAmountSeniorityReferenceDate ?? null,
+          campaignPeriodUniversalFixedAmountCostFcfa: nullableIntegerText(
+            employee.campaignPeriodUniversalFixedAmountCostText,
+          ),
+          universalFixedAmountReminderFcfa: nullableIntegerText(
+            employee.universalFixedAmountReminderText,
+          ),
+          universalFixedAmountRemainingYearDirectCostFcfa: nullableIntegerText(
+            employee.universalFixedAmountRemainingYearDirectCostText,
+          ),
+          fullYearRunRateUniversalFixedAmountCostFcfa: nullableIntegerText(
+            employee.fullYearRunRateUniversalFixedAmountCostText,
+          ),
           months: (employee.months ?? [])
             .slice()
             .sort((a, b) => a.month - b.month)

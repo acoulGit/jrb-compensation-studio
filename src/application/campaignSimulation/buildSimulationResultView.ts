@@ -157,6 +157,8 @@ function mapTrajectoryEntry(
     actualComplementAboveMinimumLabel: formatFcfaInteger(
       entry.actualComplementAboveMinimumFcfa,
     ),
+    universalFixedAmountFcfa: entry.universalFixedAmountFcfa,
+    universalFixedAmountLabel: formatFcfaInteger(entry.universalFixedAmountFcfa),
   };
 }
 
@@ -430,6 +432,35 @@ function mapEmployee(
     fullYearRunRateCompensationAboveMinimumCostLabel: formatFcfaInteger(
       employee.fullYearRunRateCompensationAboveMinimumCostFcfa,
     ),
+    socialMechanismKind: employee.socialMechanismKind,
+    isUniversalFixedAmountEligible: employee.isUniversalFixedAmountEligible,
+    universalFixedAmountExclusionReason: employee.universalFixedAmountExclusionReason,
+    universalFixedAmountMonthlyAmountFcfa:
+      employee.universalFixedAmountMonthlyAmountFcfa,
+    universalFixedAmountEffectiveMonth: employee.universalFixedAmountEffectiveMonth,
+    universalFixedAmountMinimumSeniorityMonths:
+      employee.universalFixedAmountMinimumSeniorityMonths,
+    universalFixedAmountSeniorityReferenceDate:
+      employee.universalFixedAmountSeniorityReferenceDate,
+    campaignPeriodUniversalFixedAmountCostFcfa:
+      employee.campaignPeriodUniversalFixedAmountCostFcfa,
+    campaignPeriodUniversalFixedAmountCostLabel: formatFcfaInteger(
+      employee.campaignPeriodUniversalFixedAmountCostFcfa,
+    ),
+    universalFixedAmountReminderFcfa: employee.universalFixedAmountReminderFcfa,
+    universalFixedAmountReminderLabel: formatFcfaInteger(
+      employee.universalFixedAmountReminderFcfa,
+    ),
+    universalFixedAmountRemainingYearDirectCostFcfa:
+      employee.universalFixedAmountRemainingYearDirectCostFcfa,
+    universalFixedAmountRemainingYearDirectCostLabel: formatFcfaInteger(
+      employee.universalFixedAmountRemainingYearDirectCostFcfa,
+    ),
+    fullYearRunRateUniversalFixedAmountCostFcfa:
+      employee.fullYearRunRateUniversalFixedAmountCostFcfa,
+    fullYearRunRateUniversalFixedAmountCostLabel: formatFcfaInteger(
+      employee.fullYearRunRateUniversalFixedAmountCostFcfa,
+    ),
     monthlyCompensationTrajectory: trajectory,
     explanationSteps: mapExplanationSteps(employee.explanationSteps),
   };
@@ -472,6 +503,16 @@ function buildEnvelopeSummary(
       engineResult.actualCompensationAboveMinimumCostFcfa,
     actualCompensationAboveMinimumCostLabel: formatFcfaInteger(
       engineResult.actualCompensationAboveMinimumCostFcfa,
+    ),
+    totalUniversalFixedAmountCostFcfa:
+      engineResult.populationSummary.totalUniversalFixedAmountCostFcfa,
+    totalUniversalFixedAmountCostLabel: formatFcfaInteger(
+      engineResult.populationSummary.totalUniversalFixedAmountCostFcfa,
+    ),
+    availableBudgetAfterPromotionsAndSocialMechanismFcfa:
+      engineResult.populationSummary.availableBudgetAfterPromotionsAndSocialMechanismFcfa,
+    availableBudgetAfterPromotionsAndSocialMechanismLabel: formatExactAmountAsFcfa(
+      engineResult.populationSummary.availableBudgetAfterPromotionsAndSocialMechanismFcfa,
     ),
     totalAnnualTheoreticalCompensatoryCostFcfa:
       engineResult.annualTheoreticalAllocatedTotal,
@@ -747,6 +788,26 @@ export function buildSimulationResultView(input: {
       summary.actualMinimumComplementPaidCostFcfa,
     actualCompensationAboveMinimumCostFcfa:
       summary.actualCompensationAboveMinimumCostFcfa,
+    socialMechanismKind: summary.socialMechanismKind,
+    universalFixedAmountMonthlyAmountFcfa:
+      summary.universalFixedAmountMonthlyAmountFcfa,
+    universalFixedAmountEffectiveMonth: summary.universalFixedAmountEffectiveMonth,
+    universalFixedAmountMinimumSeniorityMonths:
+      summary.universalFixedAmountMinimumSeniorityMonths,
+    universalFixedAmountSeniorityReferenceDate:
+      summary.universalFixedAmountSeniorityReferenceDate,
+    universalFixedAmountEligibleEmployeeCount:
+      summary.universalFixedAmountEligibleEmployeeCount,
+    universalFixedAmountExposureCount: summary.universalFixedAmountExposureCount,
+    totalUniversalFixedAmountCostFcfa: summary.totalUniversalFixedAmountCostFcfa,
+    availableBudgetAfterPromotionsAndSocialMechanismFcfa:
+      summary.availableBudgetAfterPromotionsAndSocialMechanismFcfa,
+    totalUniversalFixedAmountReminderFcfa:
+      summary.totalUniversalFixedAmountReminderFcfa,
+    totalUniversalFixedAmountRemainingYearDirectCostFcfa:
+      summary.totalUniversalFixedAmountRemainingYearDirectCostFcfa,
+    fullYearRunRateUniversalFixedAmountCostFcfa:
+      summary.fullYearRunRateUniversalFixedAmountCostFcfa,
   };
 
   return {

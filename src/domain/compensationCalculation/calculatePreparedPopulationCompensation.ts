@@ -51,6 +51,16 @@ import {
 } from "./minimumIncrease";
 import { resolveNineBoxTreatmentKind } from "./nineBoxTreatment";
 import {
+  deriveSocialMechanismKindFromMinimumIncreaseMode,
+  isSocialMechanismKind,
+  type SocialMechanismKind,
+} from "./socialMechanism";
+import {
+  computeUniversalFixedAmountForMonth,
+  NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
+  validateUniversalFixedAmountPolicy,
+} from "./universalFixedAmount";
+import {
   buildEmployeePromotionAwareExposures,
   finalizeEmployeePromotionAwareCompensation,
   type EmployeePromotionAwareExposureResult,
@@ -290,6 +300,94 @@ export function calculatePreparedPopulationCompensation(
     throw error;
   }
 
+  const socialMechanismKind: SocialMechanismKind =
+    input.socialMechanismKind ??
+    deriveSocialMechanismKindFromMinimumIncreaseMode(minimumIncreasePolicy.mode);
+
+  if (
+    input.socialMechanismKind !== undefined &&
+    !isSocialMechanismKind(input.socialMechanismKind)
+  ) {
+    throw new CompensationCalculationError(
+      "POPULATION_CALCULATION_FAILED",
+      `Mécanisme social non supporté : ${String(input.socialMechanismKind)}.`,
+      toIssueLikes([
+        {
+          code: "UNSUPPORTED_SOCIAL_MECHANISM_KIND",
+          message: `Mécanisme social non supporté : ${String(input.socialMechanismKind)}.`,
+          step: "social_mechanism",
+        },
+      ]),
+    );
+  }
+
+  const universalFixedAmountPolicy =
+    socialMechanismKind === "universal_fixed_amount"
+      ? (input.universalFixedAmountPolicy ?? NO_UNIVERSAL_FIXED_AMOUNT_POLICY)
+      : NO_UNIVERSAL_FIXED_AMOUNT_POLICY;
+
+  if (socialMechanismKind === "universal_fixed_amount") {
+    if (minimumIncreasePolicy.mode !== "none") {
+      throw new CompensationCalculationError(
+        "POPULATION_CALCULATION_FAILED",
+        "Le forfait social universel exige une politique de minimum garanti inactive (mode none).",
+        toIssueLikes([
+          {
+            code: "INVALID_SOCIAL_MECHANISM_CONFIGURATION",
+            message:
+              "Le forfait social universel exige une politique de minimum garanti inactive (mode none).",
+            step: "social_mechanism",
+          },
+        ]),
+      );
+    }
+    try {
+      validateUniversalFixedAmountPolicy(universalFixedAmountPolicy);
+    } catch (error) {
+      if (error instanceof CompensationCalculationError) {
+        throw new CompensationCalculationError(
+          "POPULATION_CALCULATION_FAILED",
+          error.message,
+          toIssueLikes([
+            {
+              code: error.code,
+              message: error.message,
+              step: "universal_fixed_amount_policy",
+            },
+          ]),
+        );
+      }
+      throw error;
+    }
+  } else if (socialMechanismKind === "minimum_guaranteed") {
+    if (minimumIncreasePolicy.mode === "none") {
+      throw new CompensationCalculationError(
+        "POPULATION_CALCULATION_FAILED",
+        "Le minimum garanti exige une politique de minimum active.",
+        toIssueLikes([
+          {
+            code: "INVALID_SOCIAL_MECHANISM_CONFIGURATION",
+            message: "Le minimum garanti exige une politique de minimum active.",
+            step: "social_mechanism",
+          },
+        ]),
+      );
+    }
+  } else if (minimumIncreasePolicy.mode !== "none") {
+    throw new CompensationCalculationError(
+      "POPULATION_CALCULATION_FAILED",
+      "Aucun mécanisme social actif : la politique de minimum doit être inactive.",
+      toIssueLikes([
+        {
+          code: "INVALID_SOCIAL_MECHANISM_CONFIGURATION",
+          message:
+            "Aucun mécanisme social actif : la politique de minimum doit être inactive.",
+          step: "social_mechanism",
+        },
+      ]),
+    );
+  }
+
   // Tri déterministe non mutable
   const sortedPrepared = [...preparedEmployees].sort((left, right) =>
     compareEmployeeIdAsc(left.employeeId, right.employeeId),
@@ -339,6 +437,8 @@ export function calculatePreparedPopulationCompensation(
         potentialFactors: input.references.potentialFactors,
         nineBoxFactors: input.references.nineBoxFactors,
         minimumIncreasePolicy,
+        socialMechanismKind,
+        universalFixedAmountPolicy,
         roundingStepFcfa: stepFcfa,
       });
       exposuresByEmployeeId.set(prepared.employeeId, exposures);
@@ -394,7 +494,7 @@ export function calculatePreparedPopulationCompensation(
     );
   }
 
-  // Étape 5 — enveloppe compensatoire disponible + planchers + taux unique.
+  // Étape 5 — enveloppe compensatoire disponible + coûts sociaux prioritaires + taux unique.
   const availableAnnualCompensatoryBudget = subtractFractions(
     annualBudgetTarget,
     exactAmountFromInteger(totalAnnualPromotionBudgetCostFcfa),
@@ -403,67 +503,146 @@ export function calculatePreparedPopulationCompensation(
   let totalMinimumComplementFloorCostFcfa = 0n;
   let minimumIncreasePopulationEmployeeCount = 0;
   let minimumIncreaseExposureCount = 0;
-  for (const exposures of exposuresByEmployeeId.values()) {
-    if (exposures.isMinimumIncreasePopulationEmployee) {
-      minimumIncreasePopulationEmployeeCount += 1;
+  let totalUniversalFixedAmountCostFcfa = 0n;
+  let universalFixedAmountEligibleEmployeeCount = 0;
+  let universalFixedAmountExposureCount = 0;
+
+  if (socialMechanismKind === "minimum_guaranteed") {
+    for (const exposures of exposuresByEmployeeId.values()) {
+      if (exposures.isMinimumIncreasePopulationEmployee) {
+        minimumIncreasePopulationEmployeeCount += 1;
+      }
+      for (const month of exposures.months) {
+        if (month.month < retroactivityStartMonth) {
+          continue;
+        }
+        const floor = month.minimumComplementFloorFcfa ?? 0n;
+        totalMinimumComplementFloorCostFcfa += floor;
+        if (floor > 0n) {
+          minimumIncreaseExposureCount += 1;
+        }
+      }
     }
-    for (const month of exposures.months) {
-      // Réservation plancher : uniquement les mois couverts par le minimum
-      // (max(rétro, mois d’effet) … décembre). La part au-dessus reste sur toute
-      // la période de campagne.
-      if (month.month < retroactivityStartMonth) {
-        continue;
+
+    if (
+      compareFractions(
+        exactAmountFromInteger(
+          totalAnnualPromotionBudgetCostFcfa + totalMinimumComplementFloorCostFcfa,
+        ),
+        annualBudgetTarget,
+      ) > 0
+    ) {
+      const overrun = subtractFractions(
+        exactAmountFromInteger(
+          totalAnnualPromotionBudgetCostFcfa + totalMinimumComplementFloorCostFcfa,
+        ),
+        annualBudgetTarget,
+      );
+      throw new CompensationCalculationError(
+        "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
+        "L’enveloppe ne permet pas de financer les promotions et le minimum garanti.",
+        toIssueLikes([
+          {
+            code: "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
+            message:
+              "L’enveloppe ne permet pas de financer les promotions et le minimum garanti.",
+            step: "minimum_guarantee_budget_check",
+            details: {
+              annualBudgetTargetFcfa: formatExactAmount(annualBudgetTarget),
+              totalAnnualPromotionBudgetCostFcfa:
+                totalAnnualPromotionBudgetCostFcfa.toString(),
+              totalMinimumComplementFloorCostFcfa:
+                totalMinimumComplementFloorCostFcfa.toString(),
+              overrunFcfa: formatExactAmount(overrun),
+              minimumIncreasePopulationEmployeeCount,
+              minimumIncreaseExposureCount,
+            },
+          },
+        ]),
+      );
+    }
+  } else if (socialMechanismKind === "universal_fixed_amount") {
+    const eligibleEmployeeIds = new Set<string>();
+    for (const [employeeId, exposures] of exposuresByEmployeeId) {
+      if (exposures.isUniversalFixedAmountEligible) {
+        eligibleEmployeeIds.add(employeeId);
       }
-      const floor = month.minimumComplementFloorFcfa ?? 0n;
-      totalMinimumComplementFloorCostFcfa += floor;
-      if (floor > 0n) {
-        minimumIncreaseExposureCount += 1;
+      for (const month of exposures.months) {
+        if (month.month < retroactivityStartMonth) {
+          continue;
+        }
+        const forfait = computeUniversalFixedAmountForMonth({
+          policy: universalFixedAmountPolicy,
+          isEligible: exposures.isUniversalFixedAmountEligible,
+          month: month.month,
+          retroactivityStartMonth,
+          isActive: true,
+        });
+        totalUniversalFixedAmountCostFcfa += forfait;
+        if (forfait > 0n) {
+          universalFixedAmountExposureCount += 1;
+        }
       }
+    }
+    universalFixedAmountEligibleEmployeeCount = eligibleEmployeeIds.size;
+
+    if (
+      compareFractions(
+        exactAmountFromInteger(
+          totalAnnualPromotionBudgetCostFcfa + totalUniversalFixedAmountCostFcfa,
+        ),
+        annualBudgetTarget,
+      ) > 0
+    ) {
+      const overrun = subtractFractions(
+        exactAmountFromInteger(
+          totalAnnualPromotionBudgetCostFcfa + totalUniversalFixedAmountCostFcfa,
+        ),
+        annualBudgetTarget,
+      );
+      throw new CompensationCalculationError(
+        "UNIVERSAL_FIXED_AMOUNT_EXCEEDS_BUDGET",
+        "L’enveloppe ne permet pas de financer les promotions et le forfait social universel.",
+        toIssueLikes([
+          {
+            code: "UNIVERSAL_FIXED_AMOUNT_EXCEEDS_BUDGET",
+            message:
+              "L’enveloppe ne permet pas de financer les promotions et le forfait social universel.",
+            step: "universal_fixed_amount_budget_check",
+            details: {
+              annualBudgetTargetFcfa: formatExactAmount(annualBudgetTarget),
+              totalAnnualPromotionBudgetCostFcfa:
+                totalAnnualPromotionBudgetCostFcfa.toString(),
+              totalUniversalFixedAmountCostFcfa:
+                totalUniversalFixedAmountCostFcfa.toString(),
+              overrunFcfa: formatExactAmount(overrun),
+              universalFixedAmountEligibleEmployeeCount,
+              universalFixedAmountExposureCount,
+            },
+          },
+        ]),
+      );
     }
   }
 
-  if (
-    compareFractions(
-      exactAmountFromInteger(
-        totalAnnualPromotionBudgetCostFcfa + totalMinimumComplementFloorCostFcfa,
-      ),
-      annualBudgetTarget,
-    ) > 0
-  ) {
-    const overrun = subtractFractions(
-      exactAmountFromInteger(
-        totalAnnualPromotionBudgetCostFcfa + totalMinimumComplementFloorCostFcfa,
-      ),
-      annualBudgetTarget,
-    );
-    throw new CompensationCalculationError(
-      "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
-      "L’enveloppe ne permet pas de financer les promotions et le minimum garanti.",
-      toIssueLikes([
-        {
-          code: "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
-          message:
-            "L’enveloppe ne permet pas de financer les promotions et le minimum garanti.",
-          step: "minimum_guarantee_budget_check",
-          details: {
-            annualBudgetTargetFcfa: formatExactAmount(annualBudgetTarget),
-            totalAnnualPromotionBudgetCostFcfa:
-              totalAnnualPromotionBudgetCostFcfa.toString(),
-            totalMinimumComplementFloorCostFcfa:
-              totalMinimumComplementFloorCostFcfa.toString(),
-            overrunFcfa: formatExactAmount(overrun),
-            minimumIncreasePopulationEmployeeCount,
-            minimumIncreaseExposureCount,
-          },
-        },
-      ]),
-    );
-  }
+  const prioritySocialCostFcfa =
+    socialMechanismKind === "universal_fixed_amount"
+      ? totalUniversalFixedAmountCostFcfa
+      : totalMinimumComplementFloorCostFcfa;
 
   const availableBudgetAfterPromotionsAndMinimumFcfa = subtractFractions(
     availableAnnualCompensatoryBudget,
     exactAmountFromInteger(totalMinimumComplementFloorCostFcfa),
   );
+  const availableBudgetAfterPromotionsAndSocialMechanismFcfa = subtractFractions(
+    availableAnnualCompensatoryBudget,
+    exactAmountFromInteger(prioritySocialCostFcfa),
+  );
+
+  const solverAvailableBudget =
+    socialMechanismKind === "universal_fixed_amount"
+      ? availableBudgetAfterPromotionsAndSocialMechanismFcfa
+      : availableAnnualCompensatoryBudget;
 
   const calibrationExposures: PromotionCompensatoryExposure[] = [];
   for (const [employeeId, exposures] of exposuresByEmployeeId) {
@@ -485,7 +664,7 @@ export function calculatePreparedPopulationCompensation(
   let compensatoryCalibrationRate: ExactAmount;
   try {
     compensatoryCalibrationRate = solvePromotionAwareCompensatoryCalibrationRate({
-      availableBudget: availableAnnualCompensatoryBudget,
+      availableBudget: solverAvailableBudget,
       exposures: calibrationExposures,
     });
   } catch (error) {
@@ -522,56 +701,66 @@ export function calculatePreparedPopulationCompensation(
         );
       }
       if (error.code === "NO_COMPENSATORY_ALLOCATION_CAPACITY") {
-        const eligibleExposureCount = calibrationExposures.filter(
-          (exposure) => !isZeroFraction(exposure.factor),
-        ).length;
-        const message =
-          "Un budget reste disponible après promotions et minimum garanti, mais aucune exposition ne présente de capacité d’allocation positive au-dessus du plancher. Réduisez l’enveloppe disponible ou revoyez la population et les règles d’éligibilité.";
-        throw new CompensationCalculationError(
-          "NO_COMPENSATORY_ALLOCATION_CAPACITY",
-          message,
-          toIssueLikes([
-            {
-              code: "NO_COMPENSATORY_ALLOCATION_CAPACITY",
-              message,
-              step: "compensatory_calibration",
-              details: {
-                annualBudgetTargetFcfa: formatExactAmount(annualBudgetTarget),
-                totalAnnualPromotionBudgetCostFcfa:
-                  totalAnnualPromotionBudgetCostFcfa.toString(),
-                totalMinimumComplementFloorCostFcfa:
-                  totalMinimumComplementFloorCostFcfa.toString(),
-                availableAnnualCompensatoryBudgetFcfa: formatExactAmount(
-                  availableAnnualCompensatoryBudget,
-                ),
-                availableBudgetAfterPromotionsAndMinimumFcfa: formatExactAmount(
-                  availableBudgetAfterPromotionsAndMinimumFcfa,
-                ),
-                eligibleExposureCount,
+        // Forfait seul sur une population sans capacité matricielle (ex. tous
+        // sous-performants / non éligibles matrice) : le reliquat ne peut pas
+        // être alloué — taux 0, forfait conservé, pas d’échec trompeur.
+        if (socialMechanismKind === "universal_fixed_amount") {
+          compensatoryCalibrationRate = exactAmountFromInteger(0n);
+        } else {
+          const eligibleExposureCount = calibrationExposures.filter(
+            (exposure) => !isZeroFraction(exposure.factor),
+          ).length;
+          const message =
+            "Un budget reste disponible après promotions et minimum garanti, mais aucune exposition ne présente de capacité d’allocation positive au-dessus du plancher. Réduisez l’enveloppe disponible ou revoyez la population et les règles d’éligibilité.";
+          throw new CompensationCalculationError(
+            "NO_COMPENSATORY_ALLOCATION_CAPACITY",
+            message,
+            toIssueLikes([
+              {
+                code: "NO_COMPENSATORY_ALLOCATION_CAPACITY",
+                message,
+                step: "compensatory_calibration",
+                details: {
+                  annualBudgetTargetFcfa: formatExactAmount(annualBudgetTarget),
+                  totalAnnualPromotionBudgetCostFcfa:
+                    totalAnnualPromotionBudgetCostFcfa.toString(),
+                  totalMinimumComplementFloorCostFcfa:
+                    totalMinimumComplementFloorCostFcfa.toString(),
+                  availableAnnualCompensatoryBudgetFcfa: formatExactAmount(
+                    availableAnnualCompensatoryBudget,
+                  ),
+                  availableBudgetAfterPromotionsAndMinimumFcfa:
+                    formatExactAmount(
+                      availableBudgetAfterPromotionsAndMinimumFcfa,
+                    ),
+                  eligibleExposureCount,
+                },
               },
-            },
-          ]),
-        );
+            ]),
+          );
+        }
+      } else {
+        // Conserver le code métier d’origine.
+        throw error;
       }
-      // Conserver le code métier d’origine.
-      throw error;
+    } else {
+      throw new CompensationCalculationError(
+        "POPULATION_CALCULATION_FAILED",
+        error instanceof Error
+          ? error.message
+          : "Échec inattendu du calibrage compensatoire.",
+        toIssueLikes([
+          {
+            code: "POPULATION_CALCULATION_FAILED",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Échec inattendu du calibrage compensatoire.",
+            step: "compensatory_calibration",
+          },
+        ]),
+      );
     }
-    throw new CompensationCalculationError(
-      "POPULATION_CALCULATION_FAILED",
-      error instanceof Error
-        ? error.message
-        : "Échec inattendu du calibrage compensatoire.",
-      toIssueLikes([
-        {
-          code: "POPULATION_CALCULATION_FAILED",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Échec inattendu du calibrage compensatoire.",
-          step: "compensatory_calibration",
-        },
-      ]),
-    );
   }
 
   const calibrationCoefficient = multiplyFractions(
@@ -605,6 +794,9 @@ export function calculatePreparedPopulationCompensation(
         minimumIncreasePolicy,
         isMinimumIncreasePopulationEmployee:
           exposures.isMinimumIncreasePopulationEmployee,
+        socialMechanismKind,
+        universalFixedAmountPolicy,
+        isUniversalFixedAmountEligible: exposures.isUniversalFixedAmountEligible,
       });
     } catch (error) {
       finalizeIssues.push(wrapEmployeeError(prepared.employeeId, error, "finalize_compensation"));
@@ -857,6 +1049,26 @@ export function calculatePreparedPopulationCompensation(
         finalized.fullYearRunRateMinimumComplementCostFcfa,
       fullYearRunRateCompensationAboveMinimumCostFcfa:
         finalized.fullYearRunRateCompensationAboveMinimumCostFcfa,
+      socialMechanismKind,
+      isUniversalFixedAmountEligible: exposures.isUniversalFixedAmountEligible,
+      universalFixedAmountExclusionReason:
+        exposures.universalFixedAmountExclusionReason,
+      universalFixedAmountMonthlyAmountFcfa:
+        socialMechanismKind === "universal_fixed_amount"
+          ? universalFixedAmountPolicy.monthlyAmountFcfa
+          : 0n,
+      universalFixedAmountEffectiveMonth: universalFixedAmountPolicy.effectiveMonth,
+      universalFixedAmountMinimumSeniorityMonths:
+        universalFixedAmountPolicy.minimumSeniorityMonths,
+      universalFixedAmountSeniorityReferenceDate:
+        universalFixedAmountPolicy.seniorityReferenceDate,
+      campaignPeriodUniversalFixedAmountCostFcfa:
+        finalized.campaignPeriodUniversalFixedAmountCostFcfa,
+      universalFixedAmountReminderFcfa: finalized.universalFixedAmountReminderFcfa,
+      universalFixedAmountRemainingYearDirectCostFcfa:
+        finalized.universalFixedAmountRemainingYearDirectCostFcfa,
+      fullYearRunRateUniversalFixedAmountCostFcfa:
+        finalized.fullYearRunRateUniversalFixedAmountCostFcfa,
       blockingReason: prepared.blockingReason,
       explanationSteps: employeeSteps,
     });
@@ -929,6 +1141,9 @@ export function calculatePreparedPopulationCompensation(
   let aboveMinimumRemainingYearDirectCostFcfa = 0n;
   let fullYearRunRateMinimumComplementCostFcfa = 0n;
   let fullYearRunRateCompensationAboveMinimumCostFcfa = 0n;
+  let totalUniversalFixedAmountReminderFcfa = 0n;
+  let totalUniversalFixedAmountRemainingYearDirectCostFcfa = 0n;
+  let fullYearRunRateUniversalFixedAmountCostFcfa = 0n;
 
   for (const employee of employees) {
     populationSalarySumFcfa += employee.salaryFcfa;
@@ -970,6 +1185,11 @@ export function calculatePreparedPopulationCompensation(
       employee.fullYearRunRateMinimumComplementCostFcfa;
     fullYearRunRateCompensationAboveMinimumCostFcfa +=
       employee.fullYearRunRateCompensationAboveMinimumCostFcfa;
+    totalUniversalFixedAmountReminderFcfa += employee.universalFixedAmountReminderFcfa;
+    totalUniversalFixedAmountRemainingYearDirectCostFcfa +=
+      employee.universalFixedAmountRemainingYearDirectCostFcfa;
+    fullYearRunRateUniversalFixedAmountCostFcfa +=
+      employee.fullYearRunRateUniversalFixedAmountCostFcfa;
     const december = employee.monthlyCompensationTrajectory.find(
       (entry) => entry.month === 12,
     )!;
@@ -1027,10 +1247,22 @@ export function calculatePreparedPopulationCompensation(
     );
   }
   if (!fractionsEqual(annualTheoreticalAllocatedTotal, availableAnnualCompensatoryBudget)) {
-    throw new CompensationCalculationError(
-      "THEORETICAL_ALLOCATION_RECONCILIATION_FAILED",
-      "La somme théorique compensatoire annuelle ne reproduit pas l'enveloppe compensatoire disponible.",
-    );
+    // Sous-consommation explicite du reliquat matrice : forfait actif, taux 0,
+    // aucune capacité matricielle (ex. uniquement sous-performants / non
+    // éligibles matrice). Le forfait reste fixe ; le surplus n’est pas alloué.
+    const forfaitOnlyUnderConsumption =
+      socialMechanismKind === "universal_fixed_amount" &&
+      isZeroFraction(compensatoryCalibrationRate) &&
+      fractionsEqual(
+        annualTheoreticalAllocatedTotal,
+        exactAmountFromInteger(totalUniversalFixedAmountCostFcfa),
+      );
+    if (!forfaitOnlyUnderConsumption) {
+      throw new CompensationCalculationError(
+        "THEORETICAL_ALLOCATION_RECONCILIATION_FAILED",
+        "La somme théorique compensatoire annuelle ne reproduit pas l'enveloppe compensatoire disponible.",
+      );
+    }
   }
 
   const annualTotalRoundingDelta = subtractFractions(
@@ -1132,6 +1364,23 @@ export function calculatePreparedPopulationCompensation(
     aboveMinimumRemainingYearDirectCostFcfa,
     fullYearRunRateMinimumComplementCostFcfa,
     fullYearRunRateCompensationAboveMinimumCostFcfa,
+    socialMechanismKind,
+    universalFixedAmountMonthlyAmountFcfa:
+      socialMechanismKind === "universal_fixed_amount"
+        ? universalFixedAmountPolicy.monthlyAmountFcfa
+        : 0n,
+    universalFixedAmountEffectiveMonth: universalFixedAmountPolicy.effectiveMonth,
+    universalFixedAmountMinimumSeniorityMonths:
+      universalFixedAmountPolicy.minimumSeniorityMonths,
+    universalFixedAmountSeniorityReferenceDate:
+      universalFixedAmountPolicy.seniorityReferenceDate,
+    universalFixedAmountEligibleEmployeeCount,
+    universalFixedAmountExposureCount,
+    totalUniversalFixedAmountCostFcfa,
+    availableBudgetAfterPromotionsAndSocialMechanismFcfa,
+    totalUniversalFixedAmountReminderFcfa,
+    totalUniversalFixedAmountRemainingYearDirectCostFcfa,
+    fullYearRunRateUniversalFixedAmountCostFcfa,
   };
 
   const explanationSteps: CalculationExplanationStep[] = [

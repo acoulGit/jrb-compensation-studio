@@ -111,6 +111,13 @@ export function SimulationPage() {
     setTechnicalApplicationMonthInput,
     setMinimumGuaranteeEffectiveMonthInput,
     alignMinimumGuaranteeEffectiveMonthToTechnical,
+    setSocialMechanismKind,
+    setUniversalFixedAmountMonthlyAmountInput,
+    setUniversalFixedAmountEffectiveMonthInput,
+    setUniversalFixedAmountMinimumSeniorityMonthsInput,
+    setUniversalFixedAmountSeniorityReferenceDateInput,
+    resetUniversalFixedAmountSeniorityReferenceDateToDefault,
+    alignUniversalFixedAmountEffectiveMonthToTechnical,
     setMinimumIncreaseMode,
     setMinimumMonthlyAmountInput,
     setMinimumIncreaseRatePercentInput,
@@ -584,67 +591,75 @@ export function SimulationPage() {
               ))}
             </select>
           </label>
-          <label
-            className="field field--full"
-            htmlFor="simulation-minimum-guarantee-effective-month"
-          >
-            Mois d’effet du minimum garanti
-            <select
-              id="simulation-minimum-guarantee-effective-month"
-              data-testid="simulation-minimum-guarantee-effective-month"
-              disabled={isReadOnly}
-              value={draft.minimumGuaranteeEffectiveMonthInput}
-              aria-invalid={Boolean(
-                parsed?.fieldErrors.minimumGuaranteeEffectiveMonthInput,
-              )}
-              onChange={(event) => {
-                setMinimumGuaranteeEffectiveMonthInput(event.target.value);
-              }}
-            >
-              {TECHNICAL_APPLICATION_MONTH_LABELS_FR.map((label, index) => (
-                <option key={label} value={String(index + 1)}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {!isReadOnly ? (
-            <div className="field field--full">
-              <button
-                type="button"
-                className="button button--secondary"
-                data-testid="simulation-align-minimum-effective-month"
-                onClick={() => {
-                  alignMinimumGuaranteeEffectiveMonthToTechnical();
-                }}
+          {draft.socialMechanismKind === "minimum_guaranteed" ? (
+            <>
+              <label
+                className="field field--full"
+                htmlFor="simulation-minimum-guarantee-effective-month"
               >
-                Aligner sur le mois technique
-              </button>
-            </div>
+                Mois d’effet du minimum garanti
+                <select
+                  id="simulation-minimum-guarantee-effective-month"
+                  data-testid="simulation-minimum-guarantee-effective-month"
+                  disabled={isReadOnly}
+                  value={draft.minimumGuaranteeEffectiveMonthInput}
+                  aria-invalid={Boolean(
+                    parsed?.fieldErrors.minimumGuaranteeEffectiveMonthInput,
+                  )}
+                  onChange={(event) => {
+                    setMinimumGuaranteeEffectiveMonthInput(event.target.value);
+                  }}
+                >
+                  {TECHNICAL_APPLICATION_MONTH_LABELS_FR.map((label, index) => (
+                    <option key={label} value={String(index + 1)}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {!isReadOnly ? (
+                <div className="field field--full">
+                  <button
+                    type="button"
+                    className="button button--secondary"
+                    data-testid="simulation-align-minimum-effective-month"
+                    onClick={() => {
+                      alignMinimumGuaranteeEffectiveMonthToTechnical();
+                    }}
+                  >
+                    Aligner sur le mois technique
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : null}
         </div>
-        <p className="form-help">
-          Le complément minimum est appliqué uniquement à partir de ce mois.
-          S’il est antérieur au mois technique, les mois précédents peuvent
-          produire un rappel. S’il est égal ou postérieur au mois technique,
-          aucun rappel du minimum n’est généré.
-        </p>
-        {(() => {
-          const summary = minimumGuaranteeReminderSummaryFr({
-            minimumGuaranteeEffectiveMonth:
-              parsed?.minimumGuaranteeEffectiveMonth ?? null,
-            technicalApplicationMonth:
-              parsed?.technicalApplicationMonth ?? null,
-          });
-          return summary ? (
-            <p
-              className="form-help"
-              data-testid="simulation-minimum-reminder-summary"
-            >
-              {summary}
+        {draft.socialMechanismKind === "minimum_guaranteed" ? (
+          <>
+            <p className="form-help">
+              Le complément minimum est appliqué uniquement à partir de ce mois.
+              S’il est antérieur au mois technique, les mois précédents peuvent
+              produire un rappel. S’il est égal ou postérieur au mois technique,
+              aucun rappel du minimum n’est généré.
             </p>
-          ) : null;
-        })()}
+            {(() => {
+              const summary = minimumGuaranteeReminderSummaryFr({
+                minimumGuaranteeEffectiveMonth:
+                  parsed?.minimumGuaranteeEffectiveMonth ?? null,
+                technicalApplicationMonth:
+                  parsed?.technicalApplicationMonth ?? null,
+              });
+              return summary ? (
+                <p
+                  className="form-help"
+                  data-testid="simulation-minimum-reminder-summary"
+                >
+                  {summary}
+                </p>
+              ) : null;
+            })()}
+          </>
+        ) : null}
         {parsed?.retroactivityStartMonth !== null &&
         parsed?.retroactivityStartMonth !== undefined &&
         parsed?.technicalApplicationMonth !== null &&
@@ -698,120 +713,324 @@ export function SimulationPage() {
         ) : null}
       </SectionCard>
 
-      <SectionCard title="Minimum garanti d’augmentation">
-        <p className="form-help">
-          Le minimum s’applique aux salariés CDI/CDD actifs, y compris ceux de
-          moins de douze mois et les sous-performants. Les prestataires et
-          statuts exclus ne sont pas concernés.
-        </p>
+      <SectionCard title="Mécanisme social">
         <fieldset
           className="field field--full"
-          data-testid="simulation-minimum-increase-mode"
+          data-testid="simulation-social-mechanism-kind"
           disabled={isReadOnly}
         >
-          <legend>Mode</legend>
+          <legend>Mécanisme social</legend>
           <label className="choice">
             <input
               type="radio"
-              name="minimum-increase-mode"
+              name="social-mechanism-kind"
               value="none"
-              checked={draft.minimumIncreaseMode === "none"}
+              data-testid="simulation-social-mechanism-none"
+              checked={draft.socialMechanismKind === "none"}
               onChange={() => {
-                setMinimumIncreaseMode("none");
+                setSocialMechanismKind("none");
               }}
             />
-            Aucun minimum
+            Aucun
           </label>
           <label className="choice">
             <input
               type="radio"
-              name="minimum-increase-mode"
-              value="fixed_monthly_amount"
-              checked={draft.minimumIncreaseMode === "fixed_monthly_amount"}
+              name="social-mechanism-kind"
+              value="minimum_guaranteed"
+              data-testid="simulation-social-mechanism-minimum"
+              checked={draft.socialMechanismKind === "minimum_guaranteed"}
               onChange={() => {
-                setMinimumIncreaseMode("fixed_monthly_amount");
+                setSocialMechanismKind("minimum_guaranteed");
               }}
             />
-            Montant forfaitaire mensuel
+            Minimum garanti
           </label>
           <label className="choice">
             <input
               type="radio"
-              name="minimum-increase-mode"
-              value="percentage_of_base_salary"
-              checked={draft.minimumIncreaseMode === "percentage_of_base_salary"}
+              name="social-mechanism-kind"
+              value="universal_fixed_amount"
+              data-testid="simulation-social-mechanism-forfait"
+              checked={draft.socialMechanismKind === "universal_fixed_amount"}
               onChange={() => {
-                setMinimumIncreaseMode("percentage_of_base_salary");
+                setSocialMechanismKind("universal_fixed_amount");
               }}
             />
-            Pourcentage du salaire de base
+            Forfait social universel
           </label>
         </fieldset>
-        {draft.minimumIncreaseMode === "fixed_monthly_amount" ? (
-          <label
-            className="field field--full"
-            htmlFor="simulation-minimum-monthly-amount"
-          >
-            Montant forfaitaire mensuel (FCFA)
-            <input
-              id="simulation-minimum-monthly-amount"
-              data-testid="simulation-minimum-monthly-amount"
-              inputMode="numeric"
-              autoComplete="off"
+        {parsed?.fieldErrors.socialMechanismKind ? (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {parsed.fieldErrors.socialMechanismKind.message}
+          </p>
+        ) : null}
+
+        {draft.socialMechanismKind === "minimum_guaranteed" ? (
+          <>
+            <p className="form-help">
+              Le minimum s’applique aux salariés CDI/CDD actifs, y compris ceux de
+              moins de douze mois et les sous-performants. Les prestataires et
+              statuts exclus ne sont pas concernés.
+            </p>
+            <fieldset
+              className="field field--full"
+              data-testid="simulation-minimum-increase-mode"
               disabled={isReadOnly}
-              value={draft.minimumMonthlyAmountInput}
-              aria-invalid={Boolean(
-                parsed?.fieldErrors.minimumMonthlyAmountInput,
-              )}
-              onChange={(event) => {
-                setMinimumMonthlyAmountInput(event.target.value);
-              }}
-            />
-            <span className="form-help">
-              Montant mensuel total garanti, promotion comprise.
-            </span>
-          </label>
+            >
+              <legend>Mode de minimum garanti</legend>
+              <label className="choice">
+                <input
+                  type="radio"
+                  name="minimum-increase-mode"
+                  value="fixed_monthly_amount"
+                  checked={draft.minimumIncreaseMode === "fixed_monthly_amount"}
+                  onChange={() => {
+                    setMinimumIncreaseMode("fixed_monthly_amount");
+                  }}
+                />
+                Montant forfaitaire mensuel
+              </label>
+              <label className="choice">
+                <input
+                  type="radio"
+                  name="minimum-increase-mode"
+                  value="percentage_of_base_salary"
+                  checked={
+                    draft.minimumIncreaseMode === "percentage_of_base_salary"
+                  }
+                  onChange={() => {
+                    setMinimumIncreaseMode("percentage_of_base_salary");
+                  }}
+                />
+                Pourcentage du salaire de base
+              </label>
+            </fieldset>
+            {draft.minimumIncreaseMode === "fixed_monthly_amount" ? (
+              <label
+                className="field field--full"
+                htmlFor="simulation-minimum-monthly-amount"
+              >
+                Montant forfaitaire mensuel (FCFA)
+                <input
+                  id="simulation-minimum-monthly-amount"
+                  data-testid="simulation-minimum-monthly-amount"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  disabled={isReadOnly}
+                  value={draft.minimumMonthlyAmountInput}
+                  aria-invalid={Boolean(
+                    parsed?.fieldErrors.minimumMonthlyAmountInput,
+                  )}
+                  onChange={(event) => {
+                    setMinimumMonthlyAmountInput(event.target.value);
+                  }}
+                />
+                <span className="form-help">
+                  Montant mensuel total garanti, promotion comprise.
+                </span>
+              </label>
+            ) : null}
+            {draft.minimumIncreaseMode === "percentage_of_base_salary" ? (
+              <label
+                className="field field--full"
+                htmlFor="simulation-minimum-increase-rate"
+              >
+                Taux minimum (%)
+                <input
+                  id="simulation-minimum-increase-rate"
+                  data-testid="simulation-minimum-increase-rate"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  disabled={isReadOnly}
+                  value={draft.minimumIncreaseRatePercentInput}
+                  aria-invalid={Boolean(
+                    parsed?.fieldErrors.minimumIncreaseRatePercentInput,
+                  )}
+                  onChange={(event) => {
+                    setMinimumIncreaseRatePercentInput(event.target.value);
+                  }}
+                />
+                <span className="form-help">
+                  Pourcentage du salaire de base applicable chaque mois, promotion
+                  comprise.
+                </span>
+              </label>
+            ) : null}
+            {parsed?.fieldErrors.minimumIncreaseMode ? (
+              <p className="form-feedback form-feedback--error" role="alert">
+                {parsed.fieldErrors.minimumIncreaseMode.message}
+              </p>
+            ) : null}
+            {parsed?.fieldErrors.minimumMonthlyAmountInput ? (
+              <p className="form-feedback form-feedback--error" role="alert">
+                {parsed.fieldErrors.minimumMonthlyAmountInput.message}
+              </p>
+            ) : null}
+            {parsed?.fieldErrors.minimumIncreaseRatePercentInput ? (
+              <p className="form-feedback form-feedback--error" role="alert">
+                {parsed.fieldErrors.minimumIncreaseRatePercentInput.message}
+              </p>
+            ) : null}
+          </>
         ) : null}
-        {draft.minimumIncreaseMode === "percentage_of_base_salary" ? (
-          <label
-            className="field field--full"
-            htmlFor="simulation-minimum-increase-rate"
-          >
-            Taux minimum (%)
-            <input
-              id="simulation-minimum-increase-rate"
-              data-testid="simulation-minimum-increase-rate"
-              inputMode="decimal"
-              autoComplete="off"
-              disabled={isReadOnly}
-              value={draft.minimumIncreaseRatePercentInput}
-              aria-invalid={Boolean(
-                parsed?.fieldErrors.minimumIncreaseRatePercentInput,
-              )}
-              onChange={(event) => {
-                setMinimumIncreaseRatePercentInput(event.target.value);
-              }}
-            />
-            <span className="form-help">
-              Pourcentage du salaire de base applicable chaque mois, promotion
-              comprise.
-            </span>
-          </label>
-        ) : null}
-        {parsed?.fieldErrors.minimumIncreaseMode ? (
-          <p className="form-feedback form-feedback--error" role="alert">
-            {parsed.fieldErrors.minimumIncreaseMode.message}
-          </p>
-        ) : null}
-        {parsed?.fieldErrors.minimumMonthlyAmountInput ? (
-          <p className="form-feedback form-feedback--error" role="alert">
-            {parsed.fieldErrors.minimumMonthlyAmountInput.message}
-          </p>
-        ) : null}
-        {parsed?.fieldErrors.minimumIncreaseRatePercentInput ? (
-          <p className="form-feedback form-feedback--error" role="alert">
-            {parsed.fieldErrors.minimumIncreaseRatePercentInput.message}
-          </p>
+
+        {draft.socialMechanismKind === "universal_fixed_amount" ? (
+          <>
+            <label
+              className="field field--full"
+              htmlFor="simulation-universal-fixed-amount"
+            >
+              Montant du forfait social universel (FCFA)
+              <input
+                id="simulation-universal-fixed-amount"
+                data-testid="simulation-universal-fixed-amount"
+                inputMode="numeric"
+                autoComplete="off"
+                disabled={isReadOnly}
+                value={draft.universalFixedAmountMonthlyAmountInput}
+                aria-invalid={Boolean(
+                  parsed?.fieldErrors.universalFixedAmountMonthlyAmountInput,
+                )}
+                onChange={(event) => {
+                  setUniversalFixedAmountMonthlyAmountInput(event.target.value);
+                }}
+              />
+            </label>
+            <label
+              className="field field--full"
+              htmlFor="simulation-universal-fixed-effective-month"
+            >
+              Mois d’effet du forfait
+              <select
+                id="simulation-universal-fixed-effective-month"
+                data-testid="simulation-universal-fixed-effective-month"
+                disabled={isReadOnly}
+                value={draft.universalFixedAmountEffectiveMonthInput}
+                aria-invalid={Boolean(
+                  parsed?.fieldErrors.universalFixedAmountEffectiveMonthInput,
+                )}
+                onChange={(event) => {
+                  setUniversalFixedAmountEffectiveMonthInput(event.target.value);
+                }}
+              >
+                {TECHNICAL_APPLICATION_MONTH_LABELS_FR.map((label, index) => (
+                  <option key={label} value={String(index + 1)}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!isReadOnly ? (
+              <div className="field field--full">
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  data-testid="simulation-align-universal-fixed-effective-month"
+                  onClick={() => {
+                    alignUniversalFixedAmountEffectiveMonthToTechnical();
+                  }}
+                >
+                  Aligner sur le mois technique
+                </button>
+              </div>
+            ) : null}
+            <label
+              className="field field--full"
+              htmlFor="simulation-universal-fixed-minimum-seniority"
+            >
+              Ancienneté minimale pour bénéficier du forfait (mois)
+              <input
+                id="simulation-universal-fixed-minimum-seniority"
+                data-testid="simulation-universal-fixed-minimum-seniority"
+                inputMode="numeric"
+                autoComplete="off"
+                disabled={isReadOnly}
+                value={draft.universalFixedAmountMinimumSeniorityMonthsInput}
+                aria-invalid={Boolean(
+                  parsed?.fieldErrors
+                    .universalFixedAmountMinimumSeniorityMonthsInput,
+                )}
+                onChange={(event) => {
+                  setUniversalFixedAmountMinimumSeniorityMonthsInput(
+                    event.target.value,
+                  );
+                }}
+              />
+              <span className="form-help">
+                0 mois : tous les salariés inclus sont éligibles, sous réserve
+                des exclusions de campagne.
+              </span>
+            </label>
+            <label
+              className="field field--full"
+              htmlFor="simulation-universal-fixed-seniority-reference-date"
+            >
+              Date de référence de l’ancienneté
+              <input
+                id="simulation-universal-fixed-seniority-reference-date"
+                data-testid="simulation-universal-fixed-seniority-reference-date"
+                type="date"
+                autoComplete="off"
+                disabled={isReadOnly}
+                value={draft.universalFixedAmountSeniorityReferenceDateInput}
+                aria-invalid={Boolean(
+                  parsed?.fieldErrors
+                    .universalFixedAmountSeniorityReferenceDateInput,
+                )}
+                onChange={(event) => {
+                  setUniversalFixedAmountSeniorityReferenceDateInput(
+                    event.target.value,
+                  );
+                }}
+              />
+              <span className="form-help">
+                Par défaut : 31 décembre de l’année précédant la campagne.
+                Détermine l’éligibilité ; le mois d’effet détermine uniquement
+                l’incidence budgétaire.
+              </span>
+            </label>
+            {!isReadOnly ? (
+              <div className="field field--full">
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  data-testid="simulation-reset-universal-fixed-seniority-reference-date"
+                  onClick={() => {
+                    resetUniversalFixedAmountSeniorityReferenceDateToDefault();
+                  }}
+                >
+                  Réinitialiser au 31/12 N−1
+                </button>
+              </div>
+            ) : null}
+            {parsed?.fieldErrors.universalFixedAmountMonthlyAmountInput ? (
+              <p className="form-feedback form-feedback--error" role="alert">
+                {parsed.fieldErrors.universalFixedAmountMonthlyAmountInput.message}
+              </p>
+            ) : null}
+            {parsed?.fieldErrors.universalFixedAmountEffectiveMonthInput ? (
+              <p className="form-feedback form-feedback--error" role="alert">
+                {parsed.fieldErrors.universalFixedAmountEffectiveMonthInput.message}
+              </p>
+            ) : null}
+            {parsed?.fieldErrors.universalFixedAmountMinimumSeniorityMonthsInput ? (
+              <p className="form-feedback form-feedback--error" role="alert">
+                {
+                  parsed.fieldErrors.universalFixedAmountMinimumSeniorityMonthsInput
+                    .message
+                }
+              </p>
+            ) : null}
+            {parsed?.fieldErrors.universalFixedAmountSeniorityReferenceDateInput ? (
+              <p className="form-feedback form-feedback--error" role="alert">
+                {
+                  parsed.fieldErrors.universalFixedAmountSeniorityReferenceDateInput
+                    .message
+                }
+              </p>
+            ) : null}
+          </>
         ) : null}
       </SectionCard>
 

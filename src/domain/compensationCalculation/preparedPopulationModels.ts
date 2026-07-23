@@ -23,6 +23,9 @@ import type { MinimumIncreaseExclusionReason } from "./minimumIncreasePopulation
 import type { MinimumIncreaseMode, MinimumIncreasePolicy } from "./minimumIncrease";
 import type { PromotionBudgetEmploymentStatus } from "./promotionBudgetPopulation";
 import type { RoundingPolicy } from "./populationAllocationModels";
+import type { SocialMechanismKind } from "./socialMechanism";
+import type { UniversalFixedAmountPolicy } from "./universalFixedAmount";
+import type { UniversalFixedAmountExclusionReason } from "./universalFixedAmountPopulation";
 
 /**
  * Convention JRB : répartition du budget ANNUEL proportionnelle au
@@ -126,8 +129,19 @@ export interface PreparedPopulationCalculationInput {
   /**
    * Politique de minimum garanti d’augmentation (Lot 2A-H2D-2).
    * Défaut métier = aucun minimum (parité H2D-1).
+   * Doit rester `none` lorsque le mécanisme social est le forfait universel.
    */
   minimumIncreasePolicy?: MinimumIncreasePolicy;
+  /**
+   * Mécanisme social exclusif (Lot 2B-RC1-H5).
+   * Défaut = dérivé de `minimumIncreasePolicy.mode` (jamais de forfait implicite).
+   */
+  socialMechanismKind?: SocialMechanismKind;
+  /**
+   * Politique du forfait social universel (active seulement si
+   * `socialMechanismKind === "universal_fixed_amount"`).
+   */
+  universalFixedAmountPolicy?: UniversalFixedAmountPolicy;
 }
 
 export interface PopulationCalculationIssue {
@@ -325,6 +339,28 @@ export interface EmployeeCompensationCalculationResult {
   fullYearRunRateMinimumComplementCostFcfa: bigint;
   /** Plein effet décembre : au-dessus du minimum × 12. */
   fullYearRunRateCompensationAboveMinimumCostFcfa: bigint;
+  /** Mécanisme social exclusif résolu (Lot 2B-RC1-H5). */
+  socialMechanismKind: SocialMechanismKind;
+  /** Éligibilité au forfait social universel. */
+  isUniversalFixedAmountEligible: boolean;
+  /** Motif d’exclusion du forfait — null si éligible ou mécanisme inactif. */
+  universalFixedAmountExclusionReason: UniversalFixedAmountExclusionReason;
+  /** Montant mensuel configuré du forfait (0 si mécanisme ≠ forfait). */
+  universalFixedAmountMonthlyAmountFcfa: bigint;
+  /** Mois d’effet du forfait (1–12) — miroir config ; informatif si inactif. */
+  universalFixedAmountEffectiveMonth: number;
+  /** Ancienneté minimale configurée du forfait (mois). */
+  universalFixedAmountMinimumSeniorityMonths: number;
+  /** Date de référence ISO pour l’éligibilité d’ancienneté du forfait. */
+  universalFixedAmountSeniorityReferenceDate: string;
+  /** Σ forfait sur la période de campagne. */
+  campaignPeriodUniversalFixedAmountCostFcfa: bigint;
+  /** Part forfait du rappel. */
+  universalFixedAmountReminderFcfa: bigint;
+  /** Part forfait du paiement direct. */
+  universalFixedAmountRemainingYearDirectCostFcfa: bigint;
+  /** Plein effet décembre : forfait × 12. */
+  fullYearRunRateUniversalFixedAmountCostFcfa: bigint;
   blockingReason?: MatrixBlockingReason;
   explanationSteps: CalculationExplanationStep[];
 }
@@ -400,6 +436,13 @@ export interface MonthlyCompensationTrajectoryEntry {
   theoreticalComplementExact: ExactAmount;
   /** Complément arrondi au-dessus du plancher (= rounded − floor). */
   actualComplementAboveMinimumFcfa: bigint;
+  /**
+   * Forfait social universel du mois (0 si inactif / inéligible / hors couverture).
+   * Additif — jamais un plancher.
+   */
+  universalFixedAmountFcfa: bigint;
+  /** Éligibilité au forfait (population + ancienneté propre). */
+  isUniversalFixedAmountEligible: boolean;
 }
 
 export interface PopulationCalculationSummary {
@@ -507,6 +550,34 @@ export interface PopulationCalculationSummary {
   fullYearRunRateMinimumComplementCostFcfa: bigint;
   /** Plein effet : Σ au-dessus du minimum décembre × 12. */
   fullYearRunRateCompensationAboveMinimumCostFcfa: bigint;
+  /** Mécanisme social exclusif (Lot 2B-RC1-H5). */
+  socialMechanismKind: SocialMechanismKind;
+  /** Montant mensuel configuré du forfait — 0 si inactif. */
+  universalFixedAmountMonthlyAmountFcfa: bigint;
+  /** Mois d’effet du forfait (1–12). */
+  universalFixedAmountEffectiveMonth: number;
+  /** Ancienneté minimale du forfait (mois). */
+  universalFixedAmountMinimumSeniorityMonths: number;
+  /** Date de référence ISO pour l’éligibilité d’ancienneté du forfait. */
+  universalFixedAmountSeniorityReferenceDate: string;
+  /** Nombre de salariés éligibles / bénéficiaires du forfait. */
+  universalFixedAmountEligibleEmployeeCount: number;
+  /** Nombre d’expositions mensuelles avec forfait > 0. */
+  universalFixedAmountExposureCount: number;
+  /** Σ coût annuel réservé / payé du forfait. */
+  totalUniversalFixedAmountCostFcfa: bigint;
+  /**
+   * Budget résiduel matrice après promo + coûts sociaux prioritaires
+   * (planchers minimum OU forfait) :
+   * availableAnnualCompensatoryBudget − prioritySocialCost.
+   */
+  availableBudgetAfterPromotionsAndSocialMechanismFcfa: ExactAmount;
+  /** Σ part forfait du rappel. */
+  totalUniversalFixedAmountReminderFcfa: bigint;
+  /** Σ part forfait du paiement direct. */
+  totalUniversalFixedAmountRemainingYearDirectCostFcfa: bigint;
+  /** Plein effet : Σ forfait décembre × 12. */
+  fullYearRunRateUniversalFixedAmountCostFcfa: bigint;
 }
 
 export interface PreparedPopulationCalculationResult {

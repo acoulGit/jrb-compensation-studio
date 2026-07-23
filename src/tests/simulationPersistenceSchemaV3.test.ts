@@ -25,6 +25,7 @@ import type {
 import {
   withPromotionAwareBudgetSummary,
   withPromotionAwareEmployeeDefaults,
+  emptyPopulationSocialMechanismDefaults,
 } from "./simulationResultViewFixtures";
 import { DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI } from "../domain/compensationReference/defaults";
 
@@ -81,6 +82,8 @@ function monthEntry(month: number): MonthlyCompensationTrajectoryView {
     theoreticalComplementLabel: "x",
     actualComplementAboveMinimumFcfa: 25_000n,
     actualComplementAboveMinimumLabel: "x",
+    universalFixedAmountFcfa: 0n,
+    universalFixedAmountLabel: "0 FCFA",
   };
 }
 
@@ -157,6 +160,7 @@ function sampleResult(): CampaignSimulationExecutionResult {
       totalMinimumComplementFloorCostFcfa: 0n,
       actualMinimumComplementPaidCostFcfa: 0n,
       actualCompensationAboveMinimumCostFcfa: 300000n,
+      ...emptyPopulationSocialMechanismDefaults(),
     },
     employees: [
       withPromotionAwareEmployeeDefaults({

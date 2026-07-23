@@ -1,5 +1,5 @@
 /**
- * Contrat de calcul de campagne (Lot 2A-H1 → Lot 2B-RC1-H4).
+ * Contrat de calcul de campagne (Lot 2A-H1 → Lot 2B-RC1-H5).
  *
  * v2 : budget cible = coût annuel 12 mois (rétroactivité implicite janvier).
  * v3 : période budgétaire configurable via `retroactivityStartMonth`.
@@ -15,6 +15,9 @@
  * v8 : mois d’effet configurable du minimum garanti
  *      (`minimumGuaranteeEffectiveMonth`) ; la part au-dessus du minimum
  *      conserve la rétroactivité générale.
+ * v9 : mécanisme social exclusif (aucun / minimum garanti / forfait social
+ *      universel) ; forfait additif avec mois d’effet et ancienneté propres ;
+ *      budget résiduel matrice après réservation du forfait.
  *
  * Les salaires importés, S0 et le nouveau salaire restent MENSUELS.
  * L’arrondi s’applique uniquement à l’augmentation mensuelle individuelle
@@ -22,7 +25,10 @@
  */
 
 /** Version du contrat de calcul (empreintes / compatibilité). */
-export const CALCULATION_CONTRACT_VERSION = 8 as const;
+export const CALCULATION_CONTRACT_VERSION = 9 as const;
+
+/** Contrat v8 (avant forfait social universel). */
+export const CALCULATION_CONTRACT_VERSION_V8 = 8 as const;
 
 /** Contrat v7 (avant mois d’effet configurable du minimum). */
 export const CALCULATION_CONTRACT_VERSION_V7 = 7 as const;
@@ -58,15 +64,23 @@ export const EMPLOYER_CHARGES_INCLUDED = false;
  *      garanti (`minimum_guarantee_effective_month`). Les snapshots v5
  *      restent lisibles ; leur mois d’effet historique se résout vers
  *      `retroactivityStartMonth` (jamais vers le mois technique).
+ * v7 = contrat v9 (migration 0013) : mécanisme social exclusif + forfait
+ *      social universel (montant, mois d’effet, ancienneté minimale) et
+ *      champs individuels / agrégats associés. Les snapshots ≤ 6 restent
+ *      lisibles ; mécanisme dérivé du mode de minimum si absent.
  *
  * Règle de compatibilité d'écriture : un résultat contrat ≥ 6 exige schema ≥ 5 ;
- * un résultat contrat ≥ 8 exige schema ≥ 6.
- * Les snapshots v1–v5 restent lisibles mais ne doivent pas être
- * réinterprétés avec le modèle v6 (pas de mois technique inventé pour v5).
+ * un résultat contrat ≥ 8 exige schema ≥ 6 ;
+ * un résultat contrat ≥ 9 exige schema ≥ 7.
+ * Les snapshots v1–v6 restent lisibles mais ne doivent pas être
+ * réinterprétés avec le modèle v7 (pas de forfait inventé pour v6).
  * Contrat 6 et contrat 7 partagent le schema 5 (pas de migration structurelle
  * pour H3).
  */
-export const RESULT_SCHEMA_VERSION = 6 as const;
+export const RESULT_SCHEMA_VERSION = 7 as const;
+
+/** Schema v6 (contrat v8, sans forfait social universel). */
+export const RESULT_SCHEMA_VERSION_V6 = 6 as const;
 
 /** Schema v5 (contrats v6–v7, sans mois d’effet minimum explicite). */
 export const RESULT_SCHEMA_VERSION_V5 = 5 as const;

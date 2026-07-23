@@ -78,6 +78,21 @@ pub struct RunRow {
 
     // ---- Champ schema v5 (Lot 2B-RC1-H2) — NULL pour snapshots < v5 ----
     pub nine_box_confirmation_factor_milli: Option<i64>,
+
+    // ---- Champs schema v7 (Lot 2B-RC1-H5) — NULL pour snapshots < v7 ----
+    pub social_mechanism_kind: Option<String>,
+    pub universal_fixed_amount_monthly_fcfa: Option<i64>,
+    pub universal_fixed_amount_effective_month: Option<i64>,
+    pub universal_fixed_amount_minimum_seniority_months: Option<i64>,
+    pub universal_fixed_amount_seniority_reference_date: Option<String>,
+    pub universal_fixed_amount_eligible_employee_count: Option<i64>,
+    pub universal_fixed_amount_exposure_count: Option<i64>,
+    pub total_universal_fixed_amount_cost_text: Option<String>,
+    pub available_budget_after_promotions_and_social_mechanism_num_text: Option<String>,
+    pub available_budget_after_promotions_and_social_mechanism_den_text: Option<String>,
+    pub total_universal_fixed_amount_reminder_text: Option<String>,
+    pub total_universal_fixed_amount_remaining_year_direct_cost_text: Option<String>,
+    pub full_year_run_rate_universal_fixed_amount_cost_text: Option<String>,
 }
 
 /// Ligne `compensation_simulation_employee_results` (champs majeurs + v3 RH).
@@ -155,6 +170,15 @@ pub struct EmployeeRow {
     pub neutralize_nine_box_effect: Option<bool>,
     pub source_nine_box_code: Option<i64>,
     pub nine_box_treatment_kind: Option<String>,
+
+    // ---- Champs schema v7 (Lot 2B-RC1-H5) — NULL pour snapshots < v7 ----
+    pub is_universal_fixed_amount_eligible: Option<bool>,
+    pub universal_fixed_amount_exclusion_reason: Option<String>,
+    pub universal_fixed_amount_seniority_reference_date: Option<String>,
+    pub campaign_period_universal_fixed_amount_cost_text: Option<String>,
+    pub universal_fixed_amount_reminder_text: Option<String>,
+    pub universal_fixed_amount_remaining_year_direct_cost_text: Option<String>,
+    pub full_year_run_rate_universal_fixed_amount_cost_text: Option<String>,
 }
 
 /// Ligne `compensation_simulation_employee_month_results` (champs majeurs).
@@ -185,6 +209,7 @@ pub struct MonthRow {
     pub compensatory_seniority_impact_fcfa_text: String,
     pub minimum_complement_floor_fcfa_text: String,
     pub actual_complement_above_minimum_fcfa_text: String,
+    pub universal_fixed_amount_fcfa_text: Option<String>,
 }
 
 /// Profil d’organisation (id = 1). Optionnel : « Non disponible » si absent.

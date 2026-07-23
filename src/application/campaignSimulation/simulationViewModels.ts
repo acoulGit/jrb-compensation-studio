@@ -107,6 +107,18 @@ export interface SimulationSummaryViewModel {
   periodCombinedActualCostLabel?: string | null;
   periodCombinedRoundingDeltaLabel?: string | null;
   fullYearRunRateCombinedBaseMeasureCostLabel?: string | null;
+  /** Mécanisme social (Lot 2B-RC1-H5). */
+  socialMechanismKind?: string | null;
+  socialMechanismKindLabel?: string | null;
+  universalFixedAmountMonthlyAmountLabel?: string | null;
+  universalFixedAmountEffectiveMonth?: number | null;
+  universalFixedAmountEffectiveMonthLabel?: string | null;
+  universalFixedAmountMinimumSeniorityMonths?: number | null;
+  universalFixedAmountSeniorityReferenceDate?: string | null;
+  universalFixedAmountSeniorityReferenceDateLabel?: string | null;
+  universalFixedAmountEligibleEmployeeCount?: number | null;
+  totalUniversalFixedAmountCostLabel?: string | null;
+  availableBudgetAfterPromotionsAndSocialMechanismLabel?: string | null;
 }
 
 export interface SimulationEmployeeViewModel {
@@ -175,6 +187,20 @@ export interface SimulationEmployeeViewModel {
   minimumCompensatoryReminderLabel?: string | null;
   aboveMinimumCompensatoryReminderLabel?: string | null;
   baseSalaryReminderLabel?: string | null;
+  /** Forfait social universel (Lot 2B-RC1-H5). */
+  socialMechanismKind?: string | null;
+  isUniversalFixedAmountEligible?: boolean | null;
+  universalFixedAmountEligibilityLabel?: string | null;
+  universalFixedAmountExclusionReasonLabel?: string | null;
+  universalFixedAmountMonthlyAmountLabel?: string | null;
+  universalFixedAmountEffectiveMonth?: number | null;
+  universalFixedAmountEffectiveMonthLabel?: string | null;
+  universalFixedAmountMinimumSeniorityMonths?: number | null;
+  universalFixedAmountSeniorityReferenceDate?: string | null;
+  universalFixedAmountSeniorityReferenceDateLabel?: string | null;
+  campaignPeriodUniversalFixedAmountCostLabel?: string | null;
+  universalFixedAmountReminderLabel?: string | null;
+  universalFixedAmountRemainingYearDirectCostLabel?: string | null;
   months?: SimulationEmployeeMonthViewModel[] | null;
 }
 

@@ -29,6 +29,8 @@ pub enum InjectedFault {
 
 const ALLOWED_MINIMUM_INCREASE_MODES: &[&str] =
     &["none", "fixed_monthly_amount", "percentage_of_base_salary"];
+const ALLOWED_SOCIAL_MECHANISM_KINDS: &[&str] =
+    &["none", "minimum_guaranteed", "universal_fixed_amount"];
 const ALLOWED_MONTH_PAYMENT_TIMINGS: &[&str] = &["outside_campaign", "reminder", "direct"];
 const ALLOWED_MONTH_PROMOTION_TIMINGS: &[&str] =
     &["outside_campaign", "reminder", "direct", "not_applicable"];
@@ -75,6 +77,8 @@ pub struct SaveSimulationEmployeeMonthDto {
     pub theoretical_complement_numerator_text: String,
     pub theoretical_complement_denominator_text: String,
     pub actual_complement_above_minimum_fcfa_text: String,
+    #[serde(default)]
+    pub universal_fixed_amount_fcfa_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -249,6 +253,28 @@ pub struct SaveSimulationEmployeeDto {
     pub source_nine_box_code: Option<i64>,
     #[serde(default)]
     pub nine_box_treatment_kind: Option<String>,
+
+    // ---- Champs schema v7 (Lot 2B-RC1-H5) — optionnels (NULL pour DTO v6) ----
+    #[serde(default)]
+    pub is_universal_fixed_amount_eligible: Option<bool>,
+    #[serde(default)]
+    pub universal_fixed_amount_exclusion_reason: Option<String>,
+    #[serde(default)]
+    pub universal_fixed_amount_monthly_amount_text: Option<String>,
+    #[serde(default)]
+    pub universal_fixed_amount_effective_month: Option<i64>,
+    #[serde(default)]
+    pub universal_fixed_amount_minimum_seniority_months: Option<i64>,
+    #[serde(default)]
+    pub universal_fixed_amount_seniority_reference_date: Option<String>,
+    #[serde(default)]
+    pub campaign_period_universal_fixed_amount_cost_text: Option<String>,
+    #[serde(default)]
+    pub universal_fixed_amount_reminder_text: Option<String>,
+    #[serde(default)]
+    pub universal_fixed_amount_remaining_year_direct_cost_text: Option<String>,
+    #[serde(default)]
+    pub full_year_run_rate_universal_fixed_amount_cost_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -400,6 +426,34 @@ pub struct SaveSimulationRunInput {
     // ---- Coefficient provisoire global schema v5 (Lot 2B-RC1-H2) ----
     #[serde(default)]
     pub nine_box_confirmation_factor_milli: Option<i64>,
+
+    // ---- Mécanisme social schema v7 (Lot 2B-RC1-H5) ----
+    #[serde(default)]
+    pub social_mechanism_kind: Option<String>,
+    #[serde(default)]
+    pub universal_fixed_amount_monthly_fcfa: Option<i64>,
+    #[serde(default)]
+    pub universal_fixed_amount_effective_month: Option<i64>,
+    #[serde(default)]
+    pub universal_fixed_amount_minimum_seniority_months: Option<i64>,
+    #[serde(default)]
+    pub universal_fixed_amount_seniority_reference_date: Option<String>,
+    #[serde(default)]
+    pub universal_fixed_amount_eligible_employee_count: Option<i64>,
+    #[serde(default)]
+    pub universal_fixed_amount_exposure_count: Option<i64>,
+    #[serde(default)]
+    pub total_universal_fixed_amount_cost_text: Option<String>,
+    #[serde(default)]
+    pub available_budget_after_promotions_and_social_mechanism_numerator_text: Option<String>,
+    #[serde(default)]
+    pub available_budget_after_promotions_and_social_mechanism_denominator_text: Option<String>,
+    #[serde(default)]
+    pub total_universal_fixed_amount_reminder_text: Option<String>,
+    #[serde(default)]
+    pub total_universal_fixed_amount_remaining_year_direct_cost_text: Option<String>,
+    #[serde(default)]
+    pub full_year_run_rate_universal_fixed_amount_cost_text: Option<String>,
 
     pub employees: Vec<SaveSimulationEmployeeDto>,
 }
@@ -626,6 +680,11 @@ fn validate_month(month: &SaveSimulationEmployeeMonthDto) -> Result<(), SaveSimu
         canonical,
     )?;
     require_positive_denominator(&month.theoretical_complement_denominator_text)?;
+    require_optional_canonical(
+        &month.universal_fixed_amount_fcfa_text,
+        false,
+        canonical,
+    )?;
     Ok(())
 }
 
@@ -923,6 +982,63 @@ fn validate_input(input: &SaveSimulationRunInput) -> Result<(), SaveSimulationRu
         }
     }
 
+    if let Some(kind) = &input.social_mechanism_kind {
+        if !ALLOWED_SOCIAL_MECHANISM_KINDS.contains(&kind.as_str()) {
+            return Err(SaveSimulationRunError::Validation(
+                "Le mécanisme social de la simulation est invalide.".into(),
+            ));
+        }
+    }
+    if let Some(month) = input.universal_fixed_amount_effective_month {
+        if !is_valid_month(month) {
+            return Err(SaveSimulationRunError::Validation(
+                "Le mois d’effet du forfait social universel est invalide.".into(),
+            ));
+        }
+    }
+    if let Some(months) = input.universal_fixed_amount_minimum_seniority_months {
+        if months < 0 {
+            return Err(SaveSimulationRunError::Validation(
+                "L’ancienneté minimale du forfait social universel est invalide.".into(),
+            ));
+        }
+    }
+    if let Some(amount) = input.universal_fixed_amount_monthly_fcfa {
+        if amount < 0 {
+            return Err(SaveSimulationRunError::Validation(
+                "Le montant mensuel du forfait social universel est invalide.".into(),
+            ));
+        }
+    }
+    require_optional_canonical(
+        &input.total_universal_fixed_amount_cost_text,
+        false,
+        "Un montant de forfait social universel n’est pas au format canonique.",
+    )?;
+    require_optional_positive_denominator(
+        &input.available_budget_after_promotions_and_social_mechanism_denominator_text,
+    )?;
+    require_optional_canonical(
+        &input.available_budget_after_promotions_and_social_mechanism_numerator_text,
+        true,
+        "Un montant de forfait social universel n’est pas au format canonique.",
+    )?;
+    require_optional_canonical(
+        &input.total_universal_fixed_amount_reminder_text,
+        false,
+        "Un montant de forfait social universel n’est pas au format canonique.",
+    )?;
+    require_optional_canonical(
+        &input.total_universal_fixed_amount_remaining_year_direct_cost_text,
+        false,
+        "Un montant de forfait social universel n’est pas au format canonique.",
+    )?;
+    require_optional_canonical(
+        &input.full_year_run_rate_universal_fixed_amount_cost_text,
+        false,
+        "Un montant de forfait social universel n’est pas au format canonique.",
+    )?;
+
     if let Some(factor) = input.nine_box_confirmation_factor_milli {
         if !(500..=1000).contains(&factor) {
             return Err(SaveSimulationRunError::Validation(
@@ -1041,8 +1157,18 @@ async fn update_employee_v3_columns(
             full_year_run_rate_compensation_above_minimum_cost_text = ?62,
             neutralize_nine_box_effect = ?63,
             source_nine_box_code = ?64,
-            nine_box_treatment_kind = ?65
-        WHERE id = ?66
+            nine_box_treatment_kind = ?65,
+            is_universal_fixed_amount_eligible = ?66,
+            universal_fixed_amount_exclusion_reason = ?67,
+            universal_fixed_amount_monthly_amount_text = ?68,
+            universal_fixed_amount_effective_month = ?69,
+            universal_fixed_amount_minimum_seniority_months = ?70,
+            universal_fixed_amount_seniority_reference_date = ?71,
+            campaign_period_universal_fixed_amount_cost_text = ?72,
+            universal_fixed_amount_reminder_text = ?73,
+            universal_fixed_amount_remaining_year_direct_cost_text = ?74,
+            full_year_run_rate_universal_fixed_amount_cost_text = ?75
+        WHERE id = ?76
         "#,
     )
     .bind(&employee.annual_theoretical_allocation_numerator_text)
@@ -1110,6 +1236,16 @@ async fn update_employee_v3_columns(
     .bind(employee.neutralize_nine_box_effect)
     .bind(employee.source_nine_box_code)
     .bind(&employee.nine_box_treatment_kind)
+    .bind(employee.is_universal_fixed_amount_eligible)
+    .bind(&employee.universal_fixed_amount_exclusion_reason)
+    .bind(&employee.universal_fixed_amount_monthly_amount_text)
+    .bind(employee.universal_fixed_amount_effective_month)
+    .bind(employee.universal_fixed_amount_minimum_seniority_months)
+    .bind(&employee.universal_fixed_amount_seniority_reference_date)
+    .bind(&employee.campaign_period_universal_fixed_amount_cost_text)
+    .bind(&employee.universal_fixed_amount_reminder_text)
+    .bind(&employee.universal_fixed_amount_remaining_year_direct_cost_text)
+    .bind(&employee.full_year_run_rate_universal_fixed_amount_cost_text)
     .bind(employee_result_id)
     .execute(&mut **tx)
     .await?;
@@ -1143,7 +1279,8 @@ async fn insert_employee_month(
             minimum_complement_floor_fcfa_text,
             weighted_complement_num_text, weighted_complement_den_text,
             theoretical_complement_num_text, theoretical_complement_den_text,
-            actual_complement_above_minimum_fcfa_text
+            actual_complement_above_minimum_fcfa_text,
+            universal_fixed_amount_fcfa_text
         ) VALUES (
             ?1, ?2, ?3, ?4, ?5,
             ?6,
@@ -1164,7 +1301,8 @@ async fn insert_employee_month(
             ?34,
             ?35, ?36,
             ?37, ?38,
-            ?39
+            ?39,
+            ?40
         )
         "#,
     )
@@ -1207,6 +1345,7 @@ async fn insert_employee_month(
     .bind(&month.theoretical_complement_numerator_text)
     .bind(&month.theoretical_complement_denominator_text)
     .bind(&month.actual_complement_above_minimum_fcfa_text)
+    .bind(&month.universal_fixed_amount_fcfa_text)
     .execute(&mut **tx)
     .await?;
     Ok(())
@@ -1403,8 +1542,21 @@ async fn save_simulation_run_in_tx(
             total_remaining_year_direct_compensatory_cost_text = ?53,
             neutralize_nine_box_effect_employee_count = ?54,
             nine_box_confirmation_factor_milli = ?55,
-            minimum_guarantee_effective_month = ?56
-        WHERE id = ?57
+            minimum_guarantee_effective_month = ?56,
+            social_mechanism_kind = ?57,
+            universal_fixed_amount_monthly_fcfa = ?58,
+            universal_fixed_amount_effective_month = ?59,
+            universal_fixed_amount_minimum_seniority_months = ?60,
+            universal_fixed_amount_seniority_reference_date = ?61,
+            universal_fixed_amount_eligible_employee_count = ?62,
+            universal_fixed_amount_exposure_count = ?63,
+            total_universal_fixed_amount_cost_text = ?64,
+            available_budget_after_promotions_and_social_mechanism_num_text = ?65,
+            available_budget_after_promotions_and_social_mechanism_den_text = ?66,
+            total_universal_fixed_amount_reminder_text = ?67,
+            total_universal_fixed_amount_remaining_year_direct_cost_text = ?68,
+            full_year_run_rate_universal_fixed_amount_cost_text = ?69
+        WHERE id = ?70
         "#,
     )
     .bind(input.result_schema_version.unwrap_or(4))
@@ -1463,6 +1615,19 @@ async fn save_simulation_run_in_tx(
     .bind(input.neutralize_nine_box_effect_employee_count)
     .bind(input.nine_box_confirmation_factor_milli)
     .bind(input.minimum_guarantee_effective_month)
+    .bind(&input.social_mechanism_kind)
+    .bind(input.universal_fixed_amount_monthly_fcfa)
+    .bind(input.universal_fixed_amount_effective_month)
+    .bind(input.universal_fixed_amount_minimum_seniority_months)
+    .bind(&input.universal_fixed_amount_seniority_reference_date)
+    .bind(input.universal_fixed_amount_eligible_employee_count)
+    .bind(input.universal_fixed_amount_exposure_count)
+    .bind(&input.total_universal_fixed_amount_cost_text)
+    .bind(&input.available_budget_after_promotions_and_social_mechanism_numerator_text)
+    .bind(&input.available_budget_after_promotions_and_social_mechanism_denominator_text)
+    .bind(&input.total_universal_fixed_amount_reminder_text)
+    .bind(&input.total_universal_fixed_amount_remaining_year_direct_cost_text)
+    .bind(&input.full_year_run_rate_universal_fixed_amount_cost_text)
     .bind(simulation_run_id)
     .execute(&mut **tx)
     .await?;
@@ -1709,6 +1874,8 @@ mod tests {
         include_str!("../migrations/0009_nine_box_confirmation_factor.sql");
     const SIMULATION_SCHEMA_V6_ALTS: &str =
         include_str!("../migrations/0012_minimum_guarantee_effective_month.sql");
+    const SIMULATION_SCHEMA_V7_ALTS: &str =
+        include_str!("../migrations/0013_universal_fixed_amount.sql");
     // Stub minimal : la migration 0009 modifie aussi campaign_reference_config,
     // absente du schéma minimal de ces tests d’intégration ciblés simulation.
     const CAMPAIGN_REFERENCE_CONFIG_STUB: &str = r#"
@@ -1748,6 +1915,7 @@ mod tests {
             apply_sql(&mut conn, CAMPAIGN_REFERENCE_CONFIG_STUB).await;
             apply_sql(&mut conn, SIMULATION_SCHEMA_V5_ALTS).await;
             apply_sql(&mut conn, SIMULATION_SCHEMA_V6_ALTS).await;
+            apply_sql(&mut conn, SIMULATION_SCHEMA_V7_ALTS).await;
         }
 
         (dir, url)
@@ -1903,6 +2071,7 @@ mod tests {
             theoretical_complement_numerator_text: "13500".into(),
             theoretical_complement_denominator_text: "1".into(),
             actual_complement_above_minimum_fcfa_text: "13500".into(),
+            universal_fixed_amount_fcfa_text: None,
         }
     }
 

@@ -81,7 +81,16 @@ export type CompensationCalculationErrorCode =
   // Lot 2B-RC1-H2 — coefficient provisoire 9-Box (performance à confirmer)
   | "INVALID_NINE_BOX_CONFIRMATION_FACTOR"
   // Lot 2B-RC1-H4 — mois d’effet du minimum garanti
-  | "INVALID_MINIMUM_GUARANTEE_EFFECTIVE_MONTH";
+  | "INVALID_MINIMUM_GUARANTEE_EFFECTIVE_MONTH"
+  // Lot 2B-RC1-H5 — forfait social universel / mécanisme social
+  | "UNSUPPORTED_SOCIAL_MECHANISM_KIND"
+  | "INVALID_SOCIAL_MECHANISM_CONFIGURATION"
+  | "INVALID_UNIVERSAL_FIXED_AMOUNT"
+  | "INVALID_UNIVERSAL_FIXED_AMOUNT_EFFECTIVE_MONTH"
+  | "INVALID_UNIVERSAL_FIXED_AMOUNT_MINIMUM_SENIORITY"
+  | "MISSING_UNIVERSAL_FIXED_AMOUNT_SENIORITY_REFERENCE_DATE"
+  | "INVALID_UNIVERSAL_FIXED_AMOUNT_SENIORITY_REFERENCE_DATE"
+  | "UNIVERSAL_FIXED_AMOUNT_EXCEEDS_BUDGET";
 
 export class CompensationCalculationError extends Error {
   readonly code: CompensationCalculationErrorCode;

@@ -158,7 +158,9 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
   Promotion salariale sans changement de grade autorisée (contrat v7, schema v5
   inchangé ; Lot 2B-RC1-H3),
   `0012_minimum_guarantee_effective_month.sql` (schema v6 / contrat v8 :
-  mois d’effet configurable du minimum garanti ; Lot 2B-RC1-H4).
+  mois d’effet configurable du minimum garanti ; Lot 2B-RC1-H4) ;
+  `0013_universal_fixed_amount.sql` (schema v7 / contrat v9 : mécanisme
+  social exclusif + forfait social universel ; Lot 2B-RC1-H5).
 - Commande Rust `save_simulation_run` (transaction SQLx dédiée) : écrit le run
   (`result_schema_version = 6` pour les nouveaux snapshots contrat v8), les
   salariés et **12 mois** par salarié en une

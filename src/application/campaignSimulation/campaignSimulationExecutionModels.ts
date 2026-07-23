@@ -83,6 +83,12 @@ export interface PromotionAwareEnvelopeSummaryView {
   /** Part au-dessus du minimum réellement payée. */
   actualCompensationAboveMinimumCostFcfa: bigint;
   actualCompensationAboveMinimumCostLabel: string;
+  /** Coût forfait social universel réservé (Lot 2B-RC1-H5). */
+  totalUniversalFixedAmountCostFcfa: bigint;
+  totalUniversalFixedAmountCostLabel: string;
+  /** Budget disponible après promotions et mécanisme social prioritaire. */
+  availableBudgetAfterPromotionsAndSocialMechanismFcfa: ExactAmount;
+  availableBudgetAfterPromotionsAndSocialMechanismLabel: string;
   totalAnnualTheoreticalCompensatoryCostFcfa: ExactAmount;
   totalAnnualTheoreticalCompensatoryCostLabel: string;
   /** Coût effectif de campagne du complément compensatoire. */
@@ -186,6 +192,9 @@ export interface MonthlyCompensationTrajectoryView {
   theoreticalComplementLabel: string;
   actualComplementAboveMinimumFcfa: bigint;
   actualComplementAboveMinimumLabel: string;
+  /** Forfait social universel du mois (Lot 2B-RC1-H5). */
+  universalFixedAmountFcfa: bigint;
+  universalFixedAmountLabel: string;
 }
 
 export interface SimulationPopulationSummaryView {
@@ -233,6 +242,19 @@ export interface SimulationPopulationSummaryView {
   totalMinimumComplementFloorCostFcfa: bigint;
   actualMinimumComplementPaidCostFcfa: bigint;
   actualCompensationAboveMinimumCostFcfa: bigint;
+  /** Mécanisme social exclusif (Lot 2B-RC1-H5). */
+  socialMechanismKind: string;
+  universalFixedAmountMonthlyAmountFcfa: bigint;
+  universalFixedAmountEffectiveMonth: number;
+  universalFixedAmountMinimumSeniorityMonths: number;
+  universalFixedAmountSeniorityReferenceDate: string;
+  universalFixedAmountEligibleEmployeeCount: number;
+  universalFixedAmountExposureCount: number;
+  totalUniversalFixedAmountCostFcfa: bigint;
+  availableBudgetAfterPromotionsAndSocialMechanismFcfa: ExactAmount;
+  totalUniversalFixedAmountReminderFcfa: bigint;
+  totalUniversalFixedAmountRemainingYearDirectCostFcfa: bigint;
+  fullYearRunRateUniversalFixedAmountCostFcfa: bigint;
 }
 
 export interface EmployeeSimulationResultView {
@@ -385,6 +407,22 @@ export interface EmployeeSimulationResultView {
   fullYearRunRateMinimumComplementCostLabel: string;
   fullYearRunRateCompensationAboveMinimumCostFcfa: bigint;
   fullYearRunRateCompensationAboveMinimumCostLabel: string;
+  /** Forfait social universel (Lot 2B-RC1-H5). */
+  socialMechanismKind: string;
+  isUniversalFixedAmountEligible: boolean;
+  universalFixedAmountExclusionReason: string | null;
+  universalFixedAmountMonthlyAmountFcfa: bigint;
+  universalFixedAmountEffectiveMonth: number;
+  universalFixedAmountMinimumSeniorityMonths: number;
+  universalFixedAmountSeniorityReferenceDate: string;
+  campaignPeriodUniversalFixedAmountCostFcfa: bigint;
+  campaignPeriodUniversalFixedAmountCostLabel: string;
+  universalFixedAmountReminderFcfa: bigint;
+  universalFixedAmountReminderLabel: string;
+  universalFixedAmountRemainingYearDirectCostFcfa: bigint;
+  universalFixedAmountRemainingYearDirectCostLabel: string;
+  fullYearRunRateUniversalFixedAmountCostFcfa: bigint;
+  fullYearRunRateUniversalFixedAmountCostLabel: string;
   monthlyCompensationTrajectory: readonly MonthlyCompensationTrajectoryView[];
   explanationSteps: readonly {
     step: string;
