@@ -82,6 +82,9 @@ interface SimulationConfigurationContextValue {
   setCampaignYearInput: (value: string) => void;
   setRetroactivityStartMonthInput: (value: string) => void;
   setTechnicalApplicationMonthInput: (value: string) => void;
+  setMinimumGuaranteeEffectiveMonthInput: (value: string) => void;
+  /** Aligne le mois d’effet du minimum sur le mois technique courant (UI). */
+  alignMinimumGuaranteeEffectiveMonthToTechnical: () => void;
   setMinimumIncreaseMode: (mode: MinimumIncreaseMode) => void;
   setMinimumMonthlyAmountInput: (value: string) => void;
   setMinimumIncreaseRatePercentInput: (value: string) => void;
@@ -328,6 +331,24 @@ export function SimulationConfigurationProvider({
     [patchDraft],
   );
 
+  const setMinimumGuaranteeEffectiveMonthInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({
+        ...current,
+        minimumGuaranteeEffectiveMonthInput: value,
+      }));
+    },
+    [patchDraft],
+  );
+
+  const alignMinimumGuaranteeEffectiveMonthToTechnical = useCallback(() => {
+    patchDraft((current) => ({
+      ...current,
+      minimumGuaranteeEffectiveMonthInput:
+        current.technicalApplicationMonthInput,
+    }));
+  }, [patchDraft]);
+
   const setMinimumIncreaseMode = useCallback(
     (mode: MinimumIncreaseMode) => {
       patchDraft((current) => ({
@@ -378,6 +399,7 @@ export function SimulationConfigurationProvider({
         draft.campaignYearInput,
         draft.retroactivityStartMonthInput,
         draft.technicalApplicationMonthInput,
+        draft.minimumGuaranteeEffectiveMonthInput,
         draft.minimumIncreaseMode,
         draft.minimumMonthlyAmountInput,
         draft.minimumIncreaseRatePercentInput,
@@ -479,6 +501,8 @@ export function SimulationConfigurationProvider({
       campaignYear: validatedConfiguration.campaignYear,
       retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
       technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
+      minimumGuaranteeEffectiveMonth:
+        validatedConfiguration.minimumGuaranteeEffectiveMonth,
       minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
     });
 
@@ -563,6 +587,7 @@ export function SimulationConfigurationProvider({
       currentParsed.campaignYear === null ||
       currentParsed.retroactivityStartMonth === null ||
       currentParsed.technicalApplicationMonth === null ||
+      currentParsed.minimumGuaranteeEffectiveMonth === null ||
       !currentParsed.minimumIncreasePolicy
     ) {
       return false;
@@ -606,6 +631,8 @@ export function SimulationConfigurationProvider({
       campaignYear: currentParsed.campaignYear,
       retroactivityStartMonth: currentParsed.retroactivityStartMonth,
       technicalApplicationMonth: currentParsed.technicalApplicationMonth,
+      minimumGuaranteeEffectiveMonth:
+        currentParsed.minimumGuaranteeEffectiveMonth,
       minimumIncreaseMode: currentParsed.minimumIncreasePolicy.mode,
       minimumMonthlyAmountFcfa:
         currentParsed.minimumIncreasePolicy.minimumMonthlyAmountFcfa,
@@ -629,6 +656,8 @@ export function SimulationConfigurationProvider({
       campaignYear: currentParsed.campaignYear,
       retroactivityStartMonth: currentParsed.retroactivityStartMonth,
       technicalApplicationMonth: currentParsed.technicalApplicationMonth,
+      minimumGuaranteeEffectiveMonth:
+        currentParsed.minimumGuaranteeEffectiveMonth,
       minimumIncreasePolicy: currentParsed.minimumIncreasePolicy,
     });
 
@@ -639,6 +668,8 @@ export function SimulationConfigurationProvider({
       campaignYear: currentParsed.campaignYear,
       retroactivityStartMonth: currentParsed.retroactivityStartMonth,
       technicalApplicationMonth: currentParsed.technicalApplicationMonth,
+      minimumGuaranteeEffectiveMonth:
+        currentParsed.minimumGuaranteeEffectiveMonth,
       minimumIncreasePolicy: currentParsed.minimumIncreasePolicy,
       readinessReport: report,
       validatedAtSessionSequence: nextSequence,
@@ -700,6 +731,8 @@ export function SimulationConfigurationProvider({
       setCampaignYearInput,
       setRetroactivityStartMonthInput,
       setTechnicalApplicationMonthInput,
+      setMinimumGuaranteeEffectiveMonthInput,
+      alignMinimumGuaranteeEffectiveMonthToTechnical,
       setMinimumIncreaseMode,
       setMinimumMonthlyAmountInput,
       setMinimumIncreaseRatePercentInput,
@@ -731,6 +764,8 @@ export function SimulationConfigurationProvider({
       setMinimumIncreaseMode,
       setMinimumIncreaseRatePercentInput,
       setMinimumMonthlyAmountInput,
+      setMinimumGuaranteeEffectiveMonthInput,
+      alignMinimumGuaranteeEffectiveMonthToTechnical,
       setRoundingStepInput,
       setRetroactivityStartMonthInput,
       setTechnicalApplicationMonthInput,

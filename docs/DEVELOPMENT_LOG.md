@@ -1378,3 +1378,46 @@ générateur séparé hors bundle, migration `0011_license_activations`.
 
 - `pnpm test` / `pnpm build` / `cargo fmt|check|test` (app + générateur)
 - Aucun commit ; branche `feature/lot-2b-rc1-sec1b-offline-license`.
+
+## 2026-07-23 — Lot 2B-RC1-H4 : mois d’effet configurable du minimum garanti
+
+### Objectif
+
+Décorréler la temporalité du plancher du minimum garanti de la rétroactivité
+générale et du mois d’application technique, tout en conservant la
+rétroactivité habituelle pour la part au-dessus du minimum.
+
+### Choix
+
+- Trois paramètres distincts : `retroactivityStartMonth`,
+  `technicalApplicationMonth`, `minimumGuaranteeEffectiveMonth`.
+- **Défaut** nouvelle simulation : `minimumGuaranteeEffectiveMonth =
+  technicalApplicationMonth` (le brouillon n’est pas écrasé si le mois
+  technique change ensuite).
+- **Mois couverts par le minimum** :
+  `m >= max(retroactivityStartMonth, minimumGuaranteeEffectiveMonth)`.
+- **Rappel du minimum** : uniquement si
+  `minimumGuaranteeEffectiveMonth < technicalApplicationMonth`.
+- **Réservation budgétaire du plancher** : agrégée sur les mois couverts
+  uniquement (`MINIMUM_GUARANTEE_EXCEEDS_BUDGET` tient compte du vrai
+  nombre de mois).
+- **Part au-dessus du minimum** : rétroactivité générale inchangée
+  (`retroactivityStartMonth`).
+- Versionnement explicite : `CALCULATION_CONTRACT_VERSION` 7→**8**,
+  `MINIMUM_INCREASE_CONTRACT_VERSION` 1→**2**, `RESULT_SCHEMA_VERSION`
+  5→**6** ; migration additive `0012_minimum_guarantee_effective_month.sql`
+  (`compensation_simulation_runs` + miroir salarié, INTEGER NULL CHECK 1–12,
+  sans DEFAULT ni backfill).
+- **Compatibilité historique schema ≤ 5** : mois d’effet résolu =
+  `retroactivityStartMonth` (jamais le mois technique) ; libellé
+  « Aligné historiquement sur le mois de rétroactivité »
+  (`resolveMinimumGuaranteeEffectiveMonth`).
+- Export Excel : feuilles `Parametres`, `Resultats_RH`, `Trajectoire_12_mois`
+  adaptées (voir `docs/HR_EXCEL_EXPORT.md`). Aucun changement de sécurité
+  locale ni de licence.
+
+### Validations
+
+- `pnpm test` (incl. `src/tests/minimumGuaranteeEffectiveMonth.test.ts`) /
+  `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
+- Aucun commit.

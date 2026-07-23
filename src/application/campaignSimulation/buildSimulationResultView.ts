@@ -260,6 +260,7 @@ function mapEmployee(
     campaignYear: employee.campaignYear,
     retroactivityStartMonth: employee.retroactivityStartMonth,
     technicalApplicationMonth: employee.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth: employee.minimumGuaranteeEffectiveMonth,
     campaignCoveredMonthCount: employee.campaignCoveredMonthCount,
     retroactiveMonths: employee.retroactiveMonths,
     remainingDirectPaymentMonths: employee.remainingDirectPaymentMonths,
@@ -698,6 +699,7 @@ export function buildSimulationResultView(input: {
     campaignYear: summary.campaignYear,
     retroactivityStartMonth: summary.retroactivityStartMonth,
     technicalApplicationMonth: summary.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth: summary.minimumGuaranteeEffectiveMonth,
     campaignCoveredMonthCount: summary.campaignCoveredMonthCount,
     totalBaseSalaryReminderFcfa: summary.totalBaseSalaryReminderFcfa,
     totalRemainingYearDirectIncreaseCostFcfa:
@@ -752,6 +754,7 @@ export function buildSimulationResultView(input: {
     campaignName: input.campaignName,
     campaignYear: input.campaignYear,
     technicalApplicationMonth: engineResult.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth: engineResult.minimumGuaranteeEffectiveMonth,
     campaignStatus: input.campaignStatus,
     evaluationMode: input.evaluationMode,
     currentImportBatchId: input.currentImportBatchId,

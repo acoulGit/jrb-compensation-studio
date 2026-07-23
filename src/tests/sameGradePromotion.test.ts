@@ -94,8 +94,8 @@ async function referenceSet() {
 
 describe("Lot 2B-RC1-H3 — versions", () => {
   it("bumpe contrat 7 et conserve schema 5", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(7);
-    expect(RESULT_SCHEMA_VERSION).toBe(5);
+    expect(CALCULATION_CONTRACT_VERSION).toBe(8);
+    expect(RESULT_SCHEMA_VERSION).toBe(6);
   });
 });
 

@@ -986,6 +986,8 @@ fn resultats_headers(result_schema_version: i64) -> Vec<&'static str> {
         "Coût compensatoire sur la période",
         "Coût total sur la période",
         // BLOC 7 — PAIEMENT
+        "Rappel minimum garanti",
+        "Rappel au-dessus du minimum",
         "Rappel total",
         "Paiement direct total",
         // BLOC 8 — ANCIENNETÉ
@@ -1259,6 +1261,22 @@ fn write_employee_row(
     c += 1;
 
     // Paiement
+    write_opt_numeric_fmt(
+        sheet,
+        row,
+        c,
+        e.minimum_compensatory_reminder_text.as_deref(),
+        &formats.money,
+    )?;
+    c += 1;
+    write_opt_numeric_fmt(
+        sheet,
+        row,
+        c,
+        e.above_minimum_compensatory_reminder_text.as_deref(),
+        &formats.money,
+    )?;
+    c += 1;
     write_opt_numeric_fmt(
         sheet,
         row,
@@ -1993,6 +2011,36 @@ fn write_parametres(
         run.technical_application_month,
     )?;
     row += 1;
+    let (min_eff_month, min_eff_origin) = match (
+        run.result_schema_version,
+        run.minimum_guarantee_effective_month,
+        run.retroactivity_start_month,
+    ) {
+        (v, Some(m), _) if v >= 6 => (Some(m), None),
+        (_, _, Some(retro)) => (
+            Some(retro),
+            Some("Historique — aligné sur la rétroactivité"),
+        ),
+        _ => (None, Some("Historique — aligné sur la rétroactivité")),
+    };
+    label_opt_int(
+        sheet,
+        row,
+        "Mois d’effet du minimum garanti",
+        &formats.label,
+        min_eff_month,
+    )?;
+    row += 1;
+    if let Some(origin) = min_eff_origin {
+        label_opt_text_na(
+            sheet,
+            row,
+            "Origine du mois d’effet du minimum garanti",
+            &formats.label,
+            Some(origin),
+        )?;
+        row += 1;
+    }
     label_opt_int(
         sheet,
         row,

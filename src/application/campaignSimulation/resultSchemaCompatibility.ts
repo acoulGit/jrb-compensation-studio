@@ -1,6 +1,8 @@
 /**
- * Compatibilité des snapshots persistés (result_schema_version) — Lot 2B-P1 / 2B-RC1-H1 / H2.
- * v5 = courant (contrat v6, coefficient provisoire « Performance à confirmer »).
+ * Compatibilité des snapshots persistés (result_schema_version) —
+ * Lot 2B-P1 / 2B-RC1-H1 / H2 / H4.
+ * v6 = courant (contrat v8, mois d’effet explicite du minimum garanti).
+ * v5 = présentable (contrats v6–v7, minimum aligné historiquement sur la rétro).
  * v4 = présentable (contrat v5, neutralisation 9-Box à facteur 1).
  * v3 = présentable (contrat v4 consolidé, mois persistés — sans champs 9-Box v4/v5).
  * v2 = incomplet (annuel/mensuel sans mois ni ancienneté/minimum persistés).
@@ -14,6 +16,7 @@ import {
   RESULT_SCHEMA_VERSION_V2,
   RESULT_SCHEMA_VERSION_V3,
   RESULT_SCHEMA_VERSION_V4,
+  RESULT_SCHEMA_VERSION_V5,
 } from "../../domain/compensationCalculation";
 
 export type ResultSchemaCompatibility =
@@ -27,6 +30,7 @@ export function classifyResultSchemaVersion(
 ): ResultSchemaCompatibility {
   if (
     version === RESULT_SCHEMA_VERSION ||
+    version === RESULT_SCHEMA_VERSION_V5 ||
     version === RESULT_SCHEMA_VERSION_V4 ||
     version === RESULT_SCHEMA_VERSION_V3
   ) {
@@ -45,10 +49,11 @@ export function isLegacyResultSchemaVersion(version: number): boolean {
   return version === RESULT_SCHEMA_VERSION_LEGACY;
 }
 
-/** Un snapshot peut-il être présenté (v3, v4 et v5) ? */
+/** Un snapshot peut-il être présenté (v3–v6) ? */
 export function canPresentResultSchemaVersion(version: number): boolean {
   return (
     version === RESULT_SCHEMA_VERSION ||
+    version === RESULT_SCHEMA_VERSION_V5 ||
     version === RESULT_SCHEMA_VERSION_V4 ||
     version === RESULT_SCHEMA_VERSION_V3
   );

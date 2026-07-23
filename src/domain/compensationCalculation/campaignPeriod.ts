@@ -127,6 +127,23 @@ export function isMonthInCampaignPeriod(
 }
 
 /**
+ * Mois où le plancher du minimum garanti s’applique (Lot 2B-RC1-H4).
+ * Borne inférieure = max(rétroactivité générale, mois d’effet du minimum).
+ * Un mois d’effet configuré avant la rétroactivité ne crée aucune période hors campagne.
+ */
+export function isMonthCoveredByMinimumGuarantee(
+  month: number,
+  retroactivityStartMonth: number,
+  minimumGuaranteeEffectiveMonth: number,
+): boolean {
+  const start = Math.max(
+    retroactivityStartMonth,
+    minimumGuaranteeEffectiveMonth,
+  );
+  return month >= start && month <= FULL_YEAR_MONTH_COUNT;
+}
+
+/**
  * Début budgétaire d’une promotion incluse :
  * max(rétroactivité, mois d’effet effectif). Promotion N-1 → effet dès janvier.
  */

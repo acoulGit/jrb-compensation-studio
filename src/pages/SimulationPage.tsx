@@ -8,6 +8,7 @@ import { useAppData } from "../app/AppDataProvider";
 import { useCompensationReference } from "../app/CompensationReferenceProvider";
 import { useHrImport } from "../app/HrImportProvider";
 import { useSimulationConfiguration } from "../app/SimulationConfigurationProvider";
+import { minimumGuaranteeReminderSummaryFr } from "../application/campaignSimulation/resolveMinimumGuaranteeEffectiveMonth";
 import { useSimulationExecution } from "../app/SimulationExecutionProvider";
 import { ROUNDING_STEP_SUGGESTIONS } from "../application/campaignSimulation/simulationConfigurationModels";
 import { TECHNICAL_APPLICATION_MONTH_LABELS_FR } from "../domain/compensationCalculation";
@@ -108,6 +109,8 @@ export function SimulationPage() {
     setCampaignYearInput,
     setRetroactivityStartMonthInput,
     setTechnicalApplicationMonthInput,
+    setMinimumGuaranteeEffectiveMonthInput,
+    alignMinimumGuaranteeEffectiveMonthToTechnical,
     setMinimumIncreaseMode,
     setMinimumMonthlyAmountInput,
     setMinimumIncreaseRatePercentInput,
@@ -581,7 +584,67 @@ export function SimulationPage() {
               ))}
             </select>
           </label>
+          <label
+            className="field field--full"
+            htmlFor="simulation-minimum-guarantee-effective-month"
+          >
+            Mois d’effet du minimum garanti
+            <select
+              id="simulation-minimum-guarantee-effective-month"
+              data-testid="simulation-minimum-guarantee-effective-month"
+              disabled={isReadOnly}
+              value={draft.minimumGuaranteeEffectiveMonthInput}
+              aria-invalid={Boolean(
+                parsed?.fieldErrors.minimumGuaranteeEffectiveMonthInput,
+              )}
+              onChange={(event) => {
+                setMinimumGuaranteeEffectiveMonthInput(event.target.value);
+              }}
+            >
+              {TECHNICAL_APPLICATION_MONTH_LABELS_FR.map((label, index) => (
+                <option key={label} value={String(index + 1)}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!isReadOnly ? (
+            <div className="field field--full">
+              <button
+                type="button"
+                className="button button--secondary"
+                data-testid="simulation-align-minimum-effective-month"
+                onClick={() => {
+                  alignMinimumGuaranteeEffectiveMonthToTechnical();
+                }}
+              >
+                Aligner sur le mois technique
+              </button>
+            </div>
+          ) : null}
         </div>
+        <p className="form-help">
+          Le complément minimum est appliqué uniquement à partir de ce mois.
+          S’il est antérieur au mois technique, les mois précédents peuvent
+          produire un rappel. S’il est égal ou postérieur au mois technique,
+          aucun rappel du minimum n’est généré.
+        </p>
+        {(() => {
+          const summary = minimumGuaranteeReminderSummaryFr({
+            minimumGuaranteeEffectiveMonth:
+              parsed?.minimumGuaranteeEffectiveMonth ?? null,
+            technicalApplicationMonth:
+              parsed?.technicalApplicationMonth ?? null,
+          });
+          return summary ? (
+            <p
+              className="form-help"
+              data-testid="simulation-minimum-reminder-summary"
+            >
+              {summary}
+            </p>
+          ) : null;
+        })()}
         {parsed?.retroactivityStartMonth !== null &&
         parsed?.retroactivityStartMonth !== undefined &&
         parsed?.technicalApplicationMonth !== null &&
@@ -626,6 +689,11 @@ export function SimulationPage() {
         {parsed?.fieldErrors.technicalApplicationMonthInput ? (
           <p className="form-feedback form-feedback--error" role="alert">
             {parsed.fieldErrors.technicalApplicationMonthInput.message}
+          </p>
+        ) : null}
+        {parsed?.fieldErrors.minimumGuaranteeEffectiveMonthInput ? (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {parsed.fieldErrors.minimumGuaranteeEffectiveMonthInput.message}
           </p>
         ) : null}
       </SectionCard>

@@ -11,7 +11,10 @@ import type {
   PreparedEmployeeCalculationInput,
   PopulationCalculationReferences,
 } from "../domain/compensationCalculation";
-import { NO_MINIMUM_INCREASE_POLICY } from "../domain/compensationCalculation";
+import {
+  MINIMUM_INCREASE_CONTRACT_VERSION,
+  NO_MINIMUM_INCREASE_POLICY,
+} from "../domain/compensationCalculation";
 import {
   DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI,
   DEFAULT_NINE_BOX_FACTORS,
@@ -32,6 +35,7 @@ function sampleResult(
     campaignName: "Sim 2027",
     campaignYear: 2027,
     technicalApplicationMonth: 1,
+    minimumGuaranteeEffectiveMonth: 1,
     campaignStatus: "active",
     evaluationMode: "none",
     currentImportBatchId: 10,
@@ -72,6 +76,7 @@ function sampleResult(
       campaignYear: 2027,
       retroactivityStartMonth: 1,
       technicalApplicationMonth: 1,
+      minimumGuaranteeEffectiveMonth: 1,
       campaignCoveredMonthCount: 12,
       totalBaseSalaryReminderFcfa: 0n,
       totalRemainingYearDirectIncreaseCostFcfa: 24999600n,
@@ -332,6 +337,7 @@ async function setupSuccessContext(options?: {
     campaignYear: 2027,
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
+    minimumGuaranteeEffectiveMonth: 1,
   minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
   });
   const configurationFingerprint = buildConfigurationFingerprint({
@@ -343,6 +349,15 @@ async function setupSuccessContext(options?: {
     campaignYear: 2027,
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
+    minimumGuaranteeEffectiveMonth: 1,
+    minimumIncreaseMode: NO_MINIMUM_INCREASE_POLICY.mode,
+    minimumMonthlyAmountFcfa:
+      NO_MINIMUM_INCREASE_POLICY.minimumMonthlyAmountFcfa,
+    minimumIncreaseRateNumerator:
+      NO_MINIMUM_INCREASE_POLICY.minimumIncreaseRate?.numerator ?? null,
+    minimumIncreaseRateDenominator:
+      NO_MINIMUM_INCREASE_POLICY.minimumIncreaseRate?.denominator ?? null,
+    minimumIncreaseContractVersion: MINIMUM_INCREASE_CONTRACT_VERSION,
   });
 
   const readinessModule = await import(
@@ -411,6 +426,7 @@ async function setupSuccessContext(options?: {
     campaignYear: 2027,
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
+    minimumGuaranteeEffectiveMonth: 1,
     minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     readinessReport: {
       campaignId: campaign.id,

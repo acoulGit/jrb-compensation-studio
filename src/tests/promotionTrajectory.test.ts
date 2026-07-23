@@ -353,6 +353,7 @@ describe("Lot 2A-H2C-1 — trajectoire N-1 / N", () => {
       campaignYear: 2026,
       retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
+      minimumGuaranteeEffectiveMonth: 7,
     minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     });
     const fpPromo = buildSimulationSourceFingerprint({
@@ -367,6 +368,7 @@ describe("Lot 2A-H2C-1 — trajectoire N-1 / N", () => {
       campaignYear: 2026,
       retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
+      minimumGuaranteeEffectiveMonth: 7,
     minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     });
     expect(fpBase).not.toBe(fpPromo);

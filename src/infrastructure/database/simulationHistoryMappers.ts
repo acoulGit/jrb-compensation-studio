@@ -57,6 +57,7 @@ export interface SimulationRunRow {
    */
   retroactivity_start_month?: number | null;
   technical_application_month?: number | null;
+  minimum_guarantee_effective_month?: number | null;
   campaign_covered_month_count?: number | null;
   promotion_campaign_period_budget_cost_text?: string | null;
   total_minimum_complement_floor_cost_text?: string | null;
@@ -105,6 +106,10 @@ export interface SimulationEmployeeResultRow {
   neutralize_nine_box_effect?: number | null;
   source_nine_box_code?: number | null;
   nine_box_treatment_kind?: string | null;
+  /** Rappels compensatoires (migration 0007) — nullables pour snapshots v2. */
+  base_salary_reminder_text?: string | null;
+  minimum_compensatory_reminder_text?: string | null;
+  above_minimum_compensatory_reminder_text?: string | null;
 }
 
 /** Ligne mensuelle persistée (schema v3, Lot 2B-P1). */
@@ -389,6 +394,8 @@ export function mapSimulationRunSummary(
     createdAt: row.created_at,
     retroactivityStartMonth: row.retroactivity_start_month ?? null,
     technicalApplicationMonth: row.technical_application_month ?? null,
+    minimumGuaranteeEffectiveMonth:
+      row.minimum_guarantee_effective_month ?? null,
     campaignCoveredMonthCount: row.campaign_covered_month_count ?? null,
     promotionCampaignPeriodBudgetCostFcfa: nullableIntegerText(
       row.promotion_campaign_period_budget_cost_text,
@@ -480,5 +487,12 @@ export function mapSimulationEmployeeResult(
       row.nine_box_treatment_kind === undefined
         ? null
         : row.nine_box_treatment_kind,
+    baseSalaryReminderFcfa: nullableIntegerText(row.base_salary_reminder_text),
+    minimumCompensatoryReminderFcfa: nullableIntegerText(
+      row.minimum_compensatory_reminder_text,
+    ),
+    aboveMinimumCompensatoryReminderFcfa: nullableIntegerText(
+      row.above_minimum_compensatory_reminder_text,
+    ),
   };
 }

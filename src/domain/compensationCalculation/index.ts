@@ -21,9 +21,11 @@ export {
 export {
   ANNUAL_BUDGET_PERIOD_MONTHS,
   CALCULATION_CONTRACT_VERSION,
+  CALCULATION_CONTRACT_VERSION_V7,
   EMPLOYER_CHARGES_INCLUDED,
   FULL_YEAR_MONTH_COUNT,
   RESULT_SCHEMA_VERSION,
+  RESULT_SCHEMA_VERSION_V5,
   RESULT_SCHEMA_VERSION_V4,
   RESULT_SCHEMA_VERSION_V3,
   RESULT_SCHEMA_VERSION_V2,
@@ -54,6 +56,7 @@ export {
   computeCampaignPeriodBreakdown,
   computePromotionBudgetStartMonth,
   computePromotionCampaignPeriodMonthCount,
+  isMonthCoveredByMinimumGuarantee,
   isMonthInCampaignPeriod,
   validateCampaignPeriod,
   validateRetroactivityStartMonth,
@@ -105,6 +108,7 @@ export {
 } from "./compensatoryMeasureEligibility";
 export {
   MINIMUM_INCREASE_CONTRACT_VERSION,
+  MINIMUM_INCREASE_CONTRACT_VERSION_V1,
   MINIMUM_INCREASE_ELIGIBLE_CONTRACT_TYPES,
   MINIMUM_INCREASE_POPULATION_STATUSES,
   isMinimumIncreasePopulationEmployee,

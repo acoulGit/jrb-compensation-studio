@@ -82,6 +82,12 @@ export function assertSimulationResultPersistable(input: {
   resultSchemaVersion?: number;
 }): void {
   const schemaVersion = input.resultSchemaVersion ?? RESULT_SCHEMA_VERSION;
+  if (input.calculationContractVersion >= 8 && schemaVersion < 6) {
+    throw new CompensationCalculationError(
+      "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION",
+      "Cette simulation utilise le mois d’effet explicite du minimum garanti et ne peut pas être enregistrée dans l’ancien format d’historique (schema < 6). Finalisez la consolidation en schema v6 avant l’enregistrement.",
+    );
+  }
   if (input.calculationContractVersion >= 6 && schemaVersion < 5) {
     throw new CompensationCalculationError(
       "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION",
@@ -108,6 +114,24 @@ function bi(value: bigint): string {
 
 function nullableBi(value: bigint | null | undefined): string | null {
   return value === null || value === undefined ? null : bigintToCanonicalText(value);
+}
+
+/**
+ * Vérifie l’entier 1–12 du mois d’effet du minimum garanti avant écriture
+ * (schema v6, contrat v8). Aucune valeur par défaut inventée.
+ */
+function assertMinimumGuaranteeEffectiveMonth(
+  month: number | null | undefined,
+  fallbackTechnicalMonth: number,
+): number {
+  const resolved =
+    month === null || month === undefined ? fallbackTechnicalMonth : month;
+  if (!Number.isInteger(resolved) || resolved < 1 || resolved > 12) {
+    throw new Error(
+      "Le mois d’effet du minimum garanti doit être un entier compris entre 1 et 12 avant enregistrement.",
+    );
+  }
+  return resolved;
 }
 
 function promotionPaymentTiming(
@@ -262,6 +286,10 @@ function mapEmployee(
     campaignYear: employee.campaignYear,
     retroactivityStartMonth: employee.retroactivityStartMonth,
     technicalApplicationMonth: employee.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth: assertMinimumGuaranteeEffectiveMonth(
+      employee.minimumGuaranteeEffectiveMonth,
+      employee.technicalApplicationMonth,
+    ),
     campaignCoveredMonthCount: employee.campaignCoveredMonthCount,
     retroactiveMonths: employee.retroactiveMonths,
     remainingDirectPaymentMonths: employee.remainingDirectPaymentMonths,
@@ -468,6 +496,10 @@ export function mapExecutionResultToSaveDto(input: {
     resultSchemaVersion: RESULT_SCHEMA_VERSION,
     retroactivityStartMonth: retro,
     technicalApplicationMonth: technical,
+    minimumGuaranteeEffectiveMonth: assertMinimumGuaranteeEffectiveMonth(
+      population.minimumGuaranteeEffectiveMonth,
+      technical,
+    ),
     campaignCoveredMonthCount: population.campaignCoveredMonthCount,
     reminderMonthCount,
     directPaymentMonthCount,

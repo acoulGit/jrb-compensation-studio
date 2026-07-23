@@ -79,7 +79,9 @@ export type CompensationCalculationErrorCode =
   | "INVALID_MINIMUM_INCREASE_RATE"
   | "MINIMUM_GUARANTEE_EXCEEDS_BUDGET"
   // Lot 2B-RC1-H2 — coefficient provisoire 9-Box (performance à confirmer)
-  | "INVALID_NINE_BOX_CONFIRMATION_FACTOR";
+  | "INVALID_NINE_BOX_CONFIRMATION_FACTOR"
+  // Lot 2B-RC1-H4 — mois d’effet du minimum garanti
+  | "INVALID_MINIMUM_GUARANTEE_EFFECTIVE_MONTH";
 
 export class CompensationCalculationError extends Error {
   readonly code: CompensationCalculationErrorCode;

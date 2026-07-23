@@ -105,6 +105,8 @@ export interface SaveSimulationEmployeeDto {
   campaignYear?: number | null;
   retroactivityStartMonth?: number | null;
   technicalApplicationMonth?: number | null;
+  /** Mois d’effet du minimum garanti (1–12) — schema v6 (Lot 2B-RC1-H4). */
+  minimumGuaranteeEffectiveMonth?: number | null;
   campaignCoveredMonthCount?: number | null;
   retroactiveMonths?: number | null;
   remainingDirectPaymentMonths?: number | null;
@@ -210,6 +212,8 @@ export interface SaveSimulationRunDto {
   /** Champs schema v3 (Lot 2B-P1) — configuration contrat v4. */
   retroactivityStartMonth?: number | null;
   technicalApplicationMonth?: number | null;
+  /** Mois d’effet du minimum garanti (schema v6 / contrat v8). NULL = historique. */
+  minimumGuaranteeEffectiveMonth?: number | null;
   campaignCoveredMonthCount?: number | null;
   reminderMonthCount?: number | null;
   directPaymentMonthCount?: number | null;
@@ -318,6 +322,8 @@ export interface PersistedSimulationRunSummary {
    */
   retroactivityStartMonth?: number | null;
   technicalApplicationMonth?: number | null;
+  /** Schema v6 — null pour historique (résolu vers rétroactivité en lecture). */
+  minimumGuaranteeEffectiveMonth?: number | null;
   campaignCoveredMonthCount?: number | null;
   promotionCampaignPeriodBudgetCostFcfa?: bigint | null;
   totalMinimumComplementFloorCostFcfa?: bigint | null;
@@ -365,6 +371,14 @@ export interface PersistedSimulationEmployeeResult {
   }[];
   /** Trajectoire mensuelle relue (schema v3). Vide pour snapshots v1/v2. */
   months?: PersistedSimulationEmployeeMonthResult[];
+
+  /**
+   * Rappels compensatoires (schema v3+) — null si colonnes absentes ou snapshot
+   * antérieur (jamais de faux zéro).
+   */
+  baseSalaryReminderFcfa?: bigint | null;
+  minimumCompensatoryReminderFcfa?: bigint | null;
+  aboveMinimumCompensatoryReminderFcfa?: bigint | null;
 
   /**
    * Champs schema v4 (Lot 2B-RC1-H1). `null` pour snapshots v3 historiques —

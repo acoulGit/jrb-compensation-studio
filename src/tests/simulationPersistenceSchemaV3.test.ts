@@ -91,6 +91,7 @@ function sampleResult(): CampaignSimulationExecutionResult {
     campaignName: "Sim 2027",
     campaignYear: 2027,
     technicalApplicationMonth: 4,
+    minimumGuaranteeEffectiveMonth: 4,
     campaignStatus: "active",
     evaluationMode: "none",
     currentImportBatchId: 10,
@@ -128,6 +129,7 @@ function sampleResult(): CampaignSimulationExecutionResult {
       campaignYear: 2027,
       retroactivityStartMonth: 1,
       technicalApplicationMonth: 4,
+      minimumGuaranteeEffectiveMonth: 4,
       campaignCoveredMonthCount: 12,
       totalBaseSalaryReminderFcfa: 75000n,
       totalRemainingYearDirectIncreaseCostFcfa: 225000n,
@@ -227,7 +229,7 @@ describe("Lot 2B-P1 / 2B-RC1-H1 — persistance schema v3/v4", () => {
     expect(RESULT_SCHEMA_VERSION_LEGACY).toBe(1);
     expect(CALCULATION_CONTRACT_VERSION).toBeGreaterThanOrEqual(5);
     expect(SENIORITY_IMPACT_CONTRACT_VERSION).toBe(1);
-    expect(MINIMUM_INCREASE_CONTRACT_VERSION).toBe(1);
+    expect(MINIMUM_INCREASE_CONTRACT_VERSION).toBe(2);
   });
 
   it("classe la compatibilité des schémas", () => {
@@ -286,9 +288,10 @@ describe("Lot 2B-P1 / 2B-RC1-H1 — persistance schema v3/v4", () => {
     expect(dto.resultSchemaVersion).toBe(RESULT_SCHEMA_VERSION);
     expect(dto.calculationContractVersion).toBe(CALCULATION_CONTRACT_VERSION);
     expect(dto.seniorityImpactContractVersion).toBe(1);
-    expect(dto.minimumIncreaseContractVersion).toBe(1);
+    expect(dto.minimumIncreaseContractVersion).toBe(2);
     expect(dto.retroactivityStartMonth).toBe(1);
     expect(dto.technicalApplicationMonth).toBe(4);
+    expect(dto.minimumGuaranteeEffectiveMonth).toBe(4);
     expect(dto.reminderMonthCount).toBe(3);
     expect(dto.directPaymentMonthCount).toBe(9);
     expect(dto.minimumIncreaseMode).toBe("none");

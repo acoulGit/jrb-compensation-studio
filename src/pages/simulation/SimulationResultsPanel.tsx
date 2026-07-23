@@ -1003,6 +1003,29 @@ function EmployeeDetailDrawer({
                   }
                 </dd>
               </div>
+              <div data-testid="simulation-detail-minimum-temporality">
+                <dt>Mois de rétroactivité générale</dt>
+                <dd>
+                  {technicalApplicationMonthLabelFr(employee.retroactivityStartMonth)}
+                </dd>
+              </div>
+              <div>
+                <dt>Mois technique</dt>
+                <dd>
+                  {technicalApplicationMonthLabelFr(
+                    employee.technicalApplicationMonth,
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Mois d’effet du minimum garanti</dt>
+                <dd data-testid="simulation-detail-minimum-effective-month">
+                  {technicalApplicationMonthLabelFr(
+                    employee.minimumGuaranteeEffectiveMonth ??
+                      employee.technicalApplicationMonth,
+                  )}
+                </dd>
+              </div>
               <div>
                 <dt>Complément au mois d’application</dt>
                 <dd data-testid="simulation-detail-final-increase">
@@ -1022,7 +1045,19 @@ function EmployeeDetailDrawer({
                 </dd>
               </div>
               <div>
-                <dt>Rappel du complément</dt>
+                <dt>Rappel du minimum garanti</dt>
+                <dd data-testid="simulation-detail-minimum-reminder">
+                  {employee.minimumCompensatoryReminderLabel}
+                </dd>
+              </div>
+              <div>
+                <dt>Rappel au-dessus du minimum</dt>
+                <dd data-testid="simulation-detail-above-minimum-reminder">
+                  {employee.aboveMinimumCompensatoryReminderLabel}
+                </dd>
+              </div>
+              <div>
+                <dt>Rappel compensatoire total</dt>
                 <dd data-testid="simulation-detail-base-reminder">
                   {formatFcfaInteger(employee.baseSalaryReminderFcfa)}
                 </dd>

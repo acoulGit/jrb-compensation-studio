@@ -16,6 +16,7 @@ d’augmentation.
 | **2B-RC1-H1** | Neutralisation individuelle effet 9-Box (contrat v5 / schema v4, migration `0008`) |
 | **2B-RC1-H2** | Coefficient provisoire 9-Box « Performance à confirmer » (contrat v6 / schema v5, migration `0009`) |
 | **2B-RC1-H3** | Promotion salariale sans changement de grade (contrat v7 / schema v5, **pas** de migration) |
+| **2B-RC1-H4** | Mois d’effet configurable du minimum garanti (contrat v8 / schema v6, migration `0012`) |
 | **2B-4B** | Bouton Enregistrer + page Historique (lecture seule, compatible schema v3 / dégradation v1-v2) |
 | **2B-UX1** | Confort UI : sidebar repliable, pages résultats fluides, détail salarié quasi plein écran (sans changement métier) |
 
@@ -61,7 +62,10 @@ Le Lot **2B-3** l’appelle **uniquement** après un clic explicite
 - un **snapshot validé** immuable par campagne (invalidé dès modification
   de brouillon ou d’empreinte des sources) ;
 - `configurationFingerprint` + `sourceFingerprint` au moment de la validation ;
-- champs calendrier (2A-H2A) : `campaignYear`, `technicalApplicationMonth` ;
+- champs calendrier (2A-H2A / 2B-RC1-H4) : `campaignYear`,
+  `retroactivityStartMonth`, `technicalApplicationMonth`,
+  `minimumGuaranteeEffectiveMonth` (défaut nouvelle simulation =
+  `technicalApplicationMonth`) ;
 - aucun `localStorage`, `sessionStorage`, SQLite, AppData ni fichier.
 
 ### Empreinte des sources (Lot 2B-3 / H2A)
@@ -71,7 +75,8 @@ au minimum : campaignId, statut, mode d’évaluation, lot RH courant, populatio
 préparée (salaire, famille, grade, Performance/Potentiel, sous-performant,
 **`employmentStatus`**, **`compensatoryMeasureEligible`**, promotion structurée),
 référentiels (S0, positions, facteurs), budget, arrondi, **`campaignYear`**,
-**`technicalApplicationMonth`**, **`SENIORITY_IMPACT_CONTRACT_VERSION`**,
+**`retroactivityStartMonth`**, **`technicalApplicationMonth`**,
+**`minimumGuaranteeEffectiveMonth`**, **`SENIORITY_IMPACT_CONTRACT_VERSION`**,
 **`PROMOTION_TRAJECTORY_CONTRACT_VERSION`**,
 **`PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION`**,
 **`PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION`** (Lot 2A-H2C-2), et
@@ -196,15 +201,50 @@ configuration / sources : token `retroStart:`. Contrat de calcul **v3**.
 Depuis le Lot 2B-P1, la sauvegarde snapshot est possible en
 `result_schema_version = 3` (migration `0007`).
 
-### Configuration — minimum garanti (H2D-2)
+### Configuration — minimum garanti (H2D-2 / 2B-RC1-H4)
 
 Section UI « Minimum garanti d’augmentation » : modes exclusifs none /
 forfait / pourcentage. Empreintes : `minMode` / `minAmt` / `minRate` /
-`minInc:v1`. Contrat de calcul **v4**. Enveloppe : promotions, minimum
+`minInc:v2` / `minEffMonth:`. Contrat de calcul **v8**
+(`MINIMUM_INCREASE_CONTRACT_VERSION = 2`). Enveloppe : promotions, minimum
 réservé, disponible après, parts minimum / au-dessus. Erreur dédiée
 `MINIMUM_GUARANTEE_EXCEEDS_BUDGET` (ne pas recommander d’augmenter le
-minimum). Depuis le Lot 2B-P1, ce contrat v4 est persistable en schema v3 ;
-un contrat ≥ 3 reste refusé si le schema snapshot est < 3.
+minimum ; le plancher réservé ne compte que les mois couverts par le
+minimum). Depuis le Lot 2B-P1, le minimum garanti est persistable ;
+un contrat ≥ 3 reste refusé si le schema snapshot est < 3 ; un contrat **v8**
+exige schema **≥ 6** (migration `0012`).
+
+#### Temporalités distinctes (Lot 2B-RC1-H4)
+
+Trois paramètres calendaires coexistent ; ils ne doivent pas être confondus :
+
+| Paramètre | Rôle |
+| --- | --- |
+| **`retroactivityStartMonth`** | Début de la période budgétaire générale `[rétro … décembre]` ; rappels de la part **au-dessus** du minimum. |
+| **`technicalApplicationMonth`** | Mois de paiement direct du complément compensatoire (calendrier salaire de base). |
+| **`minimumGuaranteeEffectiveMonth`** | Mois à partir duquel le plancher du minimum garanti s’applique et entre dans la réservation budgétaire. |
+
+Règles métier :
+
+- **Défaut** (nouvelle simulation) : `minimumGuaranteeEffectiveMonth =
+  technicalApplicationMonth` (le brouillon conserve sa valeur si le mois
+  technique change ensuite).
+- **Mois couverts par le minimum** : `m >= max(retroactivityStartMonth,
+  minimumGuaranteeEffectiveMonth)` jusqu’à décembre (`isMonthCoveredByMinimumGuarantee`).
+  Un mois d’effet antérieur à la rétroactivité ne crée pas de période hors
+  campagne.
+- **Part au-dessus du minimum** : conserve la rétroactivité générale
+  (`retroactivityStartMonth`) — indépendamment du mois d’effet du plancher.
+- **Rappel du minimum** : uniquement si
+  `minimumGuaranteeEffectiveMonth < technicalApplicationMonth` ; sinon
+  « Aucun rappel du minimum garanti ».
+- **Réservation budgétaire du plancher** : agrégée uniquement sur les mois
+  couverts par le minimum (pas sur les 12 mois civils par défaut).
+
+Compatibilité historique (schema **≤ 5**) : le mois d’effet affiché /
+exporté se résout vers `retroactivityStartMonth` (**jamais** le mois
+technique), avec la mention « Aligné historiquement sur le mois de
+rétroactivité » (`resolveMinimumGuaranteeEffectiveMonth`).
 
 ### Coût brut vs imputable
 
@@ -245,8 +285,9 @@ G. Promotions > budget — erreur métier dédiée.
 
 - Colonne **Actions** de l’historique : bouton **Export Excel** à côté de
   **Consulter**.
-- Export réservé aux snapshots **v3** (`canPresentResultSchemaVersion`) ; les
-  snapshots v1/v2/inconnu affichent le bouton désactivé avec infobulle.
+- Export réservé aux snapshots **v3+** (`canPresentResultSchemaVersion`) ; les
+  snapshots v1/v2/inconnu affichent le bouton désactivé avec infobulle. Les
+  runs schema **6** (contrat v8) exportent le mois d’effet explicite du minimum.
 - Dialogue modal : protection par mot de passe cochée par défaut (≥ 12
   caractères), générateur de mot de passe robuste (≥ 20), ou export non protégé
   confirmé explicitement.

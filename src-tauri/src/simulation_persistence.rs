@@ -291,6 +291,8 @@ pub struct SaveSimulationRunInput {
     #[serde(default)]
     pub technical_application_month: Option<i64>,
     #[serde(default)]
+    pub minimum_guarantee_effective_month: Option<i64>,
+    #[serde(default)]
     pub campaign_covered_month_count: Option<i64>,
     #[serde(default)]
     pub reminder_month_count: Option<i64>,
@@ -1400,8 +1402,9 @@ async fn save_simulation_run_in_tx(
             above_minimum_remaining_year_direct_cost_text = ?52,
             total_remaining_year_direct_compensatory_cost_text = ?53,
             neutralize_nine_box_effect_employee_count = ?54,
-            nine_box_confirmation_factor_milli = ?55
-        WHERE id = ?56
+            nine_box_confirmation_factor_milli = ?55,
+            minimum_guarantee_effective_month = ?56
+        WHERE id = ?57
         "#,
     )
     .bind(input.result_schema_version.unwrap_or(4))
@@ -1459,6 +1462,7 @@ async fn save_simulation_run_in_tx(
     .bind(&input.total_remaining_year_direct_compensatory_cost_text)
     .bind(input.neutralize_nine_box_effect_employee_count)
     .bind(input.nine_box_confirmation_factor_milli)
+    .bind(input.minimum_guarantee_effective_month)
     .bind(simulation_run_id)
     .execute(&mut **tx)
     .await?;
@@ -1703,6 +1707,8 @@ mod tests {
         include_str!("../migrations/0008_nine_box_neutralization.sql");
     const SIMULATION_SCHEMA_V5_ALTS: &str =
         include_str!("../migrations/0009_nine_box_confirmation_factor.sql");
+    const SIMULATION_SCHEMA_V6_ALTS: &str =
+        include_str!("../migrations/0012_minimum_guarantee_effective_month.sql");
     // Stub minimal : la migration 0009 modifie aussi campaign_reference_config,
     // absente du schéma minimal de ces tests d’intégration ciblés simulation.
     const CAMPAIGN_REFERENCE_CONFIG_STUB: &str = r#"
@@ -1741,6 +1747,7 @@ mod tests {
             apply_sql(&mut conn, SIMULATION_SCHEMA_V4_ALTS).await;
             apply_sql(&mut conn, CAMPAIGN_REFERENCE_CONFIG_STUB).await;
             apply_sql(&mut conn, SIMULATION_SCHEMA_V5_ALTS).await;
+            apply_sql(&mut conn, SIMULATION_SCHEMA_V6_ALTS).await;
         }
 
         (dir, url)

@@ -59,6 +59,7 @@ export interface SimulationSourceFingerprintInput {
   campaignYear: number;
   retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  minimumGuaranteeEffectiveMonth: number;
   minimumIncreasePolicy: MinimumIncreasePolicy;
 }
 
@@ -146,6 +147,7 @@ export function buildSimulationSourceFingerprint(
     campaignYear: input.campaignYear,
     retroactivityStartMonth: input.retroactivityStartMonth,
     technicalApplicationMonth: input.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth: input.minimumGuaranteeEffectiveMonth,
     seniorityImpactContractVersion: SENIORITY_IMPACT_CONTRACT_VERSION,
     promotionTrajectoryContractVersion: PROMOTION_TRAJECTORY_CONTRACT_VERSION,
     promotionCompensatoryCalibrationContractVersion:

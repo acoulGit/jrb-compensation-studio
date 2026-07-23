@@ -90,6 +90,8 @@ const SIMULATION_SCHEMA_V4: &str =
     include_str!("../../migrations/0008_nine_box_neutralization.sql");
 const SIMULATION_SCHEMA_V5: &str =
     include_str!("../../migrations/0009_nine_box_confirmation_factor.sql");
+const SIMULATION_SCHEMA_V6: &str =
+    include_str!("../../migrations/0012_minimum_guarantee_effective_month.sql");
 // Stub minimal : la migration 0009 modifie aussi campaign_reference_config,
 // absente du schéma minimal de ces tests d’intégration ciblés export.
 const CAMPAIGN_REFERENCE_CONFIG_STUB: &str = r#"
@@ -129,6 +131,7 @@ async fn setup_temp_db() -> (tempfile::TempDir, String) {
         apply_sql(&mut conn, SIMULATION_SCHEMA_V4).await;
         apply_sql(&mut conn, CAMPAIGN_REFERENCE_CONFIG_STUB).await;
         apply_sql(&mut conn, SIMULATION_SCHEMA_V5).await;
+        apply_sql(&mut conn, SIMULATION_SCHEMA_V6).await;
     }
 
     (dir, url)

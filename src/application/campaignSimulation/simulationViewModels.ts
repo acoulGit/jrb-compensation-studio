@@ -90,6 +90,16 @@ export interface SimulationSummaryViewModel {
    */
   retroactivityStartMonth?: number | null;
   technicalApplicationMonth?: number | null;
+  /**
+   * Mois d’effet du minimum garanti résolu pour l’affichage (Lot 2B-RC1-H4).
+   * `explicit` = valeur persistée (schema ≥ 6) ; `legacy_retroactivity` =
+   * résolution historique vers `retroactivityStartMonth` (schema < 6 ou NULL).
+   */
+  minimumGuaranteeEffectiveMonth?: number | null;
+  minimumGuaranteeEffectiveMonthOrigin?:
+    | "explicit"
+    | "legacy_retroactivity"
+    | null;
   campaignCoveredMonthCount?: number | null;
   periodPromotionBudgetCostLabel?: string | null;
   periodMinimumComplementFloorCostLabel?: string | null;
@@ -153,6 +163,18 @@ export interface SimulationEmployeeViewModel {
   annualRoundingDeltaLabel?: string | null;
   fullYearRunRateCombinedBaseMeasureCostLabel?: string | null;
   technicalMonthFinalSalaryLabel?: string | null;
+  /** Temporalité minimum garanti (Lot 2B-RC1-H4). */
+  retroactivityStartMonth?: number | null;
+  technicalApplicationMonth?: number | null;
+  minimumGuaranteeEffectiveMonth?: number | null;
+  minimumGuaranteeEffectiveMonthOrigin?:
+    | "explicit"
+    | "legacy_retroactivity"
+    | null;
+  minimumGuaranteeEffectiveMonthLabel?: string | null;
+  minimumCompensatoryReminderLabel?: string | null;
+  aboveMinimumCompensatoryReminderLabel?: string | null;
+  baseSalaryReminderLabel?: string | null;
   months?: SimulationEmployeeMonthViewModel[] | null;
 }
 

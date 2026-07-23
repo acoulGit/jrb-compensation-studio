@@ -143,6 +143,8 @@ export async function saveCurrentCampaignSimulation(
     campaignYear: validatedConfiguration.campaignYear,
     retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth:
+      validatedConfiguration.minimumGuaranteeEffectiveMonth,
     minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
   });
 

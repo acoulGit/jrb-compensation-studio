@@ -14,21 +14,31 @@ pub const EXPECTED_RESULT_SCHEMA_VERSION_V3: i64 = 3;
 pub const EXPECTED_RESULT_SCHEMA_VERSION_V4: i64 = 4;
 /// Schema v5 — coefficient provisoire 9-Box « Performance à confirmer » (Lot 2B-RC1-H2).
 pub const EXPECTED_RESULT_SCHEMA_VERSION_V5: i64 = 5;
+/// Schema v6 — mois d’effet explicite du minimum garanti (Lot 2B-RC1-H4).
+pub const EXPECTED_RESULT_SCHEMA_VERSION_V6: i64 = 6;
 pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V4: i64 = 4;
 pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V5: i64 = 5;
 /// Contrat v6 — coefficient provisoire 9-Box (Lot 2B-RC1-H2).
 pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V6: i64 = 6;
 /// Contrat v7 — promotion salariale sans changement de grade (Lot 2B-RC1-H3).
 pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V7: i64 = 7;
+/// Contrat v8 — mois d’effet configurable du minimum garanti (Lot 2B-RC1-H4).
+pub const EXPECTED_CALCULATION_CONTRACT_VERSION_V8: i64 = 8;
 pub const EXPECTED_SENIORITY_IMPACT_CONTRACT_VERSION: i64 = 1;
-pub const EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION: i64 = 1;
+pub const EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION_V1: i64 = 1;
+/// Contrat minimum v2 — mois d’effet configurable (Lot 2B-RC1-H4).
+pub const EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION_V2: i64 = 2;
+/// Alias courant (Lot 2B-RC1-H4).
+#[allow(dead_code)]
+pub const EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION: i64 =
+    EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION_V2;
 
-/// Alias historique (schema courant = v5).
+/// Alias historique (schema courant = v6).
 #[allow(dead_code)]
-pub const EXPECTED_RESULT_SCHEMA_VERSION: i64 = EXPECTED_RESULT_SCHEMA_VERSION_V5;
-/// Alias courant (Lot 2B-RC1-H3) : contrat v7 / schema v5.
+pub const EXPECTED_RESULT_SCHEMA_VERSION: i64 = EXPECTED_RESULT_SCHEMA_VERSION_V6;
+/// Alias courant (Lot 2B-RC1-H4) : contrat v8 / schema v6.
 #[allow(dead_code)]
-pub const EXPECTED_CALCULATION_CONTRACT_VERSION: i64 = EXPECTED_CALCULATION_CONTRACT_VERSION_V7;
+pub const EXPECTED_CALCULATION_CONTRACT_VERSION: i64 = EXPECTED_CALCULATION_CONTRACT_VERSION_V8;
 
 const EXPECTED_MONTH_COUNT: usize = 12;
 
@@ -62,7 +72,8 @@ pub fn validate_month_numbers(months: &[i64]) -> Result<(), ExportError> {
 fn validate_versions(run: &RunRow) -> Result<(), ExportError> {
     let schema_ok = run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V3
         || run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V4
-        || run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V5;
+        || run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V5
+        || run.result_schema_version == EXPECTED_RESULT_SCHEMA_VERSION_V6;
     if !schema_ok {
         return Err(ExportError::SchemaNotSupported);
     }
@@ -70,14 +81,19 @@ fn validate_versions(run: &RunRow) -> Result<(), ExportError> {
         == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V4)
         || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V5)
         || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V6)
-        || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V7);
+        || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V7)
+        || run.calculation_contract_version == Some(EXPECTED_CALCULATION_CONTRACT_VERSION_V8);
     if !contract_ok {
         return Err(ExportError::ContractNotSupported);
     }
     if run.seniority_impact_contract_version != Some(EXPECTED_SENIORITY_IMPACT_CONTRACT_VERSION) {
         return Err(ExportError::ContractNotSupported);
     }
-    if run.minimum_increase_contract_version != Some(EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION) {
+    let min_ok = run.minimum_increase_contract_version
+        == Some(EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION_V1)
+        || run.minimum_increase_contract_version
+            == Some(EXPECTED_MINIMUM_INCREASE_CONTRACT_VERSION_V2);
+    if !min_ok {
         return Err(ExportError::ContractNotSupported);
     }
     Ok(())

@@ -9,7 +9,11 @@
 
 import type { PromotionBudgetEmploymentStatus } from "./promotionBudgetPopulation";
 
-export const MINIMUM_INCREASE_CONTRACT_VERSION = 1 as const;
+/** Contrat courant : mois d’effet configurable (Lot 2B-RC1-H4). */
+export const MINIMUM_INCREASE_CONTRACT_VERSION = 2 as const;
+
+/** Contrat historique (minimum aligné sur la rétroactivité générale). */
+export const MINIMUM_INCREASE_CONTRACT_VERSION_V1 = 1 as const;
 
 export const MINIMUM_INCREASE_ELIGIBLE_CONTRACT_TYPES = ["cdi", "cdd"] as const;
 

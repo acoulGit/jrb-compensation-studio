@@ -143,6 +143,8 @@ export function calculatePreparedPopulationCompensation(
   let budgetTargetResult;
   const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
   let campaignPeriod;
+  const minimumGuaranteeEffectiveMonth =
+    input.minimumGuaranteeEffectiveMonth ?? input.technicalApplicationMonth;
   try {
     campaignPeriod = computeCampaignPeriodBreakdown({
       campaignYear: input.campaignYear,
@@ -163,6 +165,20 @@ export function calculatePreparedPopulationCompensation(
         step: "application_calendar",
       });
     }
+  }
+
+  if (
+    !Number.isInteger(minimumGuaranteeEffectiveMonth) ||
+    minimumGuaranteeEffectiveMonth < 1 ||
+    minimumGuaranteeEffectiveMonth > 12
+  ) {
+    issues.push({
+      code: "INVALID_MINIMUM_GUARANTEE_EFFECTIVE_MONTH",
+      message:
+        "Le mois d’effet du minimum garanti doit être compris entre janvier et décembre.",
+      field: "minimumGuaranteeEffectiveMonth",
+      step: "application_calendar",
+    });
   }
 
   try {
@@ -315,6 +331,7 @@ export function calculatePreparedPopulationCompensation(
         campaignYear: input.campaignYear,
         technicalApplicationMonth: input.technicalApplicationMonth,
         retroactivityStartMonth,
+        minimumGuaranteeEffectiveMonth,
         evaluationMode: input.references.evaluationMode,
         salaryGrid: input.references.salaryGrid,
         salaryPositions: input.references.salaryPositions,
@@ -391,6 +408,9 @@ export function calculatePreparedPopulationCompensation(
       minimumIncreasePopulationEmployeeCount += 1;
     }
     for (const month of exposures.months) {
+      // Réservation plancher : uniquement les mois couverts par le minimum
+      // (max(rétro, mois d’effet) … décembre). La part au-dessus reste sur toute
+      // la période de campagne.
       if (month.month < retroactivityStartMonth) {
         continue;
       }
@@ -575,6 +595,7 @@ export function calculatePreparedPopulationCompensation(
         campaignYear: input.campaignYear,
         technicalApplicationMonth: input.technicalApplicationMonth,
         retroactivityStartMonth,
+        minimumGuaranteeEffectiveMonth,
         months: exposures.months,
         calibrationRate: compensatoryCalibrationRate,
         roundingPolicy: { mode: "nearest_half_up", stepFcfa },
@@ -771,6 +792,7 @@ export function calculatePreparedPopulationCompensation(
       campaignYear: input.campaignYear,
       retroactivityStartMonth,
       technicalApplicationMonth: input.technicalApplicationMonth,
+      minimumGuaranteeEffectiveMonth,
       campaignCoveredMonthCount: campaignPeriod.campaignCoveredMonthCount,
       retroactiveMonths,
       remainingDirectPaymentMonths,
@@ -1071,6 +1093,7 @@ export function calculatePreparedPopulationCompensation(
     campaignYear: input.campaignYear,
     retroactivityStartMonth,
     technicalApplicationMonth: input.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth,
     campaignCoveredMonthCount: campaignPeriod.campaignCoveredMonthCount,
     totalBaseSalaryReminderFcfa,
     totalRemainingYearDirectIncreaseCostFcfa,
@@ -1215,6 +1238,7 @@ export function calculatePreparedPopulationCompensation(
     campaignYear: input.campaignYear,
     retroactivityStartMonth,
     technicalApplicationMonth: input.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth,
     campaignCoveredMonthCount: campaignPeriod.campaignCoveredMonthCount,
     totalBaseSalaryReminderFcfa,
     totalRemainingYearDirectIncreaseCostFcfa,

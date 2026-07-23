@@ -6,6 +6,7 @@
 import {
   calculatePreparedPopulationCompensation,
   isCompensationCalculationError,
+  MINIMUM_INCREASE_CONTRACT_VERSION,
   type PreparedPopulationCalculationInput,
 } from "../../domain/compensationCalculation";
 import { buildCampaignSimulationReadiness } from "./buildCampaignSimulationReadiness";
@@ -165,6 +166,8 @@ export async function executeCampaignSimulation(
     campaignYear: validatedConfiguration.campaignYear,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
     retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
+    minimumGuaranteeEffectiveMonth:
+      validatedConfiguration.minimumGuaranteeEffectiveMonth,
     minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
   });
 
@@ -188,6 +191,8 @@ export async function executeCampaignSimulation(
     campaignYear: validatedConfiguration.campaignYear,
     retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth:
+      validatedConfiguration.minimumGuaranteeEffectiveMonth,
     minimumIncreaseMode: validatedConfiguration.minimumIncreasePolicy.mode,
     minimumMonthlyAmountFcfa:
       validatedConfiguration.minimumIncreasePolicy.minimumMonthlyAmountFcfa,
@@ -197,6 +202,7 @@ export async function executeCampaignSimulation(
     minimumIncreaseRateDenominator:
       validatedConfiguration.minimumIncreasePolicy.minimumIncreaseRate
         ?.denominator ?? null,
+    minimumIncreaseContractVersion: MINIMUM_INCREASE_CONTRACT_VERSION,
   });
 
   if (
@@ -239,6 +245,8 @@ export async function executeCampaignSimulation(
     campaignYear: validatedConfiguration.campaignYear,
     technicalApplicationMonth: validatedConfiguration.technicalApplicationMonth,
     retroactivityStartMonth: validatedConfiguration.retroactivityStartMonth,
+    minimumGuaranteeEffectiveMonth:
+      validatedConfiguration.minimumGuaranteeEffectiveMonth,
     minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
   };
 

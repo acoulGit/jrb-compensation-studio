@@ -44,6 +44,8 @@ pub struct RunRow {
     // ---- Champs schema v3 (nullable pour anciens snapshots) ----
     pub retroactivity_start_month: Option<i64>,
     pub technical_application_month: Option<i64>,
+    /// Schema v6 — NULL pour snapshots historiques (résolu vers rétroactivité).
+    pub minimum_guarantee_effective_month: Option<i64>,
     pub campaign_covered_month_count: Option<i64>,
     pub reminder_month_count: Option<i64>,
     pub direct_payment_month_count: Option<i64>,

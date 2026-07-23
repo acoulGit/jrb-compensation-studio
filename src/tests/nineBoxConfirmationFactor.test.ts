@@ -24,6 +24,7 @@ import {
   RESULT_SCHEMA_VERSION,
   RESULT_SCHEMA_VERSION_V3,
   RESULT_SCHEMA_VERSION_V4,
+  RESULT_SCHEMA_VERSION_V5,
   resolveEvaluationFactor,
   resolveNineBoxTreatmentKind,
 } from "../domain/compensationCalculation";
@@ -212,17 +213,20 @@ describe("nineBoxConfirmationFactor — Lot 2B-RC1-H2", () => {
   });
 
   describe("compatibilité de schéma v3/v4/v5", () => {
-    it("classe v3, v4 et v5 comme « current » (présentables)", () => {
+    it("classe v3, v4, v5 et v6 comme « current » (présentables)", () => {
       expect(classifyResultSchemaVersion(RESULT_SCHEMA_VERSION_V3)).toBe("current");
       expect(classifyResultSchemaVersion(RESULT_SCHEMA_VERSION_V4)).toBe("current");
+      expect(classifyResultSchemaVersion(RESULT_SCHEMA_VERSION_V5)).toBe("current");
       expect(classifyResultSchemaVersion(RESULT_SCHEMA_VERSION)).toBe("current");
     });
 
-    it("canPresentResultSchemaVersion accepte v3, v4 et v5", () => {
+    it("canPresentResultSchemaVersion accepte v3 à v6", () => {
       expect(canPresentResultSchemaVersion(RESULT_SCHEMA_VERSION_V3)).toBe(true);
       expect(canPresentResultSchemaVersion(RESULT_SCHEMA_VERSION_V4)).toBe(true);
+      expect(canPresentResultSchemaVersion(RESULT_SCHEMA_VERSION_V5)).toBe(true);
       expect(canPresentResultSchemaVersion(RESULT_SCHEMA_VERSION)).toBe(true);
-      expect(RESULT_SCHEMA_VERSION).toBe(5);
+      expect(RESULT_SCHEMA_VERSION).toBe(6);
+      expect(RESULT_SCHEMA_VERSION_V5).toBe(5);
       expect(RESULT_SCHEMA_VERSION_V4).toBe(4);
     });
   });

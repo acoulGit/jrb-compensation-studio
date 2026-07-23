@@ -31,6 +31,11 @@ export interface ValidatedCampaignSimulationConfiguration {
   retroactivityStartMonth: number;
   /** Mois d’application technique (1–12). */
   technicalApplicationMonth: number;
+  /**
+   * Mois d’effet du minimum garanti (1–12).
+   * Défaut = mois technique (Lot 2B-RC1-H4).
+   */
+  minimumGuaranteeEffectiveMonth: number;
   /** Politique de minimum garanti d’augmentation (Lot 2A-H2D-2). */
   minimumIncreasePolicy: MinimumIncreasePolicy;
   readinessReport: CampaignSimulationReadinessReport;
@@ -61,6 +66,7 @@ export function createEmptyConfigurationDraft(
     campaignYearInput: String(uiDefaultYear),
     retroactivityStartMonthInput: "1",
     technicalApplicationMonthInput: "1",
+    minimumGuaranteeEffectiveMonthInput: "1",
     minimumIncreaseMode: "none",
     minimumMonthlyAmountInput: "",
     minimumIncreaseRatePercentInput: "",

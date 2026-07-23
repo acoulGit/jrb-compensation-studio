@@ -1,4 +1,4 @@
-# Schéma de base de données — Lots 1A à 2B-P1
+# Schéma de base de données — Lots 1A à 2B-RC1-H4
 
 ## Emplacement logique
 
@@ -273,7 +273,8 @@ aucun faux zéro. Aucun `REAL` : montants et fractions restent en TEXT canonique
 `compensation_simulation_runs` — colonnes ajoutées (résumé) :
 
 - Configuration : `retroactivity_start_month`, `technical_application_month`,
-  `campaign_covered_month_count`, `reminder_month_count`,
+  `minimum_guarantee_effective_month` (Lot 2B-RC1-H4, migration `0012` ;
+  NULL pour schema ≤ 5), `campaign_covered_month_count`, `reminder_month_count`,
   `direct_payment_month_count`, `calculation_contract_version`,
   `seniority_impact_contract_version`, `minimum_increase_contract_version`,
   `minimum_increase_mode` (CHECK `none` / `fixed_monthly_amount` /
@@ -305,7 +306,7 @@ sont **réutilisées** avec leur sémantique « période » (voir
 coût annuel (`annual_theoretical_allocation_num/den_text`,
 `annual_actual_cost_text`, `annual_rounding_delta_num/den_text`), calendrier
 (`retroactivity_start_month`, `technical_application_month`,
-`campaign_covered_month_count`, `retroactive_months`,
+`minimum_guarantee_effective_month`, `campaign_covered_month_count`, `retroactive_months`,
 `remaining_direct_payment_months`, `base_salary_reminder_text`, …), ancienneté
 (`hire_date`, `technical_application_month_seniority_rate_percent`,
 `seniority_reminder_text`, `annual_seniority_impact_text`, …), plein effet
@@ -370,7 +371,7 @@ intégrées au build Rust via `include_str!`. Elles sont enregistrées dans le
 builder `tauri-plugin-sql` avec la même chaîne de connexion que le frontend.
 Depuis le Lot 2B-RC1-SEC1-A, la fenêtre `access` (démarrage) n’utilise **pas**
 le plugin SQL et ne précharge jamais la base ; seule la fenêtre `main` (après
-déverrouillage) déclenche le préchargement + les migrations 0001–0010 via le
+déverrouillage) déclenche le préchargement + les migrations 0001–0012 via le
 plugin. Les commandes d’accès local (`get_local_access_status`,
 `setup_local_access`, `unlock_local_access`) ouvrent une connexion SQLite
 dédiée (`create_if_missing`) et rejouent la migration `0010` de façon
@@ -389,6 +390,24 @@ idempotente avant toute lecture/écriture — voir `docs/LOCAL_ACCESS_SECURITY.m
 | 9 | `0009_nine_box_confirmation_factor.sql` | référentiel + snapshot schema v5 (contrat v6) — coefficient provisoire 9-Box |
 | 10 | `0010_local_access_state.sql` | `local_access_state` (accès local : mot de passe + période initiale) |
 | 11 | `0011_license_activations.sql` | `license_activations` (historique des licences hors ligne) |
+| 12 | `0012_minimum_guarantee_effective_month.sql` | mois d’effet explicite du minimum garanti (schema v6 / contrat v8) |
+
+### Mois d’effet du minimum garanti (migration `0012`, schema v6 / contrat v8)
+
+Additive, non destructive. Aucun `DEFAULT`, aucun backfill artificiel :
+les snapshots historiques conservent `NULL`.
+
+- `compensation_simulation_runs.minimum_guarantee_effective_month` INTEGER
+  NULL, CHECK (`NULL` ou entre **1** et **12**). Les nouveaux runs schema **6**
+  écrivent une valeur explicite côté applicatif.
+- `compensation_simulation_employee_results.minimum_guarantee_effective_month`
+  INTEGER NULL, CHECK identique (miroir salarié, aligné sur
+  `retroactivity_start_month` / `technical_application_month` depuis `0007`).
+
+Relecture schema **≤ 5** : le mois d’effet affiché / exporté se résout vers
+`retroactivity_start_month` (**jamais** `technical_application_month`), avec
+libellé « Aligné historiquement sur le mois de rétroactivité » — aucune
+valeur 1–12 fabriquée à la lecture.
 
 ### Neutralisation 9-Box (migration `0008`, schema v4 / contrat v5)
 
@@ -422,7 +441,7 @@ Lot H1 est remplacé par un coefficient provisoire paramétrable).
   valeur historique `nine_box_effect_neutralized` reste acceptée pour les
   snapshots v4.
 
-Évolution : ajouter un fichier `0012_....sql`, une constante associée et une
+Évolution : ajouter un fichier `0013_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.
 
 ### Accès local (migration `0010`, Lot 2B-RC1-SEC1-A)
@@ -450,7 +469,7 @@ Champs : `license_id` UNIQUE, `installation_id`, `payload_json`,
 `previous_valid_until`, `new_valid_until`, `customer` NULL, `created_at`.
 Voir `docs/OFFLINE_LICENSES.md`.
 
-Évolution : ajouter un fichier `0012_....sql`, une constante associée et une
+Évolution : ajouter un fichier `0013_....sql`, une constante associée et une
 entrée `Migration` supplémentaire, sans modifier une migration déjà appliquée.
 
 ## Export Excel RH et mot de passe (Lot 2B-E1)

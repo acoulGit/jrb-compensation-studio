@@ -191,17 +191,27 @@ export function computeRequiredMinimumComplementExact(input: {
   return afterPromo;
 }
 
-/** Plancher payable (multiple du pas) pour un mois couvert. */
+/** Plancher payable (multiple du pas) pour un mois couvert par le minimum. */
 export function computeMinimumComplementFloorFcfa(input: {
   policy: MinimumIncreasePolicy;
   applicableMonthlyBaseSalaryFcfa: bigint;
   applicablePromotionIncrementFcfa: bigint;
   roundingStepFcfa: bigint;
+  /**
+   * Mois couvert par le minimum garanti
+   * (`isMonthCoveredByMinimumGuarantee`).
+   * Conservé sous l’alias historique `isCampaignCoveredMonth` pour
+   * compatibilité d’appel (Lot 2B-RC1-H4).
+   */
   isCampaignCoveredMonth: boolean;
+  /** Alias explicite H4 — prioritaire si fourni. */
+  isMinimumGuaranteeCoveredMonth?: boolean;
   isMinimumIncreasePopulationEmployee: boolean;
 }): bigint {
+  const covered =
+    input.isMinimumGuaranteeCoveredMonth ?? input.isCampaignCoveredMonth;
   if (
-    !input.isCampaignCoveredMonth ||
+    !covered ||
     !input.isMinimumIncreasePopulationEmployee ||
     input.policy.mode === "none"
   ) {

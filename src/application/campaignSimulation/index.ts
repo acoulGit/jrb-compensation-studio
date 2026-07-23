@@ -39,12 +39,20 @@ export {
   parseNonNegativeFcfaAmount,
   parseRoundingStepFcfa,
   parseRetroactivityStartMonthInput,
+  parseTechnicalApplicationMonthInput,
+  parseMinimumGuaranteeEffectiveMonthInput,
   parseSimulationConfigurationDraft,
   type ParseFailure,
   type ParseResult,
   type ParsedSimulationConfiguration,
   type SimulationConfigurationDraftFields,
 } from "./parseSimulationConfiguration";
+export {
+  resolveMinimumGuaranteeEffectiveMonth,
+  minimumGuaranteeReminderSummaryFr,
+  type MinimumGuaranteeEffectiveMonthOrigin,
+  type ResolvedMinimumGuaranteeEffectiveMonth,
+} from "./resolveMinimumGuaranteeEffectiveMonth";
 export {
   buildConfigurationFingerprint,
   formatBasisPointsAsPercent,

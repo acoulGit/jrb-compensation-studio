@@ -118,9 +118,9 @@ function populationTest1Input(
 }
 
 describe("Lot 2A-H2D-2 — minimum garanti d’augmentation", () => {
-  it("expose MINIMUM_INCREASE_CONTRACT_VERSION = 1 (contrat de calcul courant ≥ 4)", () => {
+  it("expose MINIMUM_INCREASE_CONTRACT_VERSION = 2 (contrat de calcul courant ≥ 4)", () => {
     expect(CALCULATION_CONTRACT_VERSION).toBeGreaterThanOrEqual(4);
-    expect(MINIMUM_INCREASE_CONTRACT_VERSION).toBe(1);
+    expect(MINIMUM_INCREASE_CONTRACT_VERSION).toBe(2);
   });
 
   describe("configuration", () => {
@@ -601,6 +601,7 @@ describe("Lot 2A-H2D-2 — minimum garanti d’augmentation", () => {
           ],
           retroactivityStartMonth: 4,
           technicalApplicationMonth: 7,
+          minimumGuaranteeEffectiveMonth: 4,
           budgetTarget: { mode: "manual_amount", manualBudgetFcfa: 90_000 },
           minimumIncreasePolicy: {
             mode: "fixed_monthly_amount",

@@ -257,6 +257,8 @@ export class MemorySimulationHistoryRepository
       createdAt,
       retroactivityStartMonth: dto.retroactivityStartMonth ?? null,
       technicalApplicationMonth: dto.technicalApplicationMonth ?? null,
+      minimumGuaranteeEffectiveMonth:
+        dto.minimumGuaranteeEffectiveMonth ?? null,
       campaignCoveredMonthCount: dto.campaignCoveredMonthCount ?? null,
       promotionCampaignPeriodBudgetCostFcfa: nullableIntegerText(
         dto.promotionCampaignPeriodBudgetCostText,
@@ -355,6 +357,29 @@ export class MemorySimulationHistoryRepository
             employee.nineBoxTreatmentKind === undefined
               ? null
               : employee.nineBoxTreatmentKind,
+          baseSalaryReminderFcfa:
+            employee.baseSalaryReminderFcfaText !== undefined &&
+            employee.baseSalaryReminderFcfaText !== null
+              ? parseCanonicalIntegerText(employee.baseSalaryReminderFcfaText, {
+                  allowNegative: false,
+                })
+              : null,
+          minimumCompensatoryReminderFcfa:
+            employee.minimumCompensatoryReminderFcfaText !== undefined &&
+            employee.minimumCompensatoryReminderFcfaText !== null
+              ? parseCanonicalIntegerText(
+                  employee.minimumCompensatoryReminderFcfaText,
+                  { allowNegative: false },
+                )
+              : null,
+          aboveMinimumCompensatoryReminderFcfa:
+            employee.aboveMinimumCompensatoryReminderFcfaText !== undefined &&
+            employee.aboveMinimumCompensatoryReminderFcfaText !== null
+              ? parseCanonicalIntegerText(
+                  employee.aboveMinimumCompensatoryReminderFcfaText,
+                  { allowNegative: false },
+                )
+              : null,
           months: (employee.months ?? [])
             .slice()
             .sort((a, b) => a.month - b.month)

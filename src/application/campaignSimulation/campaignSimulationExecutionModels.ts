@@ -204,6 +204,8 @@ export interface SimulationPopulationSummaryView {
   campaignYear: number;
   retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  /** Mois d’effet du minimum garanti (1–12) — contrat v8 (Lot 2B-RC1-H4). */
+  minimumGuaranteeEffectiveMonth?: number;
   campaignCoveredMonthCount: number;
   totalBaseSalaryReminderFcfa: bigint;
   totalRemainingYearDirectIncreaseCostFcfa: bigint;
@@ -292,6 +294,8 @@ export interface EmployeeSimulationResultView {
   campaignYear: number;
   retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  /** Mois d’effet du minimum garanti (1–12) — contrat v8 (Lot 2B-RC1-H4). */
+  minimumGuaranteeEffectiveMonth?: number;
   campaignCoveredMonthCount: number;
   retroactiveMonths: number;
   remainingDirectPaymentMonths: number;
@@ -394,6 +398,8 @@ export interface CampaignSimulationExecutionResult {
   campaignName: string | null;
   campaignYear: number | null;
   technicalApplicationMonth: number | null;
+  /** Mois d’effet du minimum garanti (1–12) — contrat v8 (Lot 2B-RC1-H4). */
+  minimumGuaranteeEffectiveMonth?: number | null;
   campaignStatus: CampaignStatus | "unknown";
   evaluationMode: NineBoxMode;
   currentImportBatchId: number | null;

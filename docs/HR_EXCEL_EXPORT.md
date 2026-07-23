@@ -2,8 +2,8 @@
 
 ## Objectif
 
-Produire, à partir d’un **snapshot de simulation persisté** (schema v3, v4 ou
-v5, contrats v4/v5/v6/v7), un classeur Excel `.xlsx` destiné aux équipes RH, avec
+Produire, à partir d’un **snapshot de simulation persisté** (schema v3 à v6,
+contrats v4 à v8), un classeur Excel `.xlsx` destiné aux équipes RH, avec
 **protection par mot de passe optionnelle** et **écriture atomique**.
 
 L’export reste une **lecture fidèle** du snapshot immutable : aucun recalcul
@@ -38,6 +38,31 @@ Depuis le Lot **2B-RC1-H3** (contrat v7, même schema v5) : une promotion avec
 grade avant = grade après (ou grade après vide résolu par fallback) est
 exportée normalement (montants, taux, trajectoire) sans exiger de changement
 de grade. L’export accepte les contrats 6 et 7 sur schema 5.
+
+Depuis le Lot **2B-RC1-H4** (schema v6, contrat v8) — mois d’effet
+configurable du minimum garanti ; **aucun changement de sécurité ni de
+licence** :
+
+- **`Parametres`** (section CALENDRIER) : nouvelle ligne **Mois d’effet du
+  minimum garanti** après « Mois d’application technique ». Pour un run
+  schema **≥ 6** avec valeur persistée : mois explicite (1–12). Pour un run
+  schema **≤ 5** (colonne `NULL`) : mois résolu =
+  `retroactivity_start_month`, jamais le mois technique ; ligne supplémentaire
+  **Origine du mois d’effet du minimum garanti** =
+  « Historique — aligné sur la rétroactivité ».
+- **`Resultats_RH`** : colonnes **Rappel minimum garanti** et **Rappel
+  au-dessus du minimum** (bloc PAIEMENT) reflètent la temporalité du
+  snapshot — rappel du plancher uniquement si le mois d’effet du minimum est
+  antérieur au mois technique ; la part au-dessus conserve la rétroactivité
+  générale. Les coûts de période minimum / au-dessus restent les agrégats
+  persistés.
+- **`Trajectoire_12_mois`** : colonnes **Minimum garanti mensuel** et
+  **Complément au-dessus du minimum** sont nulles avant
+  `max(retroactivity_start_month, minimum_guarantee_effective_month)` ;
+  **Couvert par la période** et **Calendrier de paiement** restent fondés
+  sur la rétroactivité générale pour la part au-dessus du minimum.
+- L’export accepte les contrats **7** et **8** sur schema **5** et **6**
+  (schema v6 requis pour persister le mois d’effet explicite).
 
 ## Feuilles produites (ordre)
 

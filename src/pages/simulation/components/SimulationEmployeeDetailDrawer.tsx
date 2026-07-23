@@ -10,6 +10,7 @@ import type {
   SimulationViewMode,
 } from "../../../application/campaignSimulation/simulationViewModels";
 import { nineBoxModeLabel } from "../../../domain/compensationReference/conversions";
+import { TECHNICAL_APPLICATION_MONTH_LABELS_FR } from "../../../domain/compensationCalculation";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { levelOrNotRequired } from "./simulationViewUtils";
 
@@ -225,6 +226,56 @@ export function SimulationEmployeeDetailDrawer({
               <dt>Poids d’allocation</dt>
               <dd data-testid={`${testIdPrefix}-detail-alloc-weight`}>
                 {employee.allocationWeightLabel}
+              </dd>
+            </div>
+            <div data-testid={`${testIdPrefix}-detail-minimum-temporality`}>
+              <dt>Mois de rétroactivité générale</dt>
+              <dd>
+                {employee.retroactivityStartMonth != null
+                  ? TECHNICAL_APPLICATION_MONTH_LABELS_FR[
+                      employee.retroactivityStartMonth - 1
+                    ]
+                  : "Non disponible"}
+              </dd>
+            </div>
+            <div>
+              <dt>Mois technique</dt>
+              <dd>
+                {employee.technicalApplicationMonth != null
+                  ? TECHNICAL_APPLICATION_MONTH_LABELS_FR[
+                      employee.technicalApplicationMonth - 1
+                    ]
+                  : "Non disponible"}
+              </dd>
+            </div>
+            <div>
+              <dt>Mois d’effet du minimum garanti</dt>
+              <dd data-testid={`${testIdPrefix}-detail-minimum-effective-month`}>
+                {employee.minimumGuaranteeEffectiveMonthLabel
+                  ? employee.minimumGuaranteeEffectiveMonthOrigin ===
+                    "legacy_retroactivity"
+                    ? `${employee.minimumGuaranteeEffectiveMonthLabel} — historique aligné sur la rétroactivité`
+                    : employee.minimumGuaranteeEffectiveMonthLabel
+                  : "Non disponible"}
+              </dd>
+            </div>
+            <div>
+              <dt>Rappel du minimum garanti</dt>
+              <dd data-testid={`${testIdPrefix}-detail-minimum-reminder`}>
+                {employee.minimumCompensatoryReminderLabel ?? "Non disponible"}
+              </dd>
+            </div>
+            <div>
+              <dt>Rappel au-dessus du minimum</dt>
+              <dd data-testid={`${testIdPrefix}-detail-above-minimum-reminder`}>
+                {employee.aboveMinimumCompensatoryReminderLabel ??
+                  "Non disponible"}
+              </dd>
+            </div>
+            <div>
+              <dt>Rappel compensatoire total</dt>
+              <dd data-testid={`${testIdPrefix}-detail-total-reminder`}>
+                {employee.baseSalaryReminderLabel ?? "Non disponible"}
               </dd>
             </div>
             <div>

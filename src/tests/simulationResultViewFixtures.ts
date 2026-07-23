@@ -261,6 +261,7 @@ export function withPromotionAwareEmployeeDefaults(
     | "sourceNineBoxCode"
     | "nineBoxTreatmentKind"
     | "nineBoxTreatmentLabel"
+    | "minimumGuaranteeEffectiveMonth"
   > &
     Partial<EmployeeSimulationResultView>,
 ): EmployeeSimulationResultView {
@@ -332,6 +333,10 @@ export function withPromotionAwareEmployeeDefaults(
     fullYearRunRateCompensationAboveMinimumCostLabel: ZERO_LABEL,
     monthlyCompensationTrajectory: [],
     retroactivityStartMonth: employee.retroactivityStartMonth ?? 1,
+    minimumGuaranteeEffectiveMonth:
+      employee.minimumGuaranteeEffectiveMonth ??
+      employee.technicalApplicationMonth ??
+      1,
     campaignCoveredMonthCount:
       employee.campaignCoveredMonthCount ??
       13 - (employee.retroactivityStartMonth ?? 1),

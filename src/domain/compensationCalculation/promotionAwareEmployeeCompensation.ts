@@ -15,6 +15,7 @@
 import { validateApplicationCalendar } from "./baseSalaryReminder";
 import {
   FULL_YEAR_MONTH_COUNT,
+  isMonthCoveredByMinimumGuarantee,
   isMonthInCampaignPeriod,
 } from "./campaignPeriod";
 import { calculateIndividualMatrixWeight } from "./calculateIndividualMatrixWeight";
@@ -121,6 +122,11 @@ export interface BuildEmployeePromotionAwareExposuresInput {
   campaignYear: number;
   technicalApplicationMonth: number;
   retroactivityStartMonth?: number;
+  /**
+   * Mois d’effet du minimum garanti (1–12).
+   * Défaut métier = `technicalApplicationMonth` (Lot 2B-RC1-H4).
+   */
+  minimumGuaranteeEffectiveMonth?: number;
   evaluationMode: NineBoxMode;
   salaryGrid: readonly PreparedSalaryGridCell[];
   salaryPositions: readonly SalaryPositionInputRow[];
@@ -138,11 +144,23 @@ export function buildEmployeePromotionAwareExposures(
   input: BuildEmployeePromotionAwareExposuresInput,
 ): EmployeePromotionAwareExposureResult {
   const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
+  const minimumGuaranteeEffectiveMonth =
+    input.minimumGuaranteeEffectiveMonth ?? input.technicalApplicationMonth;
   validateApplicationCalendar({
     campaignYear: input.campaignYear,
     technicalApplicationMonth: input.technicalApplicationMonth,
     retroactivityStartMonth,
   });
+  if (
+    !Number.isInteger(minimumGuaranteeEffectiveMonth) ||
+    minimumGuaranteeEffectiveMonth < 1 ||
+    minimumGuaranteeEffectiveMonth > 12
+  ) {
+    throw new CompensationCalculationError(
+      "INVALID_MINIMUM_GUARANTEE_EFFECTIVE_MONTH",
+      "Le mois d’effet du minimum garanti doit être compris entre janvier et décembre.",
+    );
+  }
 
   const policy = input.minimumIncreasePolicy ?? NO_MINIMUM_INCREASE_POLICY;
   const roundingStepFcfa = input.roundingStepFcfa ?? 1n;
@@ -211,6 +229,11 @@ export function buildEmployeePromotionAwareExposures(
         entry.month,
         retroactivityStartMonth,
       );
+      const inMinimumGuaranteePeriod = isMonthCoveredByMinimumGuarantee(
+        entry.month,
+        retroactivityStartMonth,
+        minimumGuaranteeEffectiveMonth,
+      );
       const effectiveCompensationFactor =
         compensatoryMeasureEligible && inCampaignPeriod
           ? blockedEffectiveFactor
@@ -230,7 +253,8 @@ export function buildEmployeePromotionAwareExposures(
         applicableMonthlyBaseSalaryFcfa: entry.baseSalaryFcfa,
         applicablePromotionIncrementFcfa: promotionAmountForMonthFcfa,
         roundingStepFcfa,
-        isCampaignCoveredMonth: inCampaignPeriod,
+        isCampaignCoveredMonth: inMinimumGuaranteePeriod,
+        isMinimumGuaranteeCoveredMonth: inMinimumGuaranteePeriod,
         isMinimumIncreasePopulationEmployee: inMinimumPopulation,
       });
 
@@ -274,6 +298,11 @@ export interface FinalizeEmployeePromotionAwareCompensationInput {
   campaignYear: number;
   technicalApplicationMonth: number;
   retroactivityStartMonth?: number;
+  /**
+   * Mois d’effet du minimum garanti (1–12).
+   * Défaut métier = `technicalApplicationMonth` (Lot 2B-RC1-H4).
+   */
+  minimumGuaranteeEffectiveMonth?: number;
   months: readonly EmployeeMonthlyExposureContext[];
   calibrationRate: ExactAmount;
   roundingPolicy: { mode: "nearest_half_up"; stepFcfa: bigint };
@@ -348,11 +377,23 @@ export function finalizeEmployeePromotionAwareCompensation(
   input: FinalizeEmployeePromotionAwareCompensationInput,
 ): FinalizeEmployeePromotionAwareCompensationResult {
   const retroactivityStartMonth = input.retroactivityStartMonth ?? 1;
+  const minimumGuaranteeEffectiveMonth =
+    input.minimumGuaranteeEffectiveMonth ?? input.technicalApplicationMonth;
   validateApplicationCalendar({
     campaignYear: input.campaignYear,
     technicalApplicationMonth: input.technicalApplicationMonth,
     retroactivityStartMonth,
   });
+  if (
+    !Number.isInteger(minimumGuaranteeEffectiveMonth) ||
+    minimumGuaranteeEffectiveMonth < 1 ||
+    minimumGuaranteeEffectiveMonth > 12
+  ) {
+    throw new CompensationCalculationError(
+      "INVALID_MINIMUM_GUARANTEE_EFFECTIVE_MONTH",
+      "Le mois d’effet du minimum garanti doit être compris entre janvier et décembre.",
+    );
+  }
 
   const hire = parseHireDateIso(input.hireDate);
   validateHireDateForCampaign(hire, input.campaignYear);
@@ -371,6 +412,11 @@ export function finalizeEmployeePromotionAwareCompensation(
       const coveredByCampaignPeriod = isMonthInCampaignPeriod(
         month.month,
         retroactivityStartMonth,
+      );
+      const coveredByMinimumGuarantee = isMonthCoveredByMinimumGuarantee(
+        month.month,
+        retroactivityStartMonth,
+        minimumGuaranteeEffectiveMonth,
       );
       const targetCompensatoryRate = multiplyFractions(
         input.calibrationRate,
@@ -393,7 +439,7 @@ export function finalizeEmployeePromotionAwareCompensation(
         : 0n;
 
       const guaranteedTotalIncreaseExact =
-        coveredByCampaignPeriod && inMinimumPopulation
+        coveredByMinimumGuarantee && inMinimumPopulation
           ? computeGuaranteedTotalIncreaseExact({
               policy,
               applicableMonthlyBaseSalaryFcfa: month.baseSalaryFcfa,
@@ -401,11 +447,13 @@ export function finalizeEmployeePromotionAwareCompensation(
           : exactAmountFromInteger(0n);
       const requiredMinimumComplementExact = computeRequiredMinimumComplementExact({
         guaranteedTotalIncreaseExact,
-        applicablePromotionIncrementFcfa,
+        applicablePromotionIncrementFcfa: coveredByMinimumGuarantee
+          ? applicablePromotionIncrementFcfa
+          : 0n,
       });
 
       // Préférer le plancher déjà calculé sur l’exposition (identique au solveur).
-      const minimumComplementFloorFcfa = coveredByCampaignPeriod
+      const minimumComplementFloorFcfa = coveredByMinimumGuarantee
         ? (month.minimumComplementFloorFcfa ?? 0n)
         : 0n;
 

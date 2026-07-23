@@ -127,11 +127,14 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
 - Réutilise `buildCampaignSimulationReadiness` ; n’appelle pas le moteur
   d’allocation.
 
-## Couche exécution de simulation (Lot 2B-3)
+## Couche exécution de simulation (Lot 2B-3 / 2B-RC1-H4)
 
 - **Service** `executeCampaignSimulation` : recharge sources, vérifie empreintes,
   appelle **une fois** `calculatePreparedPopulationCompensation`, construit une
   vue consultable — **aucune persistance**.
+- Calendrier simulation (2A-H2A / 2B-RC1-H4) : `retroactivityStartMonth`,
+  `technicalApplicationMonth`, `minimumGuaranteeEffectiveMonth` (défaut =
+  mois technique pour une nouvelle configuration).
 - **Fingerprint** `buildSimulationSourceFingerprint` (sources + config).
 - **Provider** `SimulationExecutionProvider` : état / résultat / issues par
   `campaignId`, `runSequence` de session, invalidation stale.
@@ -153,9 +156,12 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
   coefficient provisoire `nine_box_confirmation_factor_milli` sur
   `campaign_reference_config` et sur le run de simulation ; Lot 2B-RC1-H2).
   Promotion salariale sans changement de grade autorisée (contrat v7, schema v5
-  inchangé ; Lot 2B-RC1-H3).
+  inchangé ; Lot 2B-RC1-H3),
+  `0012_minimum_guarantee_effective_month.sql` (schema v6 / contrat v8 :
+  mois d’effet configurable du minimum garanti ; Lot 2B-RC1-H4).
 - Commande Rust `save_simulation_run` (transaction SQLx dédiée) : écrit le run
-  (`result_schema_version = 3`), les salariés et **12 mois** par salarié en une
+  (`result_schema_version = 6` pour les nouveaux snapshots contrat v8), les
+  salariés et **12 mois** par salarié en une
   seule transaction, sans recalcul.
 - Service `saveCurrentCampaignSimulation` + DTO chaînes canoniques (run /
   salarié / mensuel).
@@ -165,9 +171,9 @@ Voir `docs/CAMPAIGN_SIMULATION.md`.
   `SimulationHistoryRefreshProvider`, `SimulationHistoryPage` et composants
   partagés courant / historique (`SimulationSummaryPanel`,
   `SimulationEmployeeTable`, `SimulationEmployeeDetailDrawer`) — enregistrement
-  explicite et consultation en lecture seule, compatibles schema v3 (période
-  configurable, promotions, minimum garanti, ancienneté, trajectoire mensuelle)
-  avec dégradation explicite pour les snapshots v1/v2.
+  explicite et consultation en lecture seule, compatibles schema v3–v6 (période
+  configurable, promotions, minimum garanti et mois d’effet, ancienneté,
+  trajectoire mensuelle) avec dégradation explicite pour les snapshots v1/v2.
 - Voir `docs/SIMULATION_PERSISTENCE.md`.
 
 Voir `docs/CAMPAIGN_SIMULATION.md`.

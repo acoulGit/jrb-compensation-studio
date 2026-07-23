@@ -1,5 +1,5 @@
 /**
- * Contrat de calcul de campagne (Lot 2A-H1 → Lot 2B-RC1-H3).
+ * Contrat de calcul de campagne (Lot 2A-H1 → Lot 2B-RC1-H4).
  *
  * v2 : budget cible = coût annuel 12 mois (rétroactivité implicite janvier).
  * v3 : période budgétaire configurable via `retroactivityStartMonth`.
@@ -12,6 +12,9 @@
  *      coefficient global « Performance à confirmer » (milli, défaut 900).
  * v7 : promotion salariale sans changement de grade autorisée
  *      (même grade ou grade après vide → conservation du grade d’origine).
+ * v8 : mois d’effet configurable du minimum garanti
+ *      (`minimumGuaranteeEffectiveMonth`) ; la part au-dessus du minimum
+ *      conserve la rétroactivité générale.
  *
  * Les salaires importés, S0 et le nouveau salaire restent MENSUELS.
  * L’arrondi s’applique uniquement à l’augmentation mensuelle individuelle
@@ -19,7 +22,10 @@
  */
 
 /** Version du contrat de calcul (empreintes / compatibilité). */
-export const CALCULATION_CONTRACT_VERSION = 7 as const;
+export const CALCULATION_CONTRACT_VERSION = 8 as const;
+
+/** Contrat v7 (avant mois d’effet configurable du minimum). */
+export const CALCULATION_CONTRACT_VERSION_V7 = 7 as const;
 
 /**
  * Nombre de mois d’une année civile complète (indicateur plein effet).
@@ -48,14 +54,22 @@ export const EMPLOYER_CHARGES_INCLUDED = false;
  * v5 = contrats v6–v7 (migration 0009) : coefficient provisoire global
  *      « Performance à confirmer » ; structure promotion déjà capable de
  *      stocker un grade après identique au grade avant (contrat v7).
+ * v6 = contrat v8 (migration 0012) : mois d’effet explicite du minimum
+ *      garanti (`minimum_guarantee_effective_month`). Les snapshots v5
+ *      restent lisibles ; leur mois d’effet historique se résout vers
+ *      `retroactivityStartMonth` (jamais vers le mois technique).
  *
- * Règle de compatibilité d'écriture : un résultat contrat ≥ 6 exige schema ≥ 5.
- * Les snapshots v1–v4 restent lisibles mais ne doivent pas être
- * réinterprétés avec le modèle v5 (pas de 0,900 inventé pour v4).
+ * Règle de compatibilité d'écriture : un résultat contrat ≥ 6 exige schema ≥ 5 ;
+ * un résultat contrat ≥ 8 exige schema ≥ 6.
+ * Les snapshots v1–v5 restent lisibles mais ne doivent pas être
+ * réinterprétés avec le modèle v6 (pas de mois technique inventé pour v5).
  * Contrat 6 et contrat 7 partagent le schema 5 (pas de migration structurelle
  * pour H3).
  */
-export const RESULT_SCHEMA_VERSION = 5 as const;
+export const RESULT_SCHEMA_VERSION = 6 as const;
+
+/** Schema v5 (contrats v6–v7, sans mois d’effet minimum explicite). */
+export const RESULT_SCHEMA_VERSION_V5 = 5 as const;
 
 /** Schema v4 (contrat v5, neutralisation 9-Box à facteur 1). */
 export const RESULT_SCHEMA_VERSION_V4 = 4 as const;

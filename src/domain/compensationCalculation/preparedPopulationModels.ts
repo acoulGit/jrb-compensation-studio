@@ -119,6 +119,11 @@ export interface PreparedPopulationCalculationInput {
   /** Mois d’application technique (1 = janvier … 12 = décembre). */
   technicalApplicationMonth: number;
   /**
+   * Mois d’effet du minimum garanti (1–12).
+   * Défaut métier = `technicalApplicationMonth` (contrat v8 / Lot 2B-RC1-H4).
+   */
+  minimumGuaranteeEffectiveMonth?: number;
+  /**
    * Politique de minimum garanti d’augmentation (Lot 2A-H2D-2).
    * Défaut métier = aucun minimum (parité H2D-1).
    */
@@ -222,6 +227,8 @@ export interface EmployeeCompensationCalculationResult {
   retroactivityStartMonth: number;
   /** Mois d’application technique (1–12). */
   technicalApplicationMonth: number;
+  /** Mois d’effet du minimum garanti (1–12) — contrat v8. */
+  minimumGuaranteeEffectiveMonth: number;
   /** Nombre de mois couverts par la campagne (13 − rétroactivité). */
   campaignCoveredMonthCount: number;
   /** Mois de rappel = technicalApplicationMonth − retroactivityStartMonth. */
@@ -425,6 +432,8 @@ export interface PopulationCalculationSummary {
   campaignYear: number;
   retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  /** Mois d’effet du minimum garanti (1–12) — contrat v8. */
+  minimumGuaranteeEffectiveMonth: number;
   campaignCoveredMonthCount: number;
   totalBaseSalaryReminderFcfa: bigint;
   totalRemainingYearDirectIncreaseCostFcfa: bigint;
@@ -518,6 +527,8 @@ export interface PreparedPopulationCalculationResult {
   campaignYear: number;
   retroactivityStartMonth: number;
   technicalApplicationMonth: number;
+  /** Mois d’effet du minimum garanti (1–12) — contrat v8. */
+  minimumGuaranteeEffectiveMonth: number;
   campaignCoveredMonthCount: number;
   totalBaseSalaryReminderFcfa: bigint;
   totalRemainingYearDirectIncreaseCostFcfa: bigint;

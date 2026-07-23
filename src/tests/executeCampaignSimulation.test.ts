@@ -12,7 +12,10 @@ import type {
   PopulationCalculationReferences,
   PreparedSalaryGridCell,
 } from "../domain/compensationCalculation";
-import { NO_MINIMUM_INCREASE_POLICY } from "../domain/compensationCalculation";
+import {
+  MINIMUM_INCREASE_CONTRACT_VERSION,
+  NO_MINIMUM_INCREASE_POLICY,
+} from "../domain/compensationCalculation";
 import { executeCampaignSimulation } from "../application/campaignSimulation/executeCampaignSimulation";
 import { buildSimulationSourceFingerprint } from "../application/campaignSimulation/buildSimulationSourceFingerprint";
 import { buildConfigurationFingerprint } from "../application/campaignSimulation/formatExactBudgetDisplay";
@@ -291,6 +294,7 @@ async function buildValidated(options?: {
     campaignYear: 2027,
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
+    minimumGuaranteeEffectiveMonth: 1,
   minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
   });
 
@@ -314,6 +318,15 @@ async function buildValidated(options?: {
     campaignYear: 2027,
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
+    minimumGuaranteeEffectiveMonth: 1,
+    minimumIncreaseMode: NO_MINIMUM_INCREASE_POLICY.mode,
+    minimumMonthlyAmountFcfa:
+      NO_MINIMUM_INCREASE_POLICY.minimumMonthlyAmountFcfa,
+    minimumIncreaseRateNumerator:
+      NO_MINIMUM_INCREASE_POLICY.minimumIncreaseRate?.numerator ?? null,
+    minimumIncreaseRateDenominator:
+      NO_MINIMUM_INCREASE_POLICY.minimumIncreaseRate?.denominator ?? null,
+    minimumIncreaseContractVersion: MINIMUM_INCREASE_CONTRACT_VERSION,
   });
 
   const validated: ValidatedCampaignSimulationConfiguration = {
@@ -323,6 +336,7 @@ async function buildValidated(options?: {
     campaignYear: 2027,
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
+    minimumGuaranteeEffectiveMonth: 1,
     minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     readinessReport: await readinessModule.buildCampaignSimulationReadiness(
       { campaignId: campaign?.id ?? 1 },

@@ -24,8 +24,12 @@ import {
 } from "./formatExactBudgetDisplay";
 import {
   formatNineBoxTreatmentLabel,
+  technicalApplicationMonthLabelFr,
   type NineBoxTreatmentKind,
 } from "../../domain/compensationCalculation";
+import {
+  resolveMinimumGuaranteeEffectiveMonth,
+} from "./resolveMinimumGuaranteeEffectiveMonth";
 import {
   classifyResultSchemaVersion,
   resultSchemaCompatibilityMessage,
@@ -155,6 +159,20 @@ function mapExecutionEmployee(
     fullYearRunRateCombinedBaseMeasureCostLabel:
       employee.fullYearRunRateCombinedBaseMeasureCostLabel,
     technicalMonthFinalSalaryLabel: employee.technicalMonthFinalSalaryLabel,
+    retroactivityStartMonth: employee.retroactivityStartMonth,
+    technicalApplicationMonth: employee.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth:
+      employee.minimumGuaranteeEffectiveMonth ??
+      employee.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonthOrigin: "explicit",
+    minimumGuaranteeEffectiveMonthLabel: technicalApplicationMonthLabelFr(
+      employee.minimumGuaranteeEffectiveMonth ??
+        employee.technicalApplicationMonth,
+    ),
+    minimumCompensatoryReminderLabel: employee.minimumCompensatoryReminderLabel,
+    aboveMinimumCompensatoryReminderLabel:
+      employee.aboveMinimumCompensatoryReminderLabel,
+    baseSalaryReminderLabel: formatFcfaInteger(employee.baseSalaryReminderFcfa),
     months: employee.monthlyCompensationTrajectory.map(mapExecutionMonth),
   };
 }
@@ -207,6 +225,8 @@ export function mapExecutionResultToViewModel(
     schemaCompatibilityMessage: null,
     retroactivityStartMonth: population.retroactivityStartMonth,
     technicalApplicationMonth: population.technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth: population.minimumGuaranteeEffectiveMonth,
+    minimumGuaranteeEffectiveMonthOrigin: "explicit",
     campaignCoveredMonthCount: population.campaignCoveredMonthCount,
     periodPromotionBudgetCostLabel:
       envelope.totalAnnualPromotionBudgetCostLabel,
@@ -267,9 +287,20 @@ function mapPersistedMonth(
 function mapPersistedEmployee(
   employee: PersistedSimulationEmployeeResult,
   compatibility: ResultSchemaCompatibility,
+  calendar?: {
+    retroactivityStartMonth: number | null;
+    technicalApplicationMonth: number | null;
+    minimumGuaranteeEffectiveMonth: number | null;
+    minimumGuaranteeEffectiveMonthOrigin:
+      | "explicit"
+      | "legacy_retroactivity"
+      | null;
+    minimumGuaranteeEffectiveMonthLabel: string | null;
+  },
 ): SimulationEmployeeViewModel {
+  const isCurrent = compatibility === "current";
   const hasMonths =
-    compatibility === "current" &&
+    isCurrent &&
     Array.isArray(employee.months) &&
     employee.months.length > 0;
   return {
@@ -313,8 +344,23 @@ function mapPersistedEmployee(
     ),
     finalSalaryFcfa: employee.finalSalaryFcfa,
     explanationSteps: employee.explanationSteps,
-    // Champs v3 par salarié non relus depuis Persisted* (colonnes agrégées non
-    // exposées par le modèle de lecture) → indisponibles pour un snapshot.
+    retroactivityStartMonth: calendar?.retroactivityStartMonth ?? null,
+    technicalApplicationMonth: calendar?.technicalApplicationMonth ?? null,
+    minimumGuaranteeEffectiveMonth:
+      calendar?.minimumGuaranteeEffectiveMonth ?? null,
+    minimumGuaranteeEffectiveMonthOrigin:
+      calendar?.minimumGuaranteeEffectiveMonthOrigin ?? null,
+    minimumGuaranteeEffectiveMonthLabel:
+      calendar?.minimumGuaranteeEffectiveMonthLabel ?? null,
+    minimumCompensatoryReminderLabel: isCurrent
+      ? nullableFcfaLabel(employee.minimumCompensatoryReminderFcfa)
+      : null,
+    aboveMinimumCompensatoryReminderLabel: isCurrent
+      ? nullableFcfaLabel(employee.aboveMinimumCompensatoryReminderFcfa)
+      : null,
+    baseSalaryReminderLabel: isCurrent
+      ? nullableFcfaLabel(employee.baseSalaryReminderFcfa)
+      : null,
     months: hasMonths
       ? employee.months!.map(mapPersistedMonth)
       : null,
@@ -329,6 +375,13 @@ export function mapPersistedDetailToViewModel(
     summaryRow.resultSchemaVersion,
   );
   const isCurrent = compatibility === "current";
+  const resolvedMinimumEffective = isCurrent
+    ? resolveMinimumGuaranteeEffectiveMonth({
+        resultSchemaVersion: summaryRow.resultSchemaVersion,
+        storedMonth: summaryRow.minimumGuaranteeEffectiveMonth,
+        retroactivityStartMonth: summaryRow.retroactivityStartMonth,
+      })
+    : null;
   const summary: SimulationSummaryViewModel = {
     mode: "persisted-readonly",
     campaignId: summaryRow.campaignId,
@@ -391,6 +444,9 @@ export function mapPersistedDetailToViewModel(
     technicalApplicationMonth: isCurrent
       ? (summaryRow.technicalApplicationMonth ?? null)
       : null,
+    minimumGuaranteeEffectiveMonth: resolvedMinimumEffective?.month ?? null,
+    minimumGuaranteeEffectiveMonthOrigin:
+      resolvedMinimumEffective?.origin ?? null,
     campaignCoveredMonthCount: isCurrent
       ? (summaryRow.campaignCoveredMonthCount ?? null)
       : null,
@@ -416,7 +472,16 @@ export function mapPersistedDetailToViewModel(
   return {
     summary,
     employees: detail.employees.map((employee) =>
-      mapPersistedEmployee(employee, compatibility),
+      mapPersistedEmployee(employee, compatibility, {
+        retroactivityStartMonth: summary.retroactivityStartMonth ?? null,
+        technicalApplicationMonth: summary.technicalApplicationMonth ?? null,
+        minimumGuaranteeEffectiveMonth:
+          summary.minimumGuaranteeEffectiveMonth ?? null,
+        minimumGuaranteeEffectiveMonthOrigin:
+          summary.minimumGuaranteeEffectiveMonthOrigin ?? null,
+        minimumGuaranteeEffectiveMonthLabel:
+          resolvedMinimumEffective?.monthLabel ?? null,
+      }),
     ),
   };
 }

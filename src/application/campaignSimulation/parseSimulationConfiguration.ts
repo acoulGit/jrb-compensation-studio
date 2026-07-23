@@ -281,6 +281,38 @@ export function parseTechnicalApplicationMonthInput(
   return { ok: true, value };
 }
 
+/** Parse le mois d’effet du minimum garanti (1 = janvier … 12 = décembre). */
+export function parseMinimumGuaranteeEffectiveMonthInput(
+  raw: string | null | undefined,
+): ParseResult<number> {
+  if (raw === null || raw === undefined || raw.trim() === "") {
+    return {
+      ok: false,
+      code: "MISSING_MINIMUM_GUARANTEE_EFFECTIVE_MONTH",
+      message: "Le mois d’effet du minimum garanti est obligatoire.",
+    };
+  }
+  const compact = stripAllowedSpaces(raw.trim());
+  if (!/^\d{1,2}$/.test(compact)) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_GUARANTEE_EFFECTIVE_MONTH",
+      message:
+        "Le mois d’effet du minimum garanti doit être compris entre janvier et décembre.",
+    };
+  }
+  const value = Number(compact);
+  if (!Number.isInteger(value) || value < 1 || value > 12) {
+    return {
+      ok: false,
+      code: "INVALID_MINIMUM_GUARANTEE_EFFECTIVE_MONTH",
+      message:
+        "Le mois d’effet du minimum garanti doit être compris entre janvier et décembre.",
+    };
+  }
+  return { ok: true, value };
+}
+
 /** Parse le mois de début de rétroactivité (1 = janvier … 12 = décembre). */
 export function parseRetroactivityStartMonthInput(
   raw: string | null | undefined,
@@ -445,6 +477,11 @@ export interface SimulationConfigurationDraftFields {
   retroactivityStartMonthInput: string;
   /** Mois d’application technique 1–12 (saisie UI). */
   technicalApplicationMonthInput: string;
+  /**
+   * Mois d’effet du minimum garanti 1–12 (saisie UI).
+   * Défaut = mois technique (Lot 2B-RC1-H4).
+   */
+  minimumGuaranteeEffectiveMonthInput: string;
   /** Mode de minimum garanti (Lot 2A-H2D-2). */
   minimumIncreaseMode: MinimumIncreaseModeChoice;
   /** Montant forfaitaire mensuel (texte UI). */
@@ -459,6 +496,7 @@ export interface ParsedSimulationConfiguration {
   campaignYear: number | null;
   retroactivityStartMonth: number | null;
   technicalApplicationMonth: number | null;
+  minimumGuaranteeEffectiveMonth: number | null;
   minimumIncreasePolicy: MinimumIncreasePolicy | null;
   fieldErrors: Partial<
     Record<
@@ -471,6 +509,7 @@ export interface ParsedSimulationConfiguration {
       | "campaignYearInput"
       | "retroactivityStartMonthInput"
       | "technicalApplicationMonthInput"
+      | "minimumGuaranteeEffectiveMonthInput"
       | "minimumIncreaseMode"
       | "minimumMonthlyAmountInput"
       | "minimumIncreaseRatePercentInput",
@@ -571,6 +610,7 @@ export function parseSimulationConfigurationDraft(
   let campaignYear: number | null = null;
   let retroactivityStartMonth: number | null = null;
   let technicalApplicationMonth: number | null = null;
+  let minimumGuaranteeEffectiveMonth: number | null = null;
   let isApplicationCalendarComplete = false;
 
   const year = parseCampaignYearInput(draft.campaignYearInput);
@@ -598,6 +638,15 @@ export function parseSimulationConfigurationDraft(
     technicalApplicationMonth = month.value;
   }
 
+  const minEffective = parseMinimumGuaranteeEffectiveMonthInput(
+    draft.minimumGuaranteeEffectiveMonthInput,
+  );
+  if (!minEffective.ok) {
+    fieldErrors.minimumGuaranteeEffectiveMonthInput = minEffective;
+  } else {
+    minimumGuaranteeEffectiveMonth = minEffective.value;
+  }
+
   if (
     retroactivityStartMonth !== null &&
     technicalApplicationMonth !== null &&
@@ -615,7 +664,8 @@ export function parseSimulationConfigurationDraft(
   if (
     campaignYear !== null &&
     retroactivityStartMonth !== null &&
-    technicalApplicationMonth !== null
+    technicalApplicationMonth !== null &&
+    minimumGuaranteeEffectiveMonth !== null
   ) {
     isApplicationCalendarComplete = true;
   }
@@ -714,6 +764,7 @@ export function parseSimulationConfigurationDraft(
     campaignYear,
     retroactivityStartMonth,
     technicalApplicationMonth,
+    minimumGuaranteeEffectiveMonth,
     minimumIncreasePolicy,
     fieldErrors,
     isBudgetComplete,

@@ -215,6 +215,8 @@ export function buildConfigurationFingerprint(parts: {
   retroactivityStartMonth?: number;
   /** Mois d’application technique 1–12 (Lot 2A-H2A). */
   technicalApplicationMonth?: number;
+  /** Mois d’effet du minimum garanti 1–12 (Lot 2B-RC1-H4). */
+  minimumGuaranteeEffectiveMonth?: number;
   /** Version du contrat d’incidence d’ancienneté (Lot 2A-H2B). */
   seniorityImpactContractVersion?: number;
   /** Version du contrat trajectoire promotion (Lot 2A-H2C-1). */
@@ -248,6 +250,7 @@ export function buildConfigurationFingerprint(parts: {
     `year:${parts.campaignYear ?? ""}`,
     `retroStart:${parts.retroactivityStartMonth ?? ""}`,
     `appMonth:${parts.technicalApplicationMonth ?? ""}`,
+    `minEffMonth:${parts.minimumGuaranteeEffectiveMonth ?? ""}`,
     `seniority:v${parts.seniorityImpactContractVersion ?? 1}`,
     `promotion:v${parts.promotionTrajectoryContractVersion ?? 1}`,
     `calibration:v${parts.promotionCompensatoryCalibrationContractVersion ?? 1}`,

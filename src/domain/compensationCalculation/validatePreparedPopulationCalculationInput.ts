@@ -192,6 +192,25 @@ export function validatePreparedPopulationCalculationInput(
     );
   }
 
+  const minimumGuaranteeEffectiveMonth =
+    input.minimumGuaranteeEffectiveMonth ?? input.technicalApplicationMonth;
+  if (
+    input.minimumGuaranteeEffectiveMonth !== undefined &&
+    (!Number.isInteger(minimumGuaranteeEffectiveMonth) ||
+      minimumGuaranteeEffectiveMonth < 1 ||
+      minimumGuaranteeEffectiveMonth > 12)
+  ) {
+    issues.push(
+      issue({
+        code: "INVALID_MINIMUM_GUARANTEE_EFFECTIVE_MONTH",
+        message:
+          "Le mois d’effet du minimum garanti doit être compris entre janvier et décembre.",
+        field: "minimumGuaranteeEffectiveMonth",
+        step: "validate_input",
+      }),
+    );
+  }
+
   const seenIds = new Set<string>();
   for (const employee of input.employees ?? []) {
     if (

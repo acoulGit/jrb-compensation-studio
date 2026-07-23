@@ -25,6 +25,7 @@ import type { ExactAmount } from "../../domain/compensationCalculation";
 export interface SimulationResultIdentityConfigFields {
   retroactivityStartMonth?: number | null;
   technicalApplicationMonth?: number | null;
+  minimumGuaranteeEffectiveMonth?: number | null;
   minimumIncreaseMode?: string | null;
   minimumMonthlyAmountFcfa?: bigint | null;
   minimumIncreaseRate?: ExactAmount | null;
@@ -64,6 +65,7 @@ function formatConfigValue(
 const CONFIG_FIELD_ORDER: (keyof SimulationResultIdentityConfigFields)[] = [
   "retroactivityStartMonth",
   "technicalApplicationMonth",
+  "minimumGuaranteeEffectiveMonth",
   "minimumIncreaseMode",
   "minimumMonthlyAmountFcfa",
   "minimumIncreaseRate",
