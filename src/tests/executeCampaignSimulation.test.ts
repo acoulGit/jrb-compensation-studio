@@ -15,6 +15,8 @@ import type {
 import {
   MINIMUM_INCREASE_CONTRACT_VERSION,
   NO_MINIMUM_INCREASE_POLICY,
+  NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
+  UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
 } from "../domain/compensationCalculation";
 import { executeCampaignSimulation } from "../application/campaignSimulation/executeCampaignSimulation";
 import { buildSimulationSourceFingerprint } from "../application/campaignSimulation/buildSimulationSourceFingerprint";
@@ -295,7 +297,9 @@ async function buildValidated(options?: {
     retroactivityStartMonth: 1,
     technicalApplicationMonth: 1,
     minimumGuaranteeEffectiveMonth: 1,
-  minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
+    minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
+    socialMechanismKind: "none",
+    universalFixedAmountPolicy: NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
   });
 
   const configurationFingerprint = buildConfigurationFingerprint({
@@ -327,6 +331,12 @@ async function buildValidated(options?: {
     minimumIncreaseRateDenominator:
       NO_MINIMUM_INCREASE_POLICY.minimumIncreaseRate?.denominator ?? null,
     minimumIncreaseContractVersion: MINIMUM_INCREASE_CONTRACT_VERSION,
+    socialMechanismKind: "none",
+    universalFixedAmountMonthlyAmount: null,
+    universalFixedAmountEffectiveMonth: null,
+    universalFixedAmountMinimumSeniorityMonths: null,
+    universalFixedAmountSeniorityReferenceDate: null,
+    universalFixedAmountContractVersion: UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
   });
 
   const validated: ValidatedCampaignSimulationConfiguration = {
@@ -338,6 +348,8 @@ async function buildValidated(options?: {
     technicalApplicationMonth: 1,
     minimumGuaranteeEffectiveMonth: 1,
     minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
+    socialMechanismKind: "none",
+    universalFixedAmountPolicy: NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
     readinessReport: await readinessModule.buildCampaignSimulationReadiness(
       { campaignId: campaign?.id ?? 1 },
       ports,

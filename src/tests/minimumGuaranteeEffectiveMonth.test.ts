@@ -15,11 +15,11 @@ import {
 } from "../domain/compensationReference/defaults";
 import {
   CALCULATION_CONTRACT_VERSION,
-  CALCULATION_CONTRACT_VERSION_V7,
+  CALCULATION_CONTRACT_VERSION_V8,
   MINIMUM_INCREASE_CONTRACT_VERSION,
   MINIMUM_INCREASE_CONTRACT_VERSION_V1,
   RESULT_SCHEMA_VERSION,
-  RESULT_SCHEMA_VERSION_V5,
+  RESULT_SCHEMA_VERSION_V6,
   calculatePreparedPopulationCompensation,
   type PreparedPopulationCalculationInput,
   type PopulationCalculationReferences,
@@ -105,13 +105,13 @@ function baseInput(
 }
 
 describe("Lot 2B-RC1-H4 — mois d’effet du minimum garanti", () => {
-  it("bump de versions contrat 8 / minimum 2 / schema 6", () => {
-    expect(CALCULATION_CONTRACT_VERSION).toBe(8);
-    expect(CALCULATION_CONTRACT_VERSION_V7).toBe(7);
+  it("bump de versions contrat 9 / minimum 2 / schema 7", () => {
+    expect(CALCULATION_CONTRACT_VERSION).toBe(9);
+    expect(CALCULATION_CONTRACT_VERSION_V8).toBe(8);
     expect(MINIMUM_INCREASE_CONTRACT_VERSION).toBe(2);
     expect(MINIMUM_INCREASE_CONTRACT_VERSION_V1).toBe(1);
-    expect(RESULT_SCHEMA_VERSION).toBe(6);
-    expect(RESULT_SCHEMA_VERSION_V5).toBe(5);
+    expect(RESULT_SCHEMA_VERSION).toBe(7);
+    expect(RESULT_SCHEMA_VERSION_V6).toBe(6);
   });
 
   describe("paramètre de configuration", () => {

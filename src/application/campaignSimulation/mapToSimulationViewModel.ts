@@ -24,8 +24,10 @@ import {
 } from "./formatExactBudgetDisplay";
 import {
   formatNineBoxTreatmentLabel,
+  SOCIAL_MECHANISM_KIND_LABELS_FR,
   technicalApplicationMonthLabelFr,
   type NineBoxTreatmentKind,
+  type SocialMechanismKind,
 } from "../../domain/compensationCalculation";
 import {
   resolveMinimumGuaranteeEffectiveMonth,
@@ -48,6 +50,14 @@ import type {
   SimulationSummaryViewModel,
 } from "./simulationViewModels";
 
+function formatIsoDateLabelFr(iso: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  if (!match) {
+    return iso;
+  }
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
 const MONTH_LABELS_FR = [
   "Janvier",
   "Février",
@@ -65,6 +75,34 @@ const MONTH_LABELS_FR = [
 
 function monthLabelFr(month: number): string {
   return MONTH_LABELS_FR[month - 1] ?? `Mois ${month}`;
+}
+
+function formatUniversalFixedAmountExclusionReasonLabel(
+  reason: string | null | undefined,
+): string | null {
+  if (!reason) return null;
+  switch (reason) {
+    case "MISSING_CONTRACT_TYPE":
+      return "Type de contrat manquant";
+    case "CONTRACT_TYPE_EXCLUDED":
+      return "Type de contrat exclu";
+    case "EMPLOYMENT_STATUS_EXCLUDED":
+      return "Statut d’emploi exclu";
+    case "INSUFFICIENT_SENIORITY":
+      return "Ancienneté insuffisante";
+    default:
+      return reason;
+  }
+}
+
+function formatUniversalFixedAmountEligibilityLabel(
+  eligible: boolean | null | undefined,
+  exclusionReason: string | null | undefined,
+): string | null {
+  if (eligible === null || eligible === undefined) return null;
+  if (eligible) return "Éligible";
+  const reason = formatUniversalFixedAmountExclusionReasonLabel(exclusionReason);
+  return reason ? `Non éligible (${reason})` : "Non éligible";
 }
 
 function nullableFcfaLabel(value: bigint | null | undefined): string | null {
@@ -173,6 +211,33 @@ function mapExecutionEmployee(
     aboveMinimumCompensatoryReminderLabel:
       employee.aboveMinimumCompensatoryReminderLabel,
     baseSalaryReminderLabel: formatFcfaInteger(employee.baseSalaryReminderFcfa),
+    socialMechanismKind: employee.socialMechanismKind,
+    isUniversalFixedAmountEligible: employee.isUniversalFixedAmountEligible,
+    universalFixedAmountEligibilityLabel: formatUniversalFixedAmountEligibilityLabel(
+      employee.isUniversalFixedAmountEligible,
+      employee.universalFixedAmountExclusionReason,
+    ),
+    universalFixedAmountExclusionReasonLabel:
+      formatUniversalFixedAmountExclusionReasonLabel(
+        employee.universalFixedAmountExclusionReason,
+      ),
+    universalFixedAmountMonthlyAmountLabel: formatFcfaInteger(
+      employee.universalFixedAmountMonthlyAmountFcfa,
+    ),
+    universalFixedAmountEffectiveMonth: employee.universalFixedAmountEffectiveMonth,
+    universalFixedAmountEffectiveMonthLabel: technicalApplicationMonthLabelFr(
+      employee.universalFixedAmountEffectiveMonth,
+    ),
+    universalFixedAmountSeniorityReferenceDate:
+      employee.universalFixedAmountSeniorityReferenceDate,
+    universalFixedAmountSeniorityReferenceDateLabel: formatIsoDateLabelFr(
+      employee.universalFixedAmountSeniorityReferenceDate,
+    ),
+    campaignPeriodUniversalFixedAmountCostLabel:
+      employee.campaignPeriodUniversalFixedAmountCostLabel,
+    universalFixedAmountReminderLabel: employee.universalFixedAmountReminderLabel,
+    universalFixedAmountRemainingYearDirectCostLabel:
+      employee.universalFixedAmountRemainingYearDirectCostLabel,
     months: employee.monthlyCompensationTrajectory.map(mapExecutionMonth),
   };
 }
@@ -183,6 +248,7 @@ export function mapExecutionResultToViewModel(
   const budget = result.budgetSummary;
   const population = result.populationSummary;
   const envelope = budget.envelopeSummary;
+  const socialMechanismKind = population.socialMechanismKind as SocialMechanismKind;
   const summary: SimulationSummaryViewModel = {
     mode: "current",
     campaignId: result.campaignId,
@@ -239,6 +305,48 @@ export function mapExecutionResultToViewModel(
     periodCombinedRoundingDeltaLabel: envelope.annualCombinedRoundingDeltaLabel,
     fullYearRunRateCombinedBaseMeasureCostLabel:
       budget.fullYearRunRateCombinedBaseMeasureCostLabel,
+    socialMechanismKind: population.socialMechanismKind,
+    socialMechanismKindLabel:
+      SOCIAL_MECHANISM_KIND_LABELS_FR[socialMechanismKind] ??
+      population.socialMechanismKind,
+    universalFixedAmountMonthlyAmountLabel:
+      socialMechanismKind === "universal_fixed_amount"
+        ? formatFcfaInteger(population.universalFixedAmountMonthlyAmountFcfa)
+        : null,
+    universalFixedAmountEffectiveMonth:
+      socialMechanismKind === "universal_fixed_amount"
+        ? population.universalFixedAmountEffectiveMonth
+        : null,
+    universalFixedAmountEffectiveMonthLabel:
+      socialMechanismKind === "universal_fixed_amount"
+        ? technicalApplicationMonthLabelFr(
+            population.universalFixedAmountEffectiveMonth,
+          )
+        : null,
+    universalFixedAmountMinimumSeniorityMonths:
+      socialMechanismKind === "universal_fixed_amount"
+        ? population.universalFixedAmountMinimumSeniorityMonths
+        : null,
+    universalFixedAmountSeniorityReferenceDate:
+      socialMechanismKind === "universal_fixed_amount"
+        ? population.universalFixedAmountSeniorityReferenceDate
+        : null,
+    universalFixedAmountSeniorityReferenceDateLabel:
+      socialMechanismKind === "universal_fixed_amount"
+        ? formatIsoDateLabelFr(population.universalFixedAmountSeniorityReferenceDate)
+        : null,
+    universalFixedAmountEligibleEmployeeCount:
+      socialMechanismKind === "universal_fixed_amount"
+        ? population.universalFixedAmountEligibleEmployeeCount
+        : null,
+    totalUniversalFixedAmountCostLabel:
+      socialMechanismKind === "universal_fixed_amount"
+        ? envelope.totalUniversalFixedAmountCostLabel
+        : null,
+    availableBudgetAfterPromotionsAndSocialMechanismLabel:
+      socialMechanismKind === "universal_fixed_amount"
+        ? envelope.availableBudgetAfterPromotionsAndSocialMechanismLabel
+        : null,
   };
   return {
     summary,

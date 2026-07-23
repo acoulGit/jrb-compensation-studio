@@ -176,6 +176,11 @@ effectif reste nul (poids matriciel 0).
 - L’ancienneté représente 1 % du salaire de base courant.
 - Elle est appliquée à la date anniversaire.
 - Elle est hors enveloppe annoncée.
+- Assiette de l’incidence d’ancienneté (Lot **2B-RC1-H5**) : l’augmentation
+  totale attribuée au salarié — augmentation matricielle arrondie, complément
+  de minimum garanti lorsqu’il est applicable, et forfait social universel
+  lorsqu’il est applicable. Le forfait entre dans cette assiette comme toute
+  composante intégrée à l’augmentation de base.
 
 ## Import de population (Lot 1C)
 

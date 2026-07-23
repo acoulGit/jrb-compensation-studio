@@ -56,6 +56,8 @@ export interface SaveSimulationEmployeeMonthDto {
   theoreticalComplementNumeratorText: string;
   theoreticalComplementDenominatorText: string;
   actualComplementAboveMinimumFcfaText: string;
+  /** Forfait social universel du mois (schema v7, Lot 2B-RC1-H5). */
+  universalFixedAmountFcfaText?: string;
 }
 
 export interface SaveSimulationEmployeeDto {
@@ -163,6 +165,21 @@ export interface SaveSimulationEmployeeDto {
   fullYearRunRateCompensationAboveMinimumCostFcfaText?: string;
   /** Trajectoire mensuelle (12 mois) — présente uniquement en schema v3. */
   months?: SaveSimulationEmployeeMonthDto[];
+
+  /**
+   * Champs schema v7 (Lot 2B-RC1-H5). Optionnels / nullables : absents pour
+   * les snapshots v6 historiques (mappés en NULL).
+   */
+  isUniversalFixedAmountEligible?: boolean | null;
+  universalFixedAmountExclusionReason?: string | null;
+  universalFixedAmountMonthlyAmountText?: string | null;
+  universalFixedAmountEffectiveMonth?: number | null;
+  universalFixedAmountMinimumSeniorityMonths?: number | null;
+  universalFixedAmountSeniorityReferenceDate?: string | null;
+  campaignPeriodUniversalFixedAmountCostText?: string | null;
+  universalFixedAmountReminderText?: string | null;
+  universalFixedAmountRemainingYearDirectCostText?: string | null;
+  fullYearRunRateUniversalFixedAmountCostText?: string | null;
 
   /**
    * Champs schema v4 (Lot 2B-RC1-H1). Optionnels / nullables : absents pour
@@ -277,6 +294,21 @@ export interface SaveSimulationRunDto {
   /** Coefficient provisoire global « Performance à confirmer » (Lot 2B-RC1-H2). */
   nineBoxConfirmationFactorMilli?: number | null;
 
+  /** Mécanisme social exclusif (schema v7 / contrat v9, Lot 2B-RC1-H5). */
+  socialMechanismKind?: string | null;
+  universalFixedAmountMonthlyFcfa?: number | null;
+  universalFixedAmountEffectiveMonth?: number | null;
+  universalFixedAmountMinimumSeniorityMonths?: number | null;
+  universalFixedAmountSeniorityReferenceDate?: string | null;
+  universalFixedAmountEligibleEmployeeCount?: number | null;
+  universalFixedAmountExposureCount?: number | null;
+  totalUniversalFixedAmountCostText?: string;
+  availableBudgetAfterPromotionsAndSocialMechanismNumeratorText?: string;
+  availableBudgetAfterPromotionsAndSocialMechanismDenominatorText?: string;
+  totalUniversalFixedAmountReminderText?: string;
+  totalUniversalFixedAmountRemainingYearDirectCostText?: string;
+  fullYearRunRateUniversalFixedAmountCostText?: string;
+
   employees: SaveSimulationEmployeeDto[];
 }
 
@@ -334,6 +366,19 @@ export interface PersistedSimulationRunSummary {
   neutralizeNineBoxEffectEmployeeCount?: number | null;
   /** Coefficient provisoire 9-Box schema v5 — null pour snapshots v4 et antérieurs. */
   nineBoxConfirmationFactorMilli?: number | null;
+  /** Mécanisme social schema v7 — null pour historique (dérivé en lecture). */
+  socialMechanismKind?: string | null;
+  universalFixedAmountMonthlyFcfa?: bigint | null;
+  universalFixedAmountEffectiveMonth?: number | null;
+  universalFixedAmountMinimumSeniorityMonths?: number | null;
+  universalFixedAmountSeniorityReferenceDate?: string | null;
+  universalFixedAmountEligibleEmployeeCount?: number | null;
+  universalFixedAmountExposureCount?: number | null;
+  totalUniversalFixedAmountCostFcfa?: bigint | null;
+  availableBudgetAfterPromotionsAndSocialMechanism?: ExactAmount | null;
+  totalUniversalFixedAmountReminderFcfa?: bigint | null;
+  totalUniversalFixedAmountRemainingYearDirectCostFcfa?: bigint | null;
+  fullYearRunRateUniversalFixedAmountCostFcfa?: bigint | null;
 }
 
 export interface PersistedSimulationEmployeeResult {
@@ -379,6 +424,15 @@ export interface PersistedSimulationEmployeeResult {
   baseSalaryReminderFcfa?: bigint | null;
   minimumCompensatoryReminderFcfa?: bigint | null;
   aboveMinimumCompensatoryReminderFcfa?: bigint | null;
+
+  /** Champs schema v7 (Lot 2B-RC1-H5) — null pour snapshots v6. */
+  isUniversalFixedAmountEligible?: boolean | null;
+  universalFixedAmountExclusionReason?: string | null;
+  universalFixedAmountSeniorityReferenceDate?: string | null;
+  campaignPeriodUniversalFixedAmountCostFcfa?: bigint | null;
+  universalFixedAmountReminderFcfa?: bigint | null;
+  universalFixedAmountRemainingYearDirectCostFcfa?: bigint | null;
+  fullYearRunRateUniversalFixedAmountCostFcfa?: bigint | null;
 
   /**
    * Champs schema v4 (Lot 2B-RC1-H1). `null` pour snapshots v3 historiques —
@@ -427,6 +481,8 @@ export interface PersistedSimulationEmployeeMonthResult {
   weightedComplement: ExactAmount;
   theoreticalComplement: ExactAmount;
   actualComplementAboveMinimumFcfa: bigint;
+  /** Forfait social universel du mois (schema v7). */
+  universalFixedAmountFcfa?: bigint | null;
 }
 
 export interface PersistedSimulationRunDetail {

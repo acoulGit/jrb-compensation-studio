@@ -1421,3 +1421,33 @@ rétroactivité habituelle pour la part au-dessus du minimum.
 - `pnpm test` (incl. `src/tests/minimumGuaranteeEffectiveMonth.test.ts`) /
   `pnpm build` / `cargo fmt --check` / `cargo check|test --locked`
 - Aucun commit.
+
+## 2026-07-23 — Lot 2B-RC1-H5 : forfait social universel + mécanisme social exclusif
+
+### Objectif
+
+Conserver le minimum garanti (plancher, mois d’effet H4) et introduire en
+parallèle un **forfait social universel** additif, avec exclusivité typée
+des mécanismes sociaux par campagne.
+
+### Choix
+
+- `SocialMechanismKind` : `none` | `minimum_guaranteed` | `universal_fixed_amount`.
+- Forfait : montant ≥ 0, mois d’effet propre, ancienneté minimale (défaut 0).
+- L’ancienneté minimale d’éligibilité au forfait social universel est évaluée en mois calendaires révolus à une date de référence configurable. Par défaut, cette date est fixée au 31 décembre de l’année précédant la campagne. Le mois d’effet du forfait détermine uniquement sa durée d’incidence budgétaire.
+- Exclusions : population payable CDI/CDD (comme le minimum) + seuil
+  d’ancienneté propre ; pas d’exclusion automatique pour matrice 0 %.
+- Budget : réservation du coût forfait avant calibrage matriciel ;
+  `UNIVERSAL_FIXED_AMOUNT_EXCEEDS_BUDGET` si dépassement ; pas de réduction
+  silencieuse du montant.
+- Versionnement : contrat **9** / schema **7** ; migration `0013`.
+- Historique : dérivation `minimum_increase_mode` → mécanisme ; jamais de
+  forfait inventé.
+- Assiette d’incidence d’ancienneté (1 %) : augmentation totale attribuée
+  (matrice arrondie + plancher minimum le cas échéant + forfait le cas
+  échéant) ; incidence toujours hors enveloppe budgétaire.
+
+### Validations
+
+- `pnpm test` / `pnpm build` / `cargo test --locked`
+- Commit unique sur `feature/lot-2b-rc1-h5-universal-fixed-amount`.

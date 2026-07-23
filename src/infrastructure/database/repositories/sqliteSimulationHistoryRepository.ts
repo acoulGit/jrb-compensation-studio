@@ -115,6 +115,13 @@ export class SqliteSimulationHistoryRepository
     runId: number,
   ): Promise<PersistedSimulationEmployeeResult[]> {
     const db = await getDatabase();
+    const runMeta = await db.select<{ campaign_year: number }[]>(
+      `SELECT campaign_year
+       FROM compensation_simulation_runs
+       WHERE id = $1`,
+      [runId],
+    );
+    const campaignYear = runMeta[0]?.campaign_year;
     const rows = await db.select<SimulationEmployeeResultRow[]>(
       `SELECT *
        FROM compensation_simulation_employee_results
@@ -122,7 +129,12 @@ export class SqliteSimulationHistoryRepository
        ORDER BY employee_id ASC`,
       [runId],
     );
-    return rows.map(mapSimulationEmployeeResult);
+    return rows.map((row) =>
+      mapSimulationEmployeeResult(
+        row,
+        campaignYear !== undefined ? { campaignYear } : undefined,
+      ),
+    );
   }
 
   async listSimulationEmployeeMonthResults(

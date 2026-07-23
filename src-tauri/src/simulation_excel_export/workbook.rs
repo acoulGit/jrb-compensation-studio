@@ -2066,6 +2066,15 @@ fn write_parametres(
     )?;
     row += 2;
 
+    label_opt_text_na(
+        sheet,
+        row,
+        "Mécanisme social",
+        &formats.label,
+        run.social_mechanism_kind.as_deref(),
+    )?;
+    row += 1;
+
     sheet.write_string_with_format(row, 0, "MINIMUM GARANTI", &formats.section)?;
     row += 1;
     label_opt_text_na(
@@ -2121,6 +2130,82 @@ fn write_parametres(
         &formats.money_fcfa,
     )?;
     row += 2;
+
+    if run.social_mechanism_kind.as_deref() == Some("universal_fixed_amount") {
+        sheet.write_string_with_format(row, 0, "FORFAIT SOCIAL UNIVERSEL", &formats.section)?;
+        row += 1;
+        label_opt_numeric(
+            sheet,
+            row,
+            "Montant mensuel forfaitaire (FCFA)",
+            &formats.label,
+            run.universal_fixed_amount_monthly_fcfa.map(|v| v.to_string()).as_deref(),
+            &formats.money_fcfa,
+        )?;
+        row += 1;
+        label_opt_numeric(
+            sheet,
+            row,
+            "Mois d’effet du forfait",
+            &formats.label,
+            run.universal_fixed_amount_effective_month.map(|v| v.to_string()).as_deref(),
+            &formats.money,
+        )?;
+        row += 1;
+        label_opt_numeric(
+            sheet,
+            row,
+            "Ancienneté minimale (mois)",
+            &formats.label,
+            run.universal_fixed_amount_minimum_seniority_months
+                .map(|v| v.to_string())
+                .as_deref(),
+            &formats.money,
+        )?;
+        row += 1;
+        label_opt_text_na(
+            sheet,
+            row,
+            "Date de référence de l’ancienneté",
+            &formats.label,
+            run.universal_fixed_amount_seniority_reference_date
+                .as_deref()
+                .map(format_date_fr)
+                .as_deref(),
+        )?;
+        row += 1;
+        label_opt_numeric(
+            sheet,
+            row,
+            "Salariés éligibles au forfait",
+            &formats.label,
+            run.universal_fixed_amount_eligible_employee_count
+                .map(|v| v.to_string())
+                .as_deref(),
+            &formats.money,
+        )?;
+        row += 1;
+        label_opt_numeric(
+            sheet,
+            row,
+            "Expositions mensuelles forfait > 0",
+            &formats.label,
+            run.universal_fixed_amount_exposure_count
+                .map(|v| v.to_string())
+                .as_deref(),
+            &formats.money,
+        )?;
+        row += 1;
+        label_opt_numeric(
+            sheet,
+            row,
+            "Coût total forfait sur la période (FCFA)",
+            &formats.label,
+            run.total_universal_fixed_amount_cost_text.as_deref(),
+            &formats.money_fcfa,
+        )?;
+        row += 2;
+    }
 
     sheet.write_string_with_format(row, 0, "EMPREINTES", &formats.section)?;
     row += 1;

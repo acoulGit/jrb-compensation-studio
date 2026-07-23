@@ -13,6 +13,7 @@ import {
   parsePromotionDateIso,
   promotionRateFromAmounts,
   NO_MINIMUM_INCREASE_POLICY,
+  NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
 } from "../domain/compensationCalculation";
 import type { PreparedEmployeeCalculationInput } from "../domain/compensationCalculation";
 
@@ -354,7 +355,9 @@ describe("Lot 2A-H2C-1 — trajectoire N-1 / N", () => {
       retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
       minimumGuaranteeEffectiveMonth: 7,
-    minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
+      minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
+      socialMechanismKind: "none",
+      universalFixedAmountPolicy: NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
     });
     const fpPromo = buildSimulationSourceFingerprint({
       campaignId: 1,
@@ -369,7 +372,9 @@ describe("Lot 2A-H2C-1 — trajectoire N-1 / N", () => {
       retroactivityStartMonth: 1,
       technicalApplicationMonth: 7,
       minimumGuaranteeEffectiveMonth: 7,
-    minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
+      minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
+      socialMechanismKind: "none",
+      universalFixedAmountPolicy: NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
     });
     expect(fpBase).not.toBe(fpPromo);
     expect(PROMOTION_TRAJECTORY_CONTRACT_VERSION).toBe(1);

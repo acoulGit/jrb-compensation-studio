@@ -8,11 +8,19 @@ import type {
   MinimumIncreaseMode,
   MinimumIncreasePolicy,
   RoundingPolicy,
+  SocialMechanismKind,
+  UniversalFixedAmountPolicy,
 } from "../../domain/compensationCalculation";
 import {
   MINIMUM_INCREASE_MODES,
   NO_MINIMUM_INCREASE_POLICY,
+  NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
+  SOCIAL_MECHANISM_KINDS,
+  defaultUniversalFixedAmountSeniorityReferenceDate,
+  deriveSocialMechanismKindFromMinimumIncreaseMode,
+  isSocialMechanismKind,
   minimumIncreaseRateFromPercentParts,
+  parseSeniorityReferenceDateIso,
   reduceFraction,
 } from "../../domain/compensationCalculation";
 import type { SimulationConfigurationCode } from "./simulationConfigurationCodes";
@@ -447,15 +455,178 @@ export function parseMinimumMonthlyAmountInput(
       message: "Le montant forfaitaire doit être un entier FCFA strictement positif.",
     };
   }
-  const value = BigInt(compact);
-  if (value <= 0n) {
+  try {
+    const value = BigInt(compact);
+    if (value <= 0n) {
+      return {
+        ok: false,
+        code: "INVALID_MINIMUM_MONTHLY_AMOUNT",
+        message:
+          "Le montant forfaitaire du minimum garanti doit être strictement positif.",
+      };
+    }
+    return { ok: true, value };
+  } catch {
     return {
       ok: false,
       code: "INVALID_MINIMUM_MONTHLY_AMOUNT",
-      message: "Le montant forfaitaire du minimum garanti doit être strictement positif.",
+      message: "Le montant forfaitaire est invalide.",
+    };
+  }
+}
+
+/**
+ * Parse le montant du forfait social universel (entier FCFA ≥ 0).
+ * Zéro accepté (forfait nul, sans effet caché).
+ */
+export function parseUniversalFixedAmountMonthlyAmountInput(
+  raw: string | null | undefined,
+): ParseResult<bigint> {
+  return parseNonNegativeFcfaAmount(raw, {
+    missingCode: "MISSING_UNIVERSAL_FIXED_AMOUNT",
+    invalidCode: "INVALID_UNIVERSAL_FIXED_AMOUNT",
+    fieldLabel: "Le montant du forfait social universel",
+  });
+}
+
+/** Parse le mois d’effet du forfait social universel (1–12). */
+export function parseUniversalFixedAmountEffectiveMonthInput(
+  raw: string | null | undefined,
+): ParseResult<number> {
+  if (raw === null || raw === undefined || raw.trim() === "") {
+    return {
+      ok: false,
+      code: "MISSING_UNIVERSAL_FIXED_AMOUNT_EFFECTIVE_MONTH",
+      message: "Le mois d’effet du forfait social universel est obligatoire.",
+    };
+  }
+  const compact = stripAllowedSpaces(raw.trim());
+  if (!/^\d{1,2}$/.test(compact)) {
+    return {
+      ok: false,
+      code: "INVALID_UNIVERSAL_FIXED_AMOUNT_EFFECTIVE_MONTH",
+      message:
+        "Le mois d’effet du forfait social universel doit être compris entre janvier et décembre.",
+    };
+  }
+  const value = Number(compact);
+  if (!Number.isInteger(value) || value < 1 || value > 12) {
+    return {
+      ok: false,
+      code: "INVALID_UNIVERSAL_FIXED_AMOUNT_EFFECTIVE_MONTH",
+      message:
+        "Le mois d’effet du forfait social universel doit être compris entre janvier et décembre.",
     };
   }
   return { ok: true, value };
+}
+
+/** Parse l’ancienneté minimale du forfait (entier ≥ 0 mois). */
+export function parseUniversalFixedAmountMinimumSeniorityMonthsInput(
+  raw: string | null | undefined,
+): ParseResult<number> {
+  if (raw === null || raw === undefined || raw.trim() === "") {
+    return {
+      ok: false,
+      code: "MISSING_UNIVERSAL_FIXED_AMOUNT_MINIMUM_SENIORITY",
+      message:
+        "L’ancienneté minimale pour bénéficier du forfait est obligatoire.",
+    };
+  }
+  const compact = stripAllowedSpaces(raw.trim());
+  if (compact.startsWith("-")) {
+    return {
+      ok: false,
+      code: "INVALID_UNIVERSAL_FIXED_AMOUNT_MINIMUM_SENIORITY",
+      message: "L’ancienneté minimale du forfait ne peut pas être négative.",
+    };
+  }
+  if (!/^\d+$/.test(compact)) {
+    return {
+      ok: false,
+      code: "INVALID_UNIVERSAL_FIXED_AMOUNT_MINIMUM_SENIORITY",
+      message:
+        "L’ancienneté minimale du forfait doit être un entier ≥ 0 (en mois).",
+    };
+  }
+  const value = Number(compact);
+  if (!Number.isInteger(value) || value < 0) {
+    return {
+      ok: false,
+      code: "INVALID_UNIVERSAL_FIXED_AMOUNT_MINIMUM_SENIORITY",
+      message:
+        "L’ancienneté minimale du forfait doit être un entier ≥ 0 (en mois).",
+    };
+  }
+  return { ok: true, value };
+}
+
+/** Parse la date de référence d’ancienneté du forfait (ISO YYYY-MM-DD). */
+export function parseUniversalFixedAmountSeniorityReferenceDateInput(
+  raw: string | null | undefined,
+  campaignYear: number | null,
+): ParseResult<string> {
+  const trimmed = raw?.trim() ?? "";
+  if (!trimmed) {
+    if (campaignYear !== null) {
+      return {
+        ok: true,
+        value: defaultUniversalFixedAmountSeniorityReferenceDate(campaignYear),
+      };
+    }
+    return {
+      ok: false,
+      code: "MISSING_UNIVERSAL_FIXED_AMOUNT_SENIORITY_REFERENCE_DATE",
+      message:
+        "La date de référence de l’ancienneté du forfait social universel est obligatoire.",
+    };
+  }
+  try {
+    parseSeniorityReferenceDateIso(trimmed);
+    return { ok: true, value: trimmed };
+  } catch {
+    return {
+      ok: false,
+      code: "INVALID_UNIVERSAL_FIXED_AMOUNT_SENIORITY_REFERENCE_DATE",
+      message:
+        "La date de référence de l’ancienneté du forfait doit être au format ISO YYYY-MM-DD.",
+    };
+  }
+}
+
+function resolveInactiveUniversalFixedAmountSeniorityReferenceDate(
+  campaignYear: number | null,
+  draftDate: string,
+): string {
+  const parsed = parseUniversalFixedAmountSeniorityReferenceDateInput(
+    draftDate,
+    campaignYear,
+  );
+  if (parsed.ok) {
+    return parsed.value;
+  }
+  if (campaignYear !== null) {
+    return defaultUniversalFixedAmountSeniorityReferenceDate(campaignYear);
+  }
+  return NO_UNIVERSAL_FIXED_AMOUNT_POLICY.seniorityReferenceDate;
+}
+
+/**
+ * Résout le mécanisme social du brouillon.
+ * Brouillons H4 sans champ : dérivation depuis minimumIncreaseMode.
+ */
+export function resolveDraftSocialMechanismKind(
+  draft: Pick<
+    SimulationConfigurationDraftFields,
+    "socialMechanismKind" | "minimumIncreaseMode"
+  >,
+): SocialMechanismKind {
+  if (isSocialMechanismKind(draft.socialMechanismKind)) {
+    return draft.socialMechanismKind;
+  }
+  return deriveSocialMechanismKindFromMinimumIncreaseMode(
+    draft.minimumIncreaseMode,
+  );
 }
 
 export type BudgetTargetModeChoice =
@@ -463,6 +634,8 @@ export type BudgetTargetModeChoice =
   | "percentage_of_eligible_payroll";
 
 export type MinimumIncreaseModeChoice = MinimumIncreaseMode;
+
+export type SocialMechanismKindChoice = SocialMechanismKind;
 
 export interface SimulationConfigurationDraftFields {
   budgetTargetMode: BudgetTargetModeChoice | null;
@@ -479,15 +652,28 @@ export interface SimulationConfigurationDraftFields {
   technicalApplicationMonthInput: string;
   /**
    * Mois d’effet du minimum garanti 1–12 (saisie UI).
-   * Défaut = mois technique (Lot 2B-RC1-H4).
+   * Conservé même si le mécanisme social actif n’est pas le minimum.
    */
   minimumGuaranteeEffectiveMonthInput: string;
-  /** Mode de minimum garanti (Lot 2A-H2D-2). */
+  /**
+   * Mécanisme social exclusif (Lot 2B-RC1-H5).
+   * Valeurs mémorisées des mécanismes non sélectionnés restent dans le brouillon.
+   */
+  socialMechanismKind: SocialMechanismKindChoice;
+  /** Mode de minimum garanti (actif seulement si mécanisme = minimum). */
   minimumIncreaseMode: MinimumIncreaseModeChoice;
-  /** Montant forfaitaire mensuel (texte UI). */
+  /** Montant forfaitaire mensuel du minimum (texte UI). */
   minimumMonthlyAmountInput: string;
   /** Taux % du minimum (texte UI). */
   minimumIncreaseRatePercentInput: string;
+  /** Montant du forfait social universel (texte UI). */
+  universalFixedAmountMonthlyAmountInput: string;
+  /** Mois d’effet du forfait (1–12), indépendant du minimum. */
+  universalFixedAmountEffectiveMonthInput: string;
+  /** Ancienneté minimale du forfait en mois (défaut 0). */
+  universalFixedAmountMinimumSeniorityMonthsInput: string;
+  /** Date de référence d’ancienneté du forfait (ISO YYYY-MM-DD). */
+  universalFixedAmountSeniorityReferenceDateInput: string;
 }
 
 export interface ParsedSimulationConfiguration {
@@ -497,7 +683,9 @@ export interface ParsedSimulationConfiguration {
   retroactivityStartMonth: number | null;
   technicalApplicationMonth: number | null;
   minimumGuaranteeEffectiveMonth: number | null;
+  socialMechanismKind: SocialMechanismKind | null;
   minimumIncreasePolicy: MinimumIncreasePolicy | null;
+  universalFixedAmountPolicy: UniversalFixedAmountPolicy | null;
   fieldErrors: Partial<
     Record<
       | "budgetTargetMode"
@@ -510,15 +698,22 @@ export interface ParsedSimulationConfiguration {
       | "retroactivityStartMonthInput"
       | "technicalApplicationMonthInput"
       | "minimumGuaranteeEffectiveMonthInput"
+      | "socialMechanismKind"
       | "minimumIncreaseMode"
       | "minimumMonthlyAmountInput"
-      | "minimumIncreaseRatePercentInput",
+      | "minimumIncreaseRatePercentInput"
+      | "universalFixedAmountMonthlyAmountInput"
+      | "universalFixedAmountEffectiveMonthInput"
+      | "universalFixedAmountMinimumSeniorityMonthsInput"
+      | "universalFixedAmountSeniorityReferenceDateInput",
       ParseFailure
     >
   >;
   isBudgetComplete: boolean;
   isRoundingComplete: boolean;
   isApplicationCalendarComplete: boolean;
+  isSocialMechanismComplete: boolean;
+  /** @deprecated Alias de isSocialMechanismComplete (compat H4). */
   isMinimumIncreaseComplete: boolean;
   isConfigurationComplete: boolean;
 }
@@ -670,91 +865,145 @@ export function parseSimulationConfigurationDraft(
     isApplicationCalendarComplete = true;
   }
 
+  let socialMechanismKind: SocialMechanismKind | null = null;
   let minimumIncreasePolicy: MinimumIncreasePolicy | null = null;
-  let isMinimumIncreaseComplete = false;
+  let universalFixedAmountPolicy: UniversalFixedAmountPolicy | null = null;
+  let isSocialMechanismComplete = false;
 
-  const modeRaw = draft.minimumIncreaseMode;
-  if (
-    modeRaw === null ||
-    modeRaw === undefined ||
-    !(MINIMUM_INCREASE_MODES as readonly string[]).includes(modeRaw)
-  ) {
-    fieldErrors.minimumIncreaseMode = {
+  const kindRaw = resolveDraftSocialMechanismKind(draft);
+  if (!(SOCIAL_MECHANISM_KINDS as readonly string[]).includes(kindRaw)) {
+    fieldErrors.socialMechanismKind = {
       ok: false,
-      code:
-        modeRaw === null || modeRaw === undefined
-          ? "MISSING_MINIMUM_INCREASE_MODE"
-          : "UNSUPPORTED_MINIMUM_INCREASE_MODE",
-      message:
-        modeRaw === null || modeRaw === undefined
-          ? "Le mode de minimum garanti est obligatoire."
-          : `Mode de minimum garanti non supporté : ${String(modeRaw)}.`,
+      code: "UNSUPPORTED_SOCIAL_MECHANISM_KIND",
+      message: `Mécanisme social non supporté : ${String(kindRaw)}.`,
     };
-  } else if (modeRaw === "none") {
-    if (draft.minimumMonthlyAmountInput.trim() !== "") {
-      fieldErrors.minimumMonthlyAmountInput = {
-        ok: false,
-        code: "INVALID_MINIMUM_INCREASE_CONFIGURATION",
-        message:
-          "En mode « aucun minimum », le montant forfaitaire doit être vide.",
-      };
-    }
-    if (draft.minimumIncreaseRatePercentInput.trim() !== "") {
-      fieldErrors.minimumIncreaseRatePercentInput = {
-        ok: false,
-        code: "INVALID_MINIMUM_INCREASE_CONFIGURATION",
-        message: "En mode « aucun minimum », le taux doit être vide.",
-      };
-    }
-    if (
-      !fieldErrors.minimumMonthlyAmountInput &&
-      !fieldErrors.minimumIncreaseRatePercentInput
-    ) {
-      minimumIncreasePolicy = NO_MINIMUM_INCREASE_POLICY;
-      isMinimumIncreaseComplete = true;
-    }
-  } else if (modeRaw === "fixed_monthly_amount") {
-    if (draft.minimumIncreaseRatePercentInput.trim() !== "") {
-      fieldErrors.minimumIncreaseRatePercentInput = {
-        ok: false,
-        code: "INVALID_MINIMUM_INCREASE_CONFIGURATION",
-        message: "En mode forfaitaire, le taux minimum doit être vide.",
-      };
-    }
-    const amount = parseMinimumMonthlyAmountInput(
-      draft.minimumMonthlyAmountInput,
-    );
-    if (!amount.ok) {
-      fieldErrors.minimumMonthlyAmountInput = amount;
-    } else if (!fieldErrors.minimumIncreaseRatePercentInput) {
-      minimumIncreasePolicy = {
-        mode: "fixed_monthly_amount",
-        minimumMonthlyAmountFcfa: amount.value,
-        minimumIncreaseRate: null,
-      };
-      isMinimumIncreaseComplete = true;
-    }
   } else {
-    // percentage_of_base_salary
-    if (draft.minimumMonthlyAmountInput.trim() !== "") {
-      fieldErrors.minimumMonthlyAmountInput = {
+    socialMechanismKind = kindRaw;
+  }
+
+  if (socialMechanismKind === "none") {
+    minimumIncreasePolicy = NO_MINIMUM_INCREASE_POLICY;
+    universalFixedAmountPolicy = {
+      ...NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
+      effectiveMonth: technicalApplicationMonth ?? 1,
+      seniorityReferenceDate: resolveInactiveUniversalFixedAmountSeniorityReferenceDate(
+        campaignYear,
+        draft.universalFixedAmountSeniorityReferenceDateInput,
+      ),
+    };
+    isSocialMechanismComplete = true;
+  } else if (socialMechanismKind === "minimum_guaranteed") {
+    universalFixedAmountPolicy = {
+      ...NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
+      effectiveMonth: technicalApplicationMonth ?? 1,
+      seniorityReferenceDate: resolveInactiveUniversalFixedAmountSeniorityReferenceDate(
+        campaignYear,
+        draft.universalFixedAmountSeniorityReferenceDateInput,
+      ),
+    };
+    const modeRaw = draft.minimumIncreaseMode;
+    if (
+      modeRaw === null ||
+      modeRaw === undefined ||
+      !(MINIMUM_INCREASE_MODES as readonly string[]).includes(modeRaw) ||
+      modeRaw === "none"
+    ) {
+      fieldErrors.minimumIncreaseMode = {
         ok: false,
-        code: "INVALID_MINIMUM_INCREASE_CONFIGURATION",
-        message: "En mode pourcentage, le montant forfaitaire doit être vide.",
+        code:
+          modeRaw === "none"
+            ? "INVALID_SOCIAL_MECHANISM_CONFIGURATION"
+            : modeRaw === null || modeRaw === undefined
+              ? "MISSING_MINIMUM_INCREASE_MODE"
+              : "UNSUPPORTED_MINIMUM_INCREASE_MODE",
+        message:
+          modeRaw === "none"
+            ? "Choisissez un mode de minimum garanti (forfaitaire ou pourcentage)."
+            : modeRaw === null || modeRaw === undefined
+              ? "Le mode de minimum garanti est obligatoire."
+              : `Mode de minimum garanti non supporté : ${String(modeRaw)}.`,
       };
+    } else if (modeRaw === "fixed_monthly_amount") {
+      if (draft.minimumIncreaseRatePercentInput.trim() !== "") {
+        fieldErrors.minimumIncreaseRatePercentInput = {
+          ok: false,
+          code: "INVALID_MINIMUM_INCREASE_CONFIGURATION",
+          message: "En mode forfaitaire, le taux minimum doit être vide.",
+        };
+      }
+      const amount = parseMinimumMonthlyAmountInput(
+        draft.minimumMonthlyAmountInput,
+      );
+      if (!amount.ok) {
+        fieldErrors.minimumMonthlyAmountInput = amount;
+      } else if (!fieldErrors.minimumIncreaseRatePercentInput) {
+        minimumIncreasePolicy = {
+          mode: "fixed_monthly_amount",
+          minimumMonthlyAmountFcfa: amount.value,
+          minimumIncreaseRate: null,
+        };
+        isSocialMechanismComplete = true;
+      }
+    } else {
+      if (draft.minimumMonthlyAmountInput.trim() !== "") {
+        fieldErrors.minimumMonthlyAmountInput = {
+          ok: false,
+          code: "INVALID_MINIMUM_INCREASE_CONFIGURATION",
+          message:
+            "En mode pourcentage, le montant forfaitaire doit être vide.",
+        };
+      }
+      const rate = parseMinimumIncreaseRatePercentInput(
+        draft.minimumIncreaseRatePercentInput,
+      );
+      if (!rate.ok) {
+        fieldErrors.minimumIncreaseRatePercentInput = rate;
+      } else if (!fieldErrors.minimumMonthlyAmountInput) {
+        minimumIncreasePolicy = {
+          mode: "percentage_of_base_salary",
+          minimumMonthlyAmountFcfa: null,
+          minimumIncreaseRate: rate.value,
+        };
+        isSocialMechanismComplete = true;
+      }
     }
-    const rate = parseMinimumIncreaseRatePercentInput(
-      draft.minimumIncreaseRatePercentInput,
+  } else if (socialMechanismKind === "universal_fixed_amount") {
+    minimumIncreasePolicy = NO_MINIMUM_INCREASE_POLICY;
+    const amount = parseUniversalFixedAmountMonthlyAmountInput(
+      draft.universalFixedAmountMonthlyAmountInput,
     );
-    if (!rate.ok) {
-      fieldErrors.minimumIncreaseRatePercentInput = rate;
-    } else if (!fieldErrors.minimumMonthlyAmountInput) {
-      minimumIncreasePolicy = {
-        mode: "percentage_of_base_salary",
-        minimumMonthlyAmountFcfa: null,
-        minimumIncreaseRate: rate.value,
+    const effective = parseUniversalFixedAmountEffectiveMonthInput(
+      draft.universalFixedAmountEffectiveMonthInput,
+    );
+    const seniority = parseUniversalFixedAmountMinimumSeniorityMonthsInput(
+      draft.universalFixedAmountMinimumSeniorityMonthsInput,
+    );
+    const seniorityReferenceDate =
+      parseUniversalFixedAmountSeniorityReferenceDateInput(
+        draft.universalFixedAmountSeniorityReferenceDateInput,
+        campaignYear,
+      );
+    if (!amount.ok) {
+      fieldErrors.universalFixedAmountMonthlyAmountInput = amount;
+    }
+    if (!effective.ok) {
+      fieldErrors.universalFixedAmountEffectiveMonthInput = effective;
+    }
+    if (!seniority.ok) {
+      fieldErrors.universalFixedAmountMinimumSeniorityMonthsInput = seniority;
+    }
+    if (!seniorityReferenceDate.ok) {
+      fieldErrors.universalFixedAmountSeniorityReferenceDateInput =
+        seniorityReferenceDate;
+    }
+    if (amount.ok && effective.ok && seniority.ok && seniorityReferenceDate.ok) {
+      universalFixedAmountPolicy = {
+        monthlyAmountFcfa: amount.value,
+        effectiveMonth: effective.value,
+        minimumSeniorityMonths: seniority.value,
+        seniorityReferenceDate: seniorityReferenceDate.value,
       };
-      isMinimumIncreaseComplete = true;
+      isSocialMechanismComplete = true;
     }
   }
 
@@ -765,16 +1014,19 @@ export function parseSimulationConfigurationDraft(
     retroactivityStartMonth,
     technicalApplicationMonth,
     minimumGuaranteeEffectiveMonth,
+    socialMechanismKind,
     minimumIncreasePolicy,
+    universalFixedAmountPolicy,
     fieldErrors,
     isBudgetComplete,
     isRoundingComplete,
     isApplicationCalendarComplete,
-    isMinimumIncreaseComplete,
+    isSocialMechanismComplete,
+    isMinimumIncreaseComplete: isSocialMechanismComplete,
     isConfigurationComplete:
       isBudgetComplete &&
       isRoundingComplete &&
       isApplicationCalendarComplete &&
-      isMinimumIncreaseComplete,
+      isSocialMechanismComplete,
   };
 }

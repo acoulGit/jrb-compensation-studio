@@ -144,6 +144,23 @@ export function isMonthCoveredByMinimumGuarantee(
 }
 
 /**
+ * Mois où le forfait social universel s’applique (Lot 2B-RC1-H5).
+ * Même convention de couverture que le minimum garanti H4 :
+ * borne inférieure = max(rétroactivité générale, mois d’effet du forfait).
+ */
+export function isMonthCoveredByUniversalFixedAmount(
+  month: number,
+  retroactivityStartMonth: number,
+  universalFixedAmountEffectiveMonth: number,
+): boolean {
+  return isMonthCoveredByMinimumGuarantee(
+    month,
+    retroactivityStartMonth,
+    universalFixedAmountEffectiveMonth,
+  );
+}
+
+/**
  * Début budgétaire d’une promotion incluse :
  * max(rétroactivité, mois d’effet effectif). Promotion N-1 → effet dès janvier.
  */

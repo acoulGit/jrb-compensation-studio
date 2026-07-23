@@ -17,7 +17,8 @@ export interface DedicatedSimulationBusinessError {
   code:
     | "PROMOTION_COST_EXCEEDS_BUDGET"
     | "NO_COMPENSATORY_ALLOCATION_CAPACITY"
-    | "MINIMUM_GUARANTEE_EXCEEDS_BUDGET";
+    | "MINIMUM_GUARANTEE_EXCEEDS_BUDGET"
+    | "UNIVERSAL_FIXED_AMOUNT_EXCEEDS_BUDGET";
   title: string;
   message: string;
   details: readonly { label: string; value: string }[];
@@ -59,6 +60,46 @@ const NO_CAPACITY_USER_MESSAGE =
 export function findDedicatedSimulationBusinessError(
   issues: readonly CampaignSimulationExecutionIssue[],
 ): DedicatedSimulationBusinessError | null {
+  const forfait = issues.find(
+    (issue) => issue.code === "UNIVERSAL_FIXED_AMOUNT_EXCEEDS_BUDGET",
+  );
+  if (forfait) {
+    const budget = formatBudgetish(
+      detailString(forfait.details, "annualBudgetTargetFcfa"),
+    );
+    const promotions = formatBudgetish(
+      detailString(forfait.details, "totalAnnualPromotionBudgetCostFcfa"),
+    );
+    const forfaitCost = formatBudgetish(
+      detailString(forfait.details, "totalUniversalFixedAmountCostFcfa"),
+    );
+    const overrunRaw = detailString(forfait.details, "overrunFcfa");
+    let overrun = overrunRaw ? formatBudgetish(overrunRaw) : "—";
+    if (overrunRaw && /^(-?\d+)\/(\d+)$/.exec(overrunRaw)) {
+      const match = /^(-?\d+)\/(\d+)$/.exec(overrunRaw)!;
+      overrun = formatSignedExactAmountAsFcfa({
+        numerator: BigInt(match[1]!),
+        denominator: BigInt(match[2]!),
+      });
+    }
+    const beneficiaryCount =
+      detailString(forfait.details, "universalFixedAmountEligibleEmployeeCount") ??
+      "—";
+    return {
+      code: "UNIVERSAL_FIXED_AMOUNT_EXCEEDS_BUDGET",
+      title: "Promotions et forfait social universel dépassent l’enveloppe",
+      message:
+        "L’enveloppe ne permet pas de financer les promotions et le forfait social universel. Augmentez l’enveloppe, réduisez ou désactivez le forfait, ou revoyez la population de la campagne.",
+      details: [
+        { label: "Budget cible", value: budget },
+        { label: "Coût des promotions", value: promotions },
+        { label: "Coût du forfait social universel", value: forfaitCost },
+        { label: "Salariés éligibles au forfait", value: beneficiaryCount },
+        { label: "Dépassement exact", value: overrun },
+      ],
+    };
+  }
+
   const minimum = issues.find(
     (issue) => issue.code === "MINIMUM_GUARANTEE_EXCEEDS_BUDGET",
   );

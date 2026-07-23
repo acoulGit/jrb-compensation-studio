@@ -146,6 +146,8 @@ export async function saveCurrentCampaignSimulation(
     minimumGuaranteeEffectiveMonth:
       validatedConfiguration.minimumGuaranteeEffectiveMonth,
     minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
+    socialMechanismKind: validatedConfiguration.socialMechanismKind,
+    universalFixedAmountPolicy: validatedConfiguration.universalFixedAmountPolicy,
   });
 
   if (currentFingerprint !== result.sourceFingerprint) {

@@ -11,7 +11,10 @@ import { PROMOTION_TRAJECTORY_CONTRACT_VERSION } from "../../domain/compensation
 import { PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION } from "../../domain/compensationCalculation";
 import { PROMOTION_AWARE_COMPENSATION_CONTRACT_VERSION } from "../../domain/compensationCalculation";
 import { MINIMUM_INCREASE_CONTRACT_VERSION } from "../../domain/compensationCalculation";
+import { UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION } from "../../domain/compensationCalculation";
 import type { MinimumIncreasePolicy } from "../../domain/compensationCalculation";
+import type { SocialMechanismKind } from "../../domain/compensationCalculation";
+import type { UniversalFixedAmountPolicy } from "../../domain/compensationCalculation";
 import type { CampaignStatus } from "../../domain/campaign/models";
 import type { NineBoxMode } from "../../domain/compensationReference/models";
 import { buildConfigurationFingerprint } from "./formatExactBudgetDisplay";
@@ -61,6 +64,8 @@ export interface SimulationSourceFingerprintInput {
   technicalApplicationMonth: number;
   minimumGuaranteeEffectiveMonth: number;
   minimumIncreasePolicy: MinimumIncreasePolicy;
+  socialMechanismKind: SocialMechanismKind;
+  universalFixedAmountPolicy: UniversalFixedAmountPolicy;
 }
 
 /**
@@ -161,6 +166,24 @@ export function buildSimulationSourceFingerprint(
     minimumIncreaseRateDenominator:
       input.minimumIncreasePolicy.minimumIncreaseRate?.denominator ?? null,
     minimumIncreaseContractVersion: MINIMUM_INCREASE_CONTRACT_VERSION,
+    socialMechanismKind: input.socialMechanismKind,
+    universalFixedAmountMonthlyAmount:
+      input.socialMechanismKind === "universal_fixed_amount"
+        ? input.universalFixedAmountPolicy.monthlyAmountFcfa
+        : null,
+    universalFixedAmountEffectiveMonth:
+      input.socialMechanismKind === "universal_fixed_amount"
+        ? input.universalFixedAmountPolicy.effectiveMonth
+        : null,
+    universalFixedAmountMinimumSeniorityMonths:
+      input.socialMechanismKind === "universal_fixed_amount"
+        ? input.universalFixedAmountPolicy.minimumSeniorityMonths
+        : null,
+    universalFixedAmountSeniorityReferenceDate:
+      input.socialMechanismKind === "universal_fixed_amount"
+        ? input.universalFixedAmountPolicy.seniorityReferenceDate
+        : null,
+    universalFixedAmountContractVersion: UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
   });
 
   const canonical = [

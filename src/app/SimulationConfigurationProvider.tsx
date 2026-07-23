@@ -37,7 +37,10 @@ import {
 import { resolveBudgetTarget } from "../domain/compensationCalculation";
 import {
   MINIMUM_INCREASE_CONTRACT_VERSION,
+  UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
+  defaultUniversalFixedAmountSeniorityReferenceDate,
   type MinimumIncreaseMode,
+  type SocialMechanismKind,
 } from "../domain/compensationCalculation";
 import type { Campaign } from "../infrastructure/database/types";
 import { toUserMessage } from "../services/errors";
@@ -85,6 +88,15 @@ interface SimulationConfigurationContextValue {
   setMinimumGuaranteeEffectiveMonthInput: (value: string) => void;
   /** Aligne le mois d’effet du minimum sur le mois technique courant (UI). */
   alignMinimumGuaranteeEffectiveMonthToTechnical: () => void;
+  setSocialMechanismKind: (kind: SocialMechanismKind) => void;
+  setUniversalFixedAmountMonthlyAmountInput: (value: string) => void;
+  setUniversalFixedAmountEffectiveMonthInput: (value: string) => void;
+  setUniversalFixedAmountMinimumSeniorityMonthsInput: (value: string) => void;
+  setUniversalFixedAmountSeniorityReferenceDateInput: (value: string) => void;
+  /** Réinitialise la date de référence d’ancienneté au 31/12 N−1. */
+  resetUniversalFixedAmountSeniorityReferenceDateToDefault: () => void;
+  /** Aligne le mois d’effet du forfait sur le mois technique courant (UI). */
+  alignUniversalFixedAmountEffectiveMonthToTechnical: () => void;
   setMinimumIncreaseMode: (mode: MinimumIncreaseMode) => void;
   setMinimumMonthlyAmountInput: (value: string) => void;
   setMinimumIncreaseRatePercentInput: (value: string) => void;
@@ -306,7 +318,35 @@ export function SimulationConfigurationProvider({
 
   const setCampaignYearInput = useCallback(
     (value: string) => {
-      patchDraft((current) => ({ ...current, campaignYearInput: value }));
+      patchDraft((current) => {
+        const prevYear = Number.parseInt(current.campaignYearInput.trim(), 10);
+        const nextYear = Number.parseInt(value.trim(), 10);
+        let seniorityDate =
+          current.universalFixedAmountSeniorityReferenceDateInput;
+        if (
+          Number.isInteger(prevYear) &&
+          prevYear >= 2000 &&
+          prevYear <= 2100 &&
+          Number.isInteger(nextYear) &&
+          nextYear >= 2000 &&
+          nextYear <= 2100
+        ) {
+          const oldDefault =
+            defaultUniversalFixedAmountSeniorityReferenceDate(prevYear);
+          if (
+            seniorityDate.trim() === "" ||
+            seniorityDate.trim() === oldDefault
+          ) {
+            seniorityDate =
+              defaultUniversalFixedAmountSeniorityReferenceDate(nextYear);
+          }
+        }
+        return {
+          ...current,
+          campaignYearInput: value,
+          universalFixedAmountSeniorityReferenceDateInput: seniorityDate,
+        };
+      });
     },
     [patchDraft],
   );
@@ -345,6 +385,81 @@ export function SimulationConfigurationProvider({
     patchDraft((current) => ({
       ...current,
       minimumGuaranteeEffectiveMonthInput:
+        current.technicalApplicationMonthInput,
+    }));
+  }, [patchDraft]);
+
+  const setSocialMechanismKind = useCallback(
+    (kind: SocialMechanismKind) => {
+      patchDraft((current) => ({
+        ...current,
+        socialMechanismKind: kind,
+        ...(kind === "minimum_guaranteed" && current.minimumIncreaseMode === "none"
+          ? { minimumIncreaseMode: "fixed_monthly_amount" as const }
+          : {}),
+      }));
+    },
+    [patchDraft],
+  );
+
+  const setUniversalFixedAmountMonthlyAmountInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({
+        ...current,
+        universalFixedAmountMonthlyAmountInput: value,
+      }));
+    },
+    [patchDraft],
+  );
+
+  const setUniversalFixedAmountEffectiveMonthInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({
+        ...current,
+        universalFixedAmountEffectiveMonthInput: value,
+      }));
+    },
+    [patchDraft],
+  );
+
+  const setUniversalFixedAmountMinimumSeniorityMonthsInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({
+        ...current,
+        universalFixedAmountMinimumSeniorityMonthsInput: value,
+      }));
+    },
+    [patchDraft],
+  );
+
+  const setUniversalFixedAmountSeniorityReferenceDateInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({
+        ...current,
+        universalFixedAmountSeniorityReferenceDateInput: value,
+      }));
+    },
+    [patchDraft],
+  );
+
+  const resetUniversalFixedAmountSeniorityReferenceDateToDefault = useCallback(() => {
+    patchDraft((current) => {
+      const year = Number.parseInt(current.campaignYearInput.trim(), 10);
+      if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+        return current;
+      }
+      return {
+        ...current,
+        universalFixedAmountSeniorityReferenceDateInput:
+          defaultUniversalFixedAmountSeniorityReferenceDate(year),
+      };
+    });
+  }, [patchDraft]);
+
+  const alignUniversalFixedAmountEffectiveMonthToTechnical = useCallback(() => {
+    patchDraft((current) => ({
+      ...current,
+      universalFixedAmountEffectiveMonthInput:
         current.technicalApplicationMonthInput,
     }));
   }, [patchDraft]);
@@ -400,9 +515,14 @@ export function SimulationConfigurationProvider({
         draft.retroactivityStartMonthInput,
         draft.technicalApplicationMonthInput,
         draft.minimumGuaranteeEffectiveMonthInput,
+        draft.socialMechanismKind,
         draft.minimumIncreaseMode,
         draft.minimumMonthlyAmountInput,
         draft.minimumIncreaseRatePercentInput,
+        draft.universalFixedAmountMonthlyAmountInput,
+        draft.universalFixedAmountEffectiveMonthInput,
+        draft.universalFixedAmountMinimumSeniorityMonthsInput,
+        draft.universalFixedAmountSeniorityReferenceDateInput,
       ].join("|")
     : "";
 
@@ -504,6 +624,9 @@ export function SimulationConfigurationProvider({
       minimumGuaranteeEffectiveMonth:
         validatedConfiguration.minimumGuaranteeEffectiveMonth,
       minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
+      socialMechanismKind: validatedConfiguration.socialMechanismKind,
+      universalFixedAmountPolicy:
+        validatedConfiguration.universalFixedAmountPolicy,
     });
 
     if (currentFingerprint !== validatedConfiguration.sourceFingerprint) {
@@ -588,7 +711,10 @@ export function SimulationConfigurationProvider({
       currentParsed.retroactivityStartMonth === null ||
       currentParsed.technicalApplicationMonth === null ||
       currentParsed.minimumGuaranteeEffectiveMonth === null ||
-      !currentParsed.minimumIncreasePolicy
+      !currentParsed.socialMechanismKind ||
+      !currentParsed.minimumIncreasePolicy ||
+      !currentParsed.universalFixedAmountPolicy ||
+      !currentParsed.isSocialMechanismComplete
     ) {
       return false;
     }
@@ -643,6 +769,24 @@ export function SimulationConfigurationProvider({
         currentParsed.minimumIncreasePolicy.minimumIncreaseRate?.denominator ??
         null,
       minimumIncreaseContractVersion: MINIMUM_INCREASE_CONTRACT_VERSION,
+      socialMechanismKind: currentParsed.socialMechanismKind,
+      universalFixedAmountMonthlyAmount:
+        currentParsed.socialMechanismKind === "universal_fixed_amount"
+          ? currentParsed.universalFixedAmountPolicy.monthlyAmountFcfa
+          : null,
+      universalFixedAmountEffectiveMonth:
+        currentParsed.socialMechanismKind === "universal_fixed_amount"
+          ? currentParsed.universalFixedAmountPolicy.effectiveMonth
+          : null,
+      universalFixedAmountMinimumSeniorityMonths:
+        currentParsed.socialMechanismKind === "universal_fixed_amount"
+          ? currentParsed.universalFixedAmountPolicy.minimumSeniorityMonths
+          : null,
+      universalFixedAmountSeniorityReferenceDate:
+        currentParsed.socialMechanismKind === "universal_fixed_amount"
+          ? currentParsed.universalFixedAmountPolicy.seniorityReferenceDate
+          : null,
+      universalFixedAmountContractVersion: UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
     });
     const sourceFingerprint = buildSimulationSourceFingerprint({
       campaignId: selectedCampaignId,
@@ -659,6 +803,8 @@ export function SimulationConfigurationProvider({
       minimumGuaranteeEffectiveMonth:
         currentParsed.minimumGuaranteeEffectiveMonth,
       minimumIncreasePolicy: currentParsed.minimumIncreasePolicy,
+      socialMechanismKind: currentParsed.socialMechanismKind,
+      universalFixedAmountPolicy: currentParsed.universalFixedAmountPolicy,
     });
 
     const snapshot: ValidatedCampaignSimulationConfiguration = {
@@ -671,6 +817,8 @@ export function SimulationConfigurationProvider({
       minimumGuaranteeEffectiveMonth:
         currentParsed.minimumGuaranteeEffectiveMonth,
       minimumIncreasePolicy: currentParsed.minimumIncreasePolicy,
+      socialMechanismKind: currentParsed.socialMechanismKind,
+      universalFixedAmountPolicy: currentParsed.universalFixedAmountPolicy,
       readinessReport: report,
       validatedAtSessionSequence: nextSequence,
       configurationFingerprint: fingerprint,
@@ -733,6 +881,13 @@ export function SimulationConfigurationProvider({
       setTechnicalApplicationMonthInput,
       setMinimumGuaranteeEffectiveMonthInput,
       alignMinimumGuaranteeEffectiveMonthToTechnical,
+      setSocialMechanismKind,
+      setUniversalFixedAmountMonthlyAmountInput,
+      setUniversalFixedAmountEffectiveMonthInput,
+      setUniversalFixedAmountMinimumSeniorityMonthsInput,
+      setUniversalFixedAmountSeniorityReferenceDateInput,
+      resetUniversalFixedAmountSeniorityReferenceDateToDefault,
+      alignUniversalFixedAmountEffectiveMonthToTechnical,
       setMinimumIncreaseMode,
       setMinimumMonthlyAmountInput,
       setMinimumIncreaseRatePercentInput,
@@ -766,6 +921,13 @@ export function SimulationConfigurationProvider({
       setMinimumMonthlyAmountInput,
       setMinimumGuaranteeEffectiveMonthInput,
       alignMinimumGuaranteeEffectiveMonthToTechnical,
+      resetUniversalFixedAmountSeniorityReferenceDateToDefault,
+      setSocialMechanismKind,
+      setUniversalFixedAmountMonthlyAmountInput,
+      setUniversalFixedAmountEffectiveMonthInput,
+      setUniversalFixedAmountMinimumSeniorityMonthsInput,
+      setUniversalFixedAmountSeniorityReferenceDateInput,
+      alignUniversalFixedAmountEffectiveMonthToTechnical,
       setRoundingStepInput,
       setRetroactivityStartMonthInput,
       setTechnicalApplicationMonthInput,

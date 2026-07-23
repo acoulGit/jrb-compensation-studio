@@ -17,6 +17,10 @@ import {
   formatSeniorityRatePercent,
 } from "../../application/campaignSimulation/formatExactBudgetDisplay";
 import { findDedicatedSimulationBusinessError } from "../../application/campaignSimulation/findDedicatedSimulationBusinessError";
+import {
+  SOCIAL_MECHANISM_KIND_LABELS_FR,
+  type SocialMechanismKind,
+} from "../../domain/compensationCalculation";
 import { technicalApplicationMonthLabelFr } from "../../domain/compensationCalculation";
 import { nineBoxModeLabel } from "../../domain/compensationReference/conversions";
 import { SectionCard } from "../../components/ui/SectionCard";
@@ -45,6 +49,41 @@ const EXEC_SCOPE_LABELS: Record<(typeof EXEC_SCOPE_ORDER)[number], string> = {
   rounding: "Arrondi",
   engine: "Moteur",
 };
+
+function formatUniversalFixedAmountExclusionReasonLabel(
+  reason: string | null | undefined,
+): string | null {
+  if (!reason) return null;
+  switch (reason) {
+    case "MISSING_CONTRACT_TYPE":
+      return "Type de contrat manquant";
+    case "CONTRACT_TYPE_EXCLUDED":
+      return "Type de contrat exclu";
+    case "EMPLOYMENT_STATUS_EXCLUDED":
+      return "Statut d’emploi exclu";
+    case "INSUFFICIENT_SENIORITY":
+      return "Ancienneté insuffisante";
+    default:
+      return reason;
+  }
+}
+
+function formatIsoDateLabelFr(iso: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  if (!match) {
+    return iso;
+  }
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+function formatUniversalFixedAmountEligibilityLabel(
+  eligible: boolean,
+  exclusionReason: string | null | undefined,
+): string {
+  if (eligible) return "Éligible";
+  const reason = formatUniversalFixedAmountExclusionReasonLabel(exclusionReason);
+  return reason ? `Non éligible (${reason})` : "Non éligible";
+}
 
 function compareEmployeeId(left: string, right: string): number {
   if (left < right) return -1;
@@ -202,9 +241,14 @@ export function SimulationResultsPanel({
   }
 
   const showPromotionColumns = result.budgetSummary.hasStructuredPromotions;
+  const socialMechanismKind = result.populationSummary
+    .socialMechanismKind as SocialMechanismKind;
   const showMinimumColumns =
-    result.populationSummary.minimumIncreaseMode !== "none" ||
-    result.populationSummary.totalMinimumComplementFloorCostFcfa > 0n;
+    socialMechanismKind === "minimum_guaranteed" &&
+    (result.populationSummary.minimumIncreaseMode !== "none" ||
+      result.populationSummary.totalMinimumComplementFloorCostFcfa > 0n);
+  const showForfaitColumns =
+    socialMechanismKind === "universal_fixed_amount";
 
   return (
     <>
@@ -299,6 +343,12 @@ export function SimulationResultsPanel({
                 {showMinimumColumns ? (
                   <th scope="col">Complément au-dessus du minimum</th>
                 ) : null}
+                {showForfaitColumns ? (
+                  <th scope="col">Forfait social (période)</th>
+                ) : null}
+                {showForfaitColumns ? (
+                  <th scope="col">Éligibilité forfait</th>
+                ) : null}
                 <th scope="col">Complément mensuel au mois d’application</th>
                 <th scope="col">Rappel complément</th>
                 <th scope="col">Coût annuel complément</th>
@@ -386,6 +436,23 @@ export function SimulationResultsPanel({
                       data-testid={`simulation-above-minimum-${employee.employeeId}`}
                     >
                       {employee.campaignPeriodCompensationAboveMinimumCostLabel}
+                    </td>
+                  ) : null}
+                  {showForfaitColumns ? (
+                    <td
+                      data-testid={`simulation-forfait-period-${employee.employeeId}`}
+                    >
+                      {employee.campaignPeriodUniversalFixedAmountCostLabel}
+                    </td>
+                  ) : null}
+                  {showForfaitColumns ? (
+                    <td
+                      data-testid={`simulation-forfait-eligibility-${employee.employeeId}`}
+                    >
+                      {formatUniversalFixedAmountEligibilityLabel(
+                        employee.isUniversalFixedAmountEligible,
+                        employee.universalFixedAmountExclusionReason,
+                      )}
                     </td>
                   ) : null}
                   <td
@@ -486,6 +553,10 @@ function EnvelopeSummary({
 }) {
   const envelope = result.budgetSummary.envelopeSummary;
   const population = result.populationSummary;
+  const socialMechanismKind = population.socialMechanismKind as SocialMechanismKind;
+  const socialMechanismLabel =
+    SOCIAL_MECHANISM_KIND_LABELS_FR[socialMechanismKind] ??
+    population.socialMechanismKind;
   return (
     <dl className="detail-list" data-testid="simulation-summary">
       <div>
@@ -495,6 +566,64 @@ function EnvelopeSummary({
           {result.campaignYear ? ` (${result.campaignYear})` : ""}
         </dd>
       </div>
+      <div>
+        <dt>Mécanisme social</dt>
+        <dd data-testid="simulation-summary-social-mechanism">
+          {socialMechanismLabel}
+        </dd>
+      </div>
+      {socialMechanismKind === "universal_fixed_amount" ? (
+        <>
+          <div>
+            <dt>Montant du forfait social universel</dt>
+            <dd data-testid="simulation-summary-forfait-amount">
+              {formatFcfaInteger(population.universalFixedAmountMonthlyAmountFcfa)}
+            </dd>
+          </div>
+          <div>
+            <dt>Mois d’effet du forfait</dt>
+            <dd data-testid="simulation-summary-forfait-effective-month">
+              {technicalApplicationMonthLabelFr(
+                population.universalFixedAmountEffectiveMonth,
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>Ancienneté minimale du forfait</dt>
+            <dd data-testid="simulation-summary-forfait-seniority">
+              {population.universalFixedAmountMinimumSeniorityMonths} mois
+            </dd>
+          </div>
+          <div>
+            <dt>Date de référence de l’ancienneté</dt>
+            <dd data-testid="simulation-summary-forfait-seniority-reference-date">
+              {population.universalFixedAmountSeniorityReferenceDate
+                ? formatIsoDateLabelFr(
+                    population.universalFixedAmountSeniorityReferenceDate,
+                  )
+                : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt>Salariés éligibles au forfait</dt>
+            <dd data-testid="simulation-summary-forfait-eligible-count">
+              {population.universalFixedAmountEligibleEmployeeCount}
+            </dd>
+          </div>
+          <div>
+            <dt>Coût annuel du forfait social universel</dt>
+            <dd data-testid="simulation-summary-forfait-annual-cost">
+              {envelope.totalUniversalFixedAmountCostLabel}
+            </dd>
+          </div>
+          <div>
+            <dt>Budget matriciel résiduel après promotions et forfait</dt>
+            <dd data-testid="simulation-summary-forfait-residual-budget">
+              {envelope.availableBudgetAfterPromotionsAndSocialMechanismLabel}
+            </dd>
+          </div>
+        </>
+      ) : null}
       <div>
         <dt>Mode d’évaluation</dt>
         <dd>{nineBoxModeLabel(result.evaluationMode)}</dd>
@@ -529,18 +658,22 @@ function EnvelopeSummary({
             : "Aucune promotion incluse"}
         </dd>
       </div>
-      <div>
-        <dt>Minimum garanti réservé</dt>
-        <dd data-testid="simulation-summary-minimum-floor-cost">
-          {envelope.totalMinimumComplementFloorCostLabel}
-        </dd>
-      </div>
-      <div>
-        <dt>Budget disponible après promotions et minimum</dt>
-        <dd data-testid="simulation-summary-available-after-minimum">
-          {envelope.availableBudgetAfterPromotionsAndMinimumLabel}
-        </dd>
-      </div>
+      {socialMechanismKind === "minimum_guaranteed" ? (
+        <>
+          <div>
+            <dt>Minimum garanti réservé</dt>
+            <dd data-testid="simulation-summary-minimum-floor-cost">
+              {envelope.totalMinimumComplementFloorCostLabel}
+            </dd>
+          </div>
+          <div>
+            <dt>Budget disponible après promotions et minimum</dt>
+            <dd data-testid="simulation-summary-available-after-minimum">
+              {envelope.availableBudgetAfterPromotionsAndMinimumLabel}
+            </dd>
+          </div>
+        </>
+      ) : null}
       <div>
         <dt>Budget disponible pour le complément compensatoire</dt>
         <dd data-testid="simulation-summary-available-compensatory">
@@ -559,18 +692,22 @@ function EnvelopeSummary({
           {envelope.totalAnnualActualCompensatoryCostLabel}
         </dd>
       </div>
-      <div>
-        <dt>Part minimum du complément</dt>
-        <dd data-testid="simulation-summary-minimum-paid">
-          {envelope.actualMinimumComplementPaidCostLabel}
-        </dd>
-      </div>
-      <div>
-        <dt>Part au-dessus du minimum</dt>
-        <dd data-testid="simulation-summary-above-minimum">
-          {envelope.actualCompensationAboveMinimumCostLabel}
-        </dd>
-      </div>
+      {socialMechanismKind === "minimum_guaranteed" ? (
+        <>
+          <div>
+            <dt>Part minimum du complément</dt>
+            <dd data-testid="simulation-summary-minimum-paid">
+              {envelope.actualMinimumComplementPaidCostLabel}
+            </dd>
+          </div>
+          <div>
+            <dt>Part au-dessus du minimum</dt>
+            <dd data-testid="simulation-summary-above-minimum">
+              {envelope.actualCompensationAboveMinimumCostLabel}
+            </dd>
+          </div>
+        </>
+      ) : null}
       <div>
         <dt>Coût effectif de campagne — promotions + complément</dt>
         <dd data-testid="simulation-summary-combined-actual">
@@ -1017,15 +1154,78 @@ function EmployeeDetailDrawer({
                   )}
                 </dd>
               </div>
-              <div>
-                <dt>Mois d’effet du minimum garanti</dt>
-                <dd data-testid="simulation-detail-minimum-effective-month">
-                  {technicalApplicationMonthLabelFr(
-                    employee.minimumGuaranteeEffectiveMonth ??
-                      employee.technicalApplicationMonth,
-                  )}
-                </dd>
-              </div>
+              {employee.socialMechanismKind === "minimum_guaranteed" ? (
+                <>
+                  <div>
+                    <dt>Mois d’effet du minimum garanti</dt>
+                    <dd data-testid="simulation-detail-minimum-effective-month">
+                      {technicalApplicationMonthLabelFr(
+                        employee.minimumGuaranteeEffectiveMonth ??
+                          employee.technicalApplicationMonth,
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Rappel du minimum garanti</dt>
+                    <dd data-testid="simulation-detail-minimum-reminder">
+                      {employee.minimumCompensatoryReminderLabel}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Rappel au-dessus du minimum</dt>
+                    <dd data-testid="simulation-detail-above-minimum-reminder">
+                      {employee.aboveMinimumCompensatoryReminderLabel}
+                    </dd>
+                  </div>
+                </>
+              ) : null}
+              {employee.socialMechanismKind === "universal_fixed_amount" ? (
+                <>
+                  <div>
+                    <dt>Éligibilité au forfait social universel</dt>
+                    <dd data-testid="simulation-detail-forfait-eligibility">
+                      {formatUniversalFixedAmountEligibilityLabel(
+                        employee.isUniversalFixedAmountEligible,
+                        employee.universalFixedAmountExclusionReason,
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Montant mensuel du forfait</dt>
+                    <dd data-testid="simulation-detail-forfait-amount">
+                      {formatFcfaInteger(
+                        employee.universalFixedAmountMonthlyAmountFcfa,
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Mois d’effet du forfait</dt>
+                    <dd data-testid="simulation-detail-forfait-effective-month">
+                      {technicalApplicationMonthLabelFr(
+                        employee.universalFixedAmountEffectiveMonth,
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Coût forfait sur la période</dt>
+                    <dd data-testid="simulation-detail-forfait-period-cost">
+                      {employee.campaignPeriodUniversalFixedAmountCostLabel}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Rappel du forfait social universel</dt>
+                    <dd data-testid="simulation-detail-forfait-reminder">
+                      {employee.universalFixedAmountReminderLabel}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Paiement direct restant du forfait</dt>
+                    <dd data-testid="simulation-detail-forfait-remaining-direct">
+                      {employee.universalFixedAmountRemainingYearDirectCostLabel}
+                    </dd>
+                  </div>
+                </>
+              ) : null}
               <div>
                 <dt>Complément au mois d’application</dt>
                 <dd data-testid="simulation-detail-final-increase">
@@ -1042,18 +1242,6 @@ function EmployeeDetailDrawer({
                 <dt>Coût réel annuel</dt>
                 <dd data-testid="simulation-detail-annual-cost">
                   {formatFcfaInteger(employee.annualActualBaseIncreaseCostFcfa)}
-                </dd>
-              </div>
-              <div>
-                <dt>Rappel du minimum garanti</dt>
-                <dd data-testid="simulation-detail-minimum-reminder">
-                  {employee.minimumCompensatoryReminderLabel}
-                </dd>
-              </div>
-              <div>
-                <dt>Rappel au-dessus du minimum</dt>
-                <dd data-testid="simulation-detail-above-minimum-reminder">
-                  {employee.aboveMinimumCompensatoryReminderLabel}
                 </dd>
               </div>
               <div>

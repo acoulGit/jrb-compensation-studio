@@ -7,6 +7,7 @@ import {
   calculatePreparedPopulationCompensation,
   isCompensationCalculationError,
   MINIMUM_INCREASE_CONTRACT_VERSION,
+  UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
   type PreparedPopulationCalculationInput,
 } from "../../domain/compensationCalculation";
 import { buildCampaignSimulationReadiness } from "./buildCampaignSimulationReadiness";
@@ -169,6 +170,8 @@ export async function executeCampaignSimulation(
     minimumGuaranteeEffectiveMonth:
       validatedConfiguration.minimumGuaranteeEffectiveMonth,
     minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
+    socialMechanismKind: validatedConfiguration.socialMechanismKind,
+    universalFixedAmountPolicy: validatedConfiguration.universalFixedAmountPolicy,
   });
 
   const currentConfigFingerprint = buildConfigurationFingerprint({
@@ -203,6 +206,24 @@ export async function executeCampaignSimulation(
       validatedConfiguration.minimumIncreasePolicy.minimumIncreaseRate
         ?.denominator ?? null,
     minimumIncreaseContractVersion: MINIMUM_INCREASE_CONTRACT_VERSION,
+    socialMechanismKind: validatedConfiguration.socialMechanismKind,
+    universalFixedAmountMonthlyAmount:
+      validatedConfiguration.socialMechanismKind === "universal_fixed_amount"
+        ? validatedConfiguration.universalFixedAmountPolicy.monthlyAmountFcfa
+        : null,
+    universalFixedAmountEffectiveMonth:
+      validatedConfiguration.socialMechanismKind === "universal_fixed_amount"
+        ? validatedConfiguration.universalFixedAmountPolicy.effectiveMonth
+        : null,
+    universalFixedAmountMinimumSeniorityMonths:
+      validatedConfiguration.socialMechanismKind === "universal_fixed_amount"
+        ? validatedConfiguration.universalFixedAmountPolicy.minimumSeniorityMonths
+        : null,
+    universalFixedAmountSeniorityReferenceDate:
+      validatedConfiguration.socialMechanismKind === "universal_fixed_amount"
+        ? validatedConfiguration.universalFixedAmountPolicy.seniorityReferenceDate
+        : null,
+    universalFixedAmountContractVersion: UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
   });
 
   if (
@@ -248,6 +269,8 @@ export async function executeCampaignSimulation(
     minimumGuaranteeEffectiveMonth:
       validatedConfiguration.minimumGuaranteeEffectiveMonth,
     minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
+    socialMechanismKind: validatedConfiguration.socialMechanismKind,
+    universalFixedAmountPolicy: validatedConfiguration.universalFixedAmountPolicy,
   };
 
   let engineResult;

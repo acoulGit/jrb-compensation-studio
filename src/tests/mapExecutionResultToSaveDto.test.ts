@@ -4,6 +4,7 @@ import type { CampaignSimulationExecutionResult } from "../application/campaignS
 import {
   withPromotionAwareBudgetSummary,
   withPromotionAwareEmployeeDefaults,
+  emptyPopulationSocialMechanismDefaults,
 } from "./simulationResultViewFixtures";
 import { DEFAULT_NINE_BOX_CONFIRMATION_FACTOR_MILLI } from "../domain/compensationReference/defaults";
 
@@ -84,6 +85,7 @@ function sampleResult(
       totalMinimumComplementFloorCostFcfa: 0n,
       actualMinimumComplementPaidCostFcfa: 0n,
       actualCompensationAboveMinimumCostFcfa: 0n,
+      ...emptyPopulationSocialMechanismDefaults(),
     },
     employees: [
       withPromotionAwareEmployeeDefaults({

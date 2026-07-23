@@ -412,6 +412,13 @@ mod tests {
             neutralize_nine_box_effect: None,
             source_nine_box_code: None,
             nine_box_treatment_kind: None,
+            is_universal_fixed_amount_eligible: None,
+            universal_fixed_amount_exclusion_reason: None,
+            universal_fixed_amount_seniority_reference_date: None,
+            campaign_period_universal_fixed_amount_cost_text: None,
+            universal_fixed_amount_reminder_text: None,
+            universal_fixed_amount_remaining_year_direct_cost_text: None,
+            full_year_run_rate_universal_fixed_amount_cost_text: None,
         }
     }
 

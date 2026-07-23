@@ -82,6 +82,12 @@ export function assertSimulationResultPersistable(input: {
   resultSchemaVersion?: number;
 }): void {
   const schemaVersion = input.resultSchemaVersion ?? RESULT_SCHEMA_VERSION;
+  if (input.calculationContractVersion >= 9 && schemaVersion < 7) {
+    throw new CompensationCalculationError(
+      "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION",
+      "Cette simulation utilise le mécanisme social exclusif / forfait universel et ne peut pas être enregistrée dans l’ancien format d’historique (schema < 7). Finalisez la consolidation en schema v7 avant l’enregistrement.",
+    );
+  }
   if (input.calculationContractVersion >= 8 && schemaVersion < 6) {
     throw new CompensationCalculationError(
       "SIMULATION_SNAPSHOT_SCHEMA_REQUIRES_CONSOLIDATION",
@@ -202,6 +208,7 @@ function mapMonth(
     theoreticalComplementNumeratorText: theoretical.numeratorText,
     theoreticalComplementDenominatorText: theoretical.denominatorText,
     actualComplementAboveMinimumFcfaText: bi(month.actualComplementAboveMinimumFcfa),
+    universalFixedAmountFcfaText: bi(month.universalFixedAmountFcfa),
   };
 }
 
@@ -391,6 +398,26 @@ function mapEmployee(
     fullYearRunRateCompensationAboveMinimumCostFcfaText: bi(
       employee.fullYearRunRateCompensationAboveMinimumCostFcfa,
     ),
+    isUniversalFixedAmountEligible: employee.isUniversalFixedAmountEligible,
+    universalFixedAmountExclusionReason: employee.universalFixedAmountExclusionReason,
+    universalFixedAmountMonthlyAmountText: bi(
+      employee.universalFixedAmountMonthlyAmountFcfa,
+    ),
+    universalFixedAmountEffectiveMonth: employee.universalFixedAmountEffectiveMonth,
+    universalFixedAmountMinimumSeniorityMonths:
+      employee.universalFixedAmountMinimumSeniorityMonths,
+    universalFixedAmountSeniorityReferenceDate:
+      employee.universalFixedAmountSeniorityReferenceDate,
+    campaignPeriodUniversalFixedAmountCostText: bi(
+      employee.campaignPeriodUniversalFixedAmountCostFcfa,
+    ),
+    universalFixedAmountReminderText: bi(employee.universalFixedAmountReminderFcfa),
+    universalFixedAmountRemainingYearDirectCostText: bi(
+      employee.universalFixedAmountRemainingYearDirectCostFcfa,
+    ),
+    fullYearRunRateUniversalFixedAmountCostText: bi(
+      employee.fullYearRunRateUniversalFixedAmountCostFcfa,
+    ),
     // ---- Champs schema v4 (Lot 2B-RC1-H1) ----
     neutralizeNineBoxEffect: employee.neutralizeNineBoxEffect,
     sourceNineBoxCode: employee.sourceNineBoxCode,
@@ -439,6 +466,9 @@ export function mapExecutionResultToSaveDto(input: {
   );
   const availableAfterPromotionsAndMinimum = exactAmountToCanonicalTexts(
     envelope.availableBudgetAfterPromotionsAndMinimumFcfa,
+  );
+  const availableAfterPromotionsAndSocialMechanism = exactAmountToCanonicalTexts(
+    population.availableBudgetAfterPromotionsAndSocialMechanismFcfa,
   );
   const theoreticalCompensatory = exactAmountToCanonicalTexts(
     envelope.totalAnnualTheoreticalCompensatoryCostFcfa,
@@ -634,6 +664,40 @@ export function mapExecutionResultToSaveDto(input: {
     neutralizeNineBoxEffectEmployeeCount:
       population.neutralizeNineBoxEffectEmployeeCount,
     nineBoxConfirmationFactorMilli: population.nineBoxConfirmationFactorMilli,
+    socialMechanismKind: population.socialMechanismKind,
+    universalFixedAmountMonthlyFcfa:
+      population.socialMechanismKind === "universal_fixed_amount"
+        ? Number(population.universalFixedAmountMonthlyAmountFcfa)
+        : null,
+    universalFixedAmountEffectiveMonth:
+      population.socialMechanismKind === "universal_fixed_amount"
+        ? population.universalFixedAmountEffectiveMonth
+        : null,
+    universalFixedAmountMinimumSeniorityMonths:
+      population.socialMechanismKind === "universal_fixed_amount"
+        ? population.universalFixedAmountMinimumSeniorityMonths
+        : null,
+    universalFixedAmountSeniorityReferenceDate:
+      population.socialMechanismKind === "universal_fixed_amount"
+        ? population.universalFixedAmountSeniorityReferenceDate
+        : null,
+    universalFixedAmountEligibleEmployeeCount:
+      population.universalFixedAmountEligibleEmployeeCount,
+    universalFixedAmountExposureCount: population.universalFixedAmountExposureCount,
+    totalUniversalFixedAmountCostText: bi(population.totalUniversalFixedAmountCostFcfa),
+    availableBudgetAfterPromotionsAndSocialMechanismNumeratorText:
+      availableAfterPromotionsAndSocialMechanism.numeratorText,
+    availableBudgetAfterPromotionsAndSocialMechanismDenominatorText:
+      availableAfterPromotionsAndSocialMechanism.denominatorText,
+    totalUniversalFixedAmountReminderText: bi(
+      population.totalUniversalFixedAmountReminderFcfa,
+    ),
+    totalUniversalFixedAmountRemainingYearDirectCostText: bi(
+      population.totalUniversalFixedAmountRemainingYearDirectCostFcfa,
+    ),
+    fullYearRunRateUniversalFixedAmountCostText: bi(
+      population.fullYearRunRateUniversalFixedAmountCostFcfa,
+    ),
     employees: result.employees.map(mapEmployee),
   };
 }

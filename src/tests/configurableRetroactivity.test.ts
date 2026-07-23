@@ -33,6 +33,7 @@ import type { CampaignSimulationExecutionResult } from "../application/campaignS
 import {
   withPromotionAwareBudgetSummary,
   withPromotionAwareEmployeeDefaults,
+  emptyPopulationSocialMechanismDefaults,
 } from "./simulationResultViewFixtures";
 
 function positions() {
@@ -241,6 +242,7 @@ function samplePersistableResult(
       totalMinimumComplementFloorCostFcfa: 0n,
       actualMinimumComplementPaidCostFcfa: 0n,
       actualCompensationAboveMinimumCostFcfa: 0n,
+      ...emptyPopulationSocialMechanismDefaults(),
     },
     employees: [
       withPromotionAwareEmployeeDefaults({

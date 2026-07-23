@@ -21,10 +21,12 @@ export {
 export {
   ANNUAL_BUDGET_PERIOD_MONTHS,
   CALCULATION_CONTRACT_VERSION,
+  CALCULATION_CONTRACT_VERSION_V8,
   CALCULATION_CONTRACT_VERSION_V7,
   EMPLOYER_CHARGES_INCLUDED,
   FULL_YEAR_MONTH_COUNT,
   RESULT_SCHEMA_VERSION,
+  RESULT_SCHEMA_VERSION_V6,
   RESULT_SCHEMA_VERSION_V5,
   RESULT_SCHEMA_VERSION_V4,
   RESULT_SCHEMA_VERSION_V3,
@@ -57,6 +59,7 @@ export {
   computePromotionBudgetStartMonth,
   computePromotionCampaignPeriodMonthCount,
   isMonthCoveredByMinimumGuarantee,
+  isMonthCoveredByUniversalFixedAmount,
   isMonthInCampaignPeriod,
   validateCampaignPeriod,
   validateRetroactivityStartMonth,
@@ -129,6 +132,34 @@ export {
   type MinimumIncreaseMode,
   type MinimumIncreasePolicy,
 } from "./minimumIncrease";
+export {
+  SOCIAL_MECHANISM_KINDS,
+  SOCIAL_MECHANISM_KIND_LABELS_FR,
+  deriveSocialMechanismKindFromMinimumIncreaseMode,
+  isSocialMechanismKind,
+  type SocialMechanismKind,
+} from "./socialMechanism";
+export {
+  NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
+  computeUniversalFixedAmountForMonth,
+  universalFixedAmountCoveredMonthCount,
+  validateUniversalFixedAmountPolicy,
+  type UniversalFixedAmountPolicy,
+} from "./universalFixedAmount";
+export {
+  UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
+  UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION_V1,
+  defaultUniversalFixedAmountSeniorityReferenceDate,
+  hasUniversalFixedAmountSeniority,
+  isUniversalFixedAmountEligible,
+  parseSeniorityReferenceDateIso,
+  resolveUniversalFixedAmountExclusionReason,
+  resolveUniversalFixedAmountSeniorityReferenceDate,
+  seniorityMonthsAtDecemberNMinus1,
+  seniorityMonthsAtReferenceDate,
+  type UniversalFixedAmountExclusionReason,
+  type UniversalFixedAmountPopulationInput,
+} from "./universalFixedAmountPopulation";
 export {
   PROMOTION_COMPENSATORY_CALIBRATION_CONTRACT_VERSION,
   promotionAnnualBudgetCostFcfa,

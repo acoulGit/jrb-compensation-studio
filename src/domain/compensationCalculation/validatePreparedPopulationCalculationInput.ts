@@ -10,6 +10,8 @@ import { ROUNDING_MODES } from "./populationAllocationModels";
 import { BUDGET_TARGET_MODES } from "./budgetTargetModels";
 import { NINE_BOX_MODES } from "../compensationReference/models";
 import { PROMOTION_BUDGET_EMPLOYMENT_STATUSES } from "./promotionBudgetPopulation";
+import { isSocialMechanismKind } from "./socialMechanism";
+import { parseSeniorityReferenceDateIso } from "./universalFixedAmountPopulation";
 
 function issue(
   partial: PopulationCalculationIssue,
@@ -209,6 +211,92 @@ export function validatePreparedPopulationCalculationInput(
         step: "validate_input",
       }),
     );
+  }
+
+  if (
+    input.socialMechanismKind !== undefined &&
+    !isSocialMechanismKind(input.socialMechanismKind)
+  ) {
+    issues.push(
+      issue({
+        code: "UNSUPPORTED_SOCIAL_MECHANISM_KIND",
+        message: `Mécanisme social non supporté : ${String(input.socialMechanismKind)}.`,
+        field: "socialMechanismKind",
+        step: "validate_input",
+      }),
+    );
+  }
+
+  if (input.universalFixedAmountPolicy !== undefined) {
+    const policy = input.universalFixedAmountPolicy;
+    if (typeof policy.monthlyAmountFcfa !== "bigint" || policy.monthlyAmountFcfa < 0n) {
+      issues.push(
+        issue({
+          code: "INVALID_UNIVERSAL_FIXED_AMOUNT",
+          message:
+            "Le montant du forfait social universel doit être un BigInt FCFA ≥ 0.",
+          field: "universalFixedAmountPolicy.monthlyAmountFcfa",
+          step: "validate_input",
+        }),
+      );
+    }
+    if (
+      !Number.isInteger(policy.effectiveMonth) ||
+      policy.effectiveMonth < 1 ||
+      policy.effectiveMonth > 12
+    ) {
+      issues.push(
+        issue({
+          code: "INVALID_UNIVERSAL_FIXED_AMOUNT_EFFECTIVE_MONTH",
+          message:
+            "Le mois d’effet du forfait social universel doit être compris entre janvier et décembre.",
+          field: "universalFixedAmountPolicy.effectiveMonth",
+          step: "validate_input",
+        }),
+      );
+    }
+    if (
+      !Number.isInteger(policy.minimumSeniorityMonths) ||
+      policy.minimumSeniorityMonths < 0
+    ) {
+      issues.push(
+        issue({
+          code: "INVALID_UNIVERSAL_FIXED_AMOUNT_MINIMUM_SENIORITY",
+          message:
+            "L’ancienneté minimale du forfait social universel doit être un entier ≥ 0.",
+          field: "universalFixedAmountPolicy.minimumSeniorityMonths",
+          step: "validate_input",
+        }),
+      );
+    }
+    if (
+      typeof policy.seniorityReferenceDate !== "string" ||
+      policy.seniorityReferenceDate.trim() === ""
+    ) {
+      issues.push(
+        issue({
+          code: "MISSING_UNIVERSAL_FIXED_AMOUNT_SENIORITY_REFERENCE_DATE",
+          message:
+            "La date de référence de l’ancienneté du forfait social universel est obligatoire.",
+          field: "universalFixedAmountPolicy.seniorityReferenceDate",
+          step: "validate_input",
+        }),
+      );
+    } else {
+      try {
+        parseSeniorityReferenceDateIso(policy.seniorityReferenceDate.trim());
+      } catch {
+        issues.push(
+          issue({
+            code: "INVALID_UNIVERSAL_FIXED_AMOUNT_SENIORITY_REFERENCE_DATE",
+            message:
+              "La date de référence de l’ancienneté du forfait doit être au format ISO YYYY-MM-DD.",
+            field: "universalFixedAmountPolicy.seniorityReferenceDate",
+            step: "validate_input",
+          }),
+        );
+      }
+    }
   }
 
   const seenIds = new Set<string>();
