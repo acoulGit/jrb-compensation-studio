@@ -6,6 +6,6 @@
  * Dans l’application desktop, l’écran « À propos » préfère `getVersion()` Tauri
  * (manifeste embarqué), avec repli sur cette constante si l’API est indisponible.
  */
-export const APP_VERSION = "0.9.1-1" as const;
+export const APP_VERSION = "0.9.1-2" as const;
 
 export const APP_PUBLISHER = "JRB XSolutions";

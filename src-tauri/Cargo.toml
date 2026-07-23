@@ -1,6 +1,6 @@
 [package]
 name = "jrb-compensation-studio"
-version = "0.9.1-1"
+version = "0.9.1-2"
 description = "Planification sécurisée des augmentations salariales."
 authors = ["JRB XSolutions"]
 edition = "2021"
