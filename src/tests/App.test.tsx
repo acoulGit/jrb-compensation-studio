@@ -6,6 +6,7 @@ import { AppError } from "../services/errors";
 import { MemoryCampaignRepository } from "../infrastructure/database/repositories/memoryCampaignRepository";
 import { createMemoryAppServices } from "../services/createAppServices";
 import { branding } from "../config/branding";
+import { APP_PUBLISHER, APP_VERSION } from "../app/appVersion";
 import App from "../App";
 
 async function renderApp(
@@ -86,11 +87,9 @@ describe("socle applicatif", () => {
     const { user } = await renderApp();
 
     await user.click(screen.getByRole("button", { name: "À propos" }));
-    expect(screen.getByTestId("about-version")).toHaveTextContent(
-      "0.9.1-prerecette.1",
-    );
+    expect(screen.getByTestId("about-version")).toHaveTextContent(APP_VERSION);
     expect(screen.getByTestId("about-publisher")).toHaveTextContent(
-      "JRB XSolutions",
+      APP_PUBLISHER,
     );
     expect(screen.queryByText("0.1.0")).not.toBeInTheDocument();
   });

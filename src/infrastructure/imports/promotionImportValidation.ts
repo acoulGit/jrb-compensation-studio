@@ -478,7 +478,14 @@ function pushError(
   field: string | null,
   message: string,
 ): void {
-  issues.push({ severity: "error", code, sourceRowNumber, field, message });
+  issues.push({
+    severity: "error",
+    code,
+    sourceRowNumber,
+    field,
+    message,
+    employeeNumber: null,
+  });
 }
 
 function pushFormulaErrorIfNeeded(

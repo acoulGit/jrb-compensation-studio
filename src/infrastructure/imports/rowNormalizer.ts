@@ -504,8 +504,14 @@ export function normalizeImportRows(input: {
   let validCount = 0;
 
   for (const draft of draftRows) {
+    const rowEmployeeNumber = draft.employeeNumber.trim()
+      ? draft.employeeNumber.trim()
+      : null;
     for (const issue of draft.issues) {
-      issues.push(issue);
+      issues.push({
+        ...issue,
+        employeeNumber: rowEmployeeNumber,
+      });
     }
     if (draft.isValid) {
       validCount += 1;
@@ -652,7 +658,14 @@ function pushIssue(
   field: string | null,
   message: string,
 ): void {
-  issues.push({ severity, code, sourceRowNumber, field, message });
+  issues.push({
+    severity,
+    code,
+    sourceRowNumber,
+    field,
+    message,
+    employeeNumber: null,
+  });
 }
 
 function pushError(

@@ -71,6 +71,7 @@ export function validateMapping(mapping: HrImportColumnMappingEntry[]): {
         field,
         message:
           "La même colonne source est associée à plusieurs champs cibles.",
+        employeeNumber: null,
       });
     }
   }
@@ -89,6 +90,7 @@ export function validateMapping(mapping: HrImportColumnMappingEntry[]): {
         sourceRowNumber: null,
         field: column.key,
         message: `La colonne obligatoire « ${column.label} » n’est associée à aucune colonne source.`,
+        employeeNumber: null,
       });
     }
   }

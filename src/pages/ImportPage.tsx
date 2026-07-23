@@ -20,6 +20,14 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { pageDefinitions } from "./pageDefinitions";
+import {
+  countImportIssuesBySeverity,
+  defaultImportIssuesViewFilter,
+  filterAndOrderImportIssues,
+  importIssueFieldLabel,
+  importIssuesDisplayCounterLabel,
+  type ImportIssuesViewFilter,
+} from "./import/importIssuesView";
 
 type ImportTab = "new" | "population" | "history";
 type PreviewFilter = "all" | "valid" | "errors" | "warnings";
@@ -64,6 +72,21 @@ export function ImportPage() {
     setPage,
   } = useHrImport();
 
+  const [issuesViewFilter, setIssuesViewFilter] =
+    useState<ImportIssuesViewFilter>("all");
+
+  useEffect(() => {
+    if (!preview) {
+      return;
+    }
+    const { errorCount, warningCount } = countImportIssuesBySeverity(
+      preview.issues,
+    );
+    setIssuesViewFilter(
+      defaultImportIssuesViewFilter(errorCount, warningCount),
+    );
+  }, [preview]);
+
   const familyDisplayById = useMemo(() => {
     const map = new Map<number, string>();
     for (const family of referenceSet?.jobFamilies ?? []) {
@@ -79,6 +102,38 @@ export function ImportPage() {
     }
     return map;
   }, [referenceSet]);
+
+  const issueSeverityCounts = useMemo(() => {
+    if (!preview) {
+      return { errorCount: 0, warningCount: 0 };
+    }
+    return countImportIssuesBySeverity(preview.issues);
+  }, [preview]);
+
+  const displayedImportIssues = useMemo(() => {
+    if (!preview) {
+      return [];
+    }
+    return filterAndOrderImportIssues(preview.issues, issuesViewFilter);
+  }, [preview, issuesViewFilter]);
+
+  const issuesCounterLabel = useMemo(() => {
+    if (!preview) {
+      return "";
+    }
+    return importIssuesDisplayCounterLabel({
+      filter: issuesViewFilter,
+      displayedCount: displayedImportIssues.length,
+      errorCount: issueSeverityCounts.errorCount,
+      warningCount: issueSeverityCounts.warningCount,
+    });
+  }, [
+    preview,
+    issuesViewFilter,
+    displayedImportIssues.length,
+    issueSeverityCounts.errorCount,
+    issueSeverityCounts.warningCount,
+  ]);
 
   const [tab, setTab] = useState<ImportTab>("new");
   const [previewFilter, setPreviewFilter] = useState<PreviewFilter>("all");
@@ -423,7 +478,11 @@ export function ImportPage() {
               <ul className="references-completeness" data-testid="import-preview-summary">
                 <li>Lignes lues : {preview.sourceRowCount}</li>
                 <li>Lignes valides : {preview.validCount}</li>
-                <li>Erreurs : {preview.errorCount}</li>
+                <li>
+                  Lignes invalides :{" "}
+                  {preview.sourceRowCount - preview.validCount}
+                </li>
+                <li>Erreurs bloquantes : {preview.errorCount}</li>
                 <li>Avertissements : {preview.warningCount}</li>
                 <li>Matricules dupliqués : {preview.duplicateNumbers}</li>
               </ul>
@@ -479,33 +538,111 @@ export function ImportPage() {
               </div>
 
               {preview.issues.length > 0 ? (
-                <>
-                  <h3 className="references-subtitle">Problèmes détectés</h3>
-                  <div className="data-table-wrap">
-                    <table className="data-table" data-testid="import-issues-table">
+                <div
+                  className="import-issues-panel"
+                  data-testid="import-issues-panel"
+                >
+                  <div className="import-issues-panel__toolbar">
+                    <h3 className="references-subtitle">
+                      Erreurs et avertissements
+                    </h3>
+                    <div
+                      className="filter-group"
+                      role="tablist"
+                      aria-label="Filtrer les anomalies d’import"
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={issuesViewFilter === "errors"}
+                        className={`filter-chip${issuesViewFilter === "errors" ? " filter-chip--active" : ""}`}
+                        data-testid="import-issues-filter-errors"
+                        onClick={() => setIssuesViewFilter("errors")}
+                      >
+                        Erreurs bloquantes ({issueSeverityCounts.errorCount})
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={issuesViewFilter === "warnings"}
+                        className={`filter-chip${issuesViewFilter === "warnings" ? " filter-chip--active" : ""}`}
+                        data-testid="import-issues-filter-warnings"
+                        onClick={() => setIssuesViewFilter("warnings")}
+                      >
+                        Avertissements ({issueSeverityCounts.warningCount})
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={issuesViewFilter === "all"}
+                        className={`filter-chip${issuesViewFilter === "all" ? " filter-chip--active" : ""}`}
+                        data-testid="import-issues-filter-all"
+                        onClick={() => setIssuesViewFilter("all")}
+                      >
+                        Toutes les anomalies (
+                        {issueSeverityCounts.errorCount +
+                          issueSeverityCounts.warningCount}
+                        )
+                      </button>
+                    </div>
+                    <p
+                      className="import-issues-panel__counter"
+                      data-testid="import-issues-counter"
+                    >
+                      {issuesCounterLabel}
+                    </p>
+                  </div>
+                  <div
+                    className="data-table-wrap data-table-wrap--import-issues"
+                    data-testid="import-issues-scroll"
+                  >
+                    <table
+                      className="data-table"
+                      data-testid="import-issues-table"
+                    >
                       <thead>
                         <tr>
                           <th>Ligne</th>
+                          <th>Matricule</th>
                           <th>Champ</th>
                           <th>Niveau</th>
                           <th>Message</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {preview.issues.slice(0, 100).map((issue, index) => (
-                          <tr key={`${issue.code}-${issue.sourceRowNumber}-${index}`}>
-                            <td>{issue.sourceRowNumber ?? "—"}</td>
-                            <td>{issue.field ?? "—"}</td>
-                            <td>
-                              {issue.severity === "error" ? "Erreur" : "Avertissement"}
+                        {displayedImportIssues.length === 0 ? (
+                          <tr>
+                            <td colSpan={5}>
+                              Aucune anomalie dans ce filtre.
                             </td>
-                            <td>{issue.message}</td>
                           </tr>
-                        ))}
+                        ) : (
+                          displayedImportIssues.map((issue, index) => (
+                            <tr
+                              key={`${issue.severity}-${issue.code}-${issue.sourceRowNumber}-${issue.field}-${index}`}
+                              data-testid={`import-issue-row-${issue.severity}`}
+                            >
+                              <td>{issue.sourceRowNumber ?? "—"}</td>
+                              <td>
+                                {issue.employeeNumber &&
+                                issue.employeeNumber.trim() !== ""
+                                  ? issue.employeeNumber
+                                  : "—"}
+                              </td>
+                              <td>{importIssueFieldLabel(issue.field)}</td>
+                              <td>
+                                {issue.severity === "error"
+                                  ? "Erreur"
+                                  : "Avertissement"}
+                              </td>
+                              <td>{issue.message}</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
-                </>
+                </div>
               ) : null}
             </SectionCard>
           ) : null}
