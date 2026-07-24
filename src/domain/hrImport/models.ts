@@ -287,6 +287,8 @@ export interface HrImportIssue {
   sourceRowNumber: number | null;
   field: string | null;
   message: string;
+  /** Matricule connu au moment de la validation de la ligne, sinon null. */
+  employeeNumber: string | null;
 }
 
 /** Aperçu produit avant confirmation de l’import (aucune écriture en base). */

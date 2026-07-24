@@ -6,6 +6,7 @@ import { AppError } from "../services/errors";
 import { MemoryCampaignRepository } from "../infrastructure/database/repositories/memoryCampaignRepository";
 import { createMemoryAppServices } from "../services/createAppServices";
 import { branding } from "../config/branding";
+import { APP_PUBLISHER, APP_VERSION } from "../app/appVersion";
 import App from "../App";
 
 async function renderApp(
@@ -80,6 +81,17 @@ describe("socle applicatif", () => {
     expect(screen.getByTestId("about-organization")).toHaveTextContent(
       branding.organizationName,
     );
+  });
+
+  it("affiche la version applicative et l’éditeur sur À propos", async () => {
+    const { user } = await renderApp();
+
+    await user.click(screen.getByRole("button", { name: "À propos" }));
+    expect(screen.getByTestId("about-version")).toHaveTextContent(APP_VERSION);
+    expect(screen.getByTestId("about-publisher")).toHaveTextContent(
+      APP_PUBLISHER,
+    );
+    expect(screen.queryByText("0.1.0")).not.toBeInTheDocument();
   });
 
   it("affiche les garanties de confidentialité", async () => {

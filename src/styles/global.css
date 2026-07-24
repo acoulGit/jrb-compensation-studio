@@ -894,6 +894,32 @@ button:focus-visible {
   overflow-x: auto;
 }
 
+.data-table-wrap--import-issues {
+  max-height: min(420px, 55vh);
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border-top: 1px solid var(--gray-200);
+}
+
+.import-issues-panel {
+  margin: 16px 22px 8px;
+}
+
+.import-issues-panel__toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-bottom: 8px;
+  background: var(--surface, #fff);
+}
+
+.import-issues-panel__counter {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--gray-700, #374151);
+}
+
 .data-table-wrap--scroll-x {
   max-width: 100%;
   overflow-x: auto;
