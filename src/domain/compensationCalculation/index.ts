@@ -8,6 +8,20 @@ export {
 } from "./arithmetic";
 export { allocateTheoreticalPopulationBudget } from "./allocateTheoreticalPopulationBudget";
 export {
+  EMPLOYER_CHARGE_CATEGORY_UNSPECIFIED_BUNDLE,
+  EmployerPeriodCostError,
+  aggregatePeriodEmployerCostBreakdowns,
+  calculatePeriodEmployerCost,
+  type AggregatedEmployerCostPolicyKind,
+  type EmployerChargeCategoryId,
+  type EmployerChargeComponent,
+  type EmployerChargePolicyComponent,
+  type EmployerCostPolicy,
+  type EmployerPeriodCostErrorCode,
+  type PeriodEmployerCostBreakdown,
+  type PeriodGrossSalaryImpactInput,
+} from "./employerPeriodCost";
+export {
   BUDGET_TARGET_MODES,
   type BudgetTargetInput,
   type BudgetTargetMode,
