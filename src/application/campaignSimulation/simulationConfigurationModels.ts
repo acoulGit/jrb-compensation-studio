@@ -2,6 +2,7 @@
 
 import type {
   BudgetTargetInput,
+  EmployerCostPolicy,
   MinimumIncreasePolicy,
   RoundingPolicy,
   SocialMechanismKind,
@@ -11,11 +12,13 @@ import { defaultUniversalFixedAmountSeniorityReferenceDate } from "../../domain/
 import type { CampaignSimulationReadinessReport } from "./campaignSimulationModels";
 import type {
   BudgetTargetModeChoice,
+  EmployerCostPolicyKindChoice,
   SimulationConfigurationDraftFields,
 } from "./parseSimulationConfiguration";
 
 export type {
   BudgetTargetModeChoice,
+  EmployerCostPolicyKindChoice,
   SimulationConfigurationDraftFields,
 };
 
@@ -45,6 +48,11 @@ export interface ValidatedCampaignSimulationConfiguration {
   minimumIncreasePolicy: MinimumIncreasePolicy;
   /** Politique du forfait social universel (Lot 2B-RC1-H5). */
   universalFixedAmountPolicy: UniversalFixedAmountPolicy;
+  /**
+   * Politique de coût employeur (Lot 2B-RC1-H6-A3).
+   * Session uniquement : non branchée au moteur ni au budget.
+   */
+  employerCostPolicy: EmployerCostPolicy;
   readinessReport: CampaignSimulationReadinessReport;
   /** Compteur de session (non temporel) incrémenté à chaque validation. */
   validatedAtSessionSequence: number;
@@ -88,6 +96,8 @@ export function createEmptyConfigurationDraft(
     universalFixedAmountEffectiveMonthInput: "1",
     universalFixedAmountMinimumSeniorityMonthsInput: "0",
     universalFixedAmountSeniorityReferenceDateInput: defaultSeniorityReferenceDate,
+    employerCostPolicyKind: "neutral",
+    employerCostRatePercentInput: "",
   };
 }
 

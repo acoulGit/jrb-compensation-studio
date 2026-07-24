@@ -39,13 +39,37 @@ import {
   MINIMUM_INCREASE_CONTRACT_VERSION,
   UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
   defaultUniversalFixedAmountSeniorityReferenceDate,
+  type EmployerCostPolicy,
   type MinimumIncreaseMode,
   type SocialMechanismKind,
 } from "../domain/compensationCalculation";
+import type {
+  EmployerCostPolicyKindChoice,
+} from "../application/campaignSimulation/parseSimulationConfiguration";
 import type { Campaign } from "../infrastructure/database/types";
 import { toUserMessage } from "../services/errors";
 import { useAppData } from "./AppDataProvider";
 import { useCompensationReference } from "./CompensationReferenceProvider";
+
+function employerCostFingerprintParts(policy: EmployerCostPolicy): {
+  employerCostPolicyKind: string;
+  employerCostRateNumerator: bigint | null;
+  employerCostRateDenominator: bigint | null;
+} {
+  if (policy.kind === "neutral") {
+    return {
+      employerCostPolicyKind: "neutral",
+      employerCostRateNumerator: null,
+      employerCostRateDenominator: null,
+    };
+  }
+  const rate = policy.components[0]?.rate ?? null;
+  return {
+    employerCostPolicyKind: "rate_on_gross_period",
+    employerCostRateNumerator: rate?.numerator ?? null,
+    employerCostRateDenominator: rate?.denominator ?? null,
+  };
+}
 
 export type SimulationReadinessLoadStatus =
   | "idle"
@@ -100,6 +124,8 @@ interface SimulationConfigurationContextValue {
   setMinimumIncreaseMode: (mode: MinimumIncreaseMode) => void;
   setMinimumMonthlyAmountInput: (value: string) => void;
   setMinimumIncreaseRatePercentInput: (value: string) => void;
+  setEmployerCostPolicyKind: (kind: EmployerCostPolicyKindChoice) => void;
+  setEmployerCostRatePercentInput: (value: string) => void;
   validateConfiguration: () => Promise<boolean>;
   refreshReadiness: () => Promise<void>;
   /** Marque le snapshot validé de la campagne courante comme stale. */
@@ -502,6 +528,27 @@ export function SimulationConfigurationProvider({
     [patchDraft],
   );
 
+  const setEmployerCostPolicyKind = useCallback(
+    (kind: EmployerCostPolicyKindChoice) => {
+      patchDraft((current) => ({
+        ...current,
+        employerCostPolicyKind: kind,
+        ...(kind === "neutral" ? { employerCostRatePercentInput: "" } : {}),
+      }));
+    },
+    [patchDraft],
+  );
+
+  const setEmployerCostRatePercentInput = useCallback(
+    (value: string) => {
+      patchDraft((current) => ({
+        ...current,
+        employerCostRatePercentInput: value,
+      }));
+    },
+    [patchDraft],
+  );
+
   const draftFingerprint = draft
     ? [
         draft.campaignId,
@@ -523,6 +570,8 @@ export function SimulationConfigurationProvider({
         draft.universalFixedAmountEffectiveMonthInput,
         draft.universalFixedAmountMinimumSeniorityMonthsInput,
         draft.universalFixedAmountSeniorityReferenceDateInput,
+        draft.employerCostPolicyKind,
+        draft.employerCostRatePercentInput,
       ].join("|")
     : "";
 
@@ -627,6 +676,7 @@ export function SimulationConfigurationProvider({
       socialMechanismKind: validatedConfiguration.socialMechanismKind,
       universalFixedAmountPolicy:
         validatedConfiguration.universalFixedAmountPolicy,
+      employerCostPolicy: validatedConfiguration.employerCostPolicy,
     });
 
     if (currentFingerprint !== validatedConfiguration.sourceFingerprint) {
@@ -714,7 +764,9 @@ export function SimulationConfigurationProvider({
       !currentParsed.socialMechanismKind ||
       !currentParsed.minimumIncreasePolicy ||
       !currentParsed.universalFixedAmountPolicy ||
-      !currentParsed.isSocialMechanismComplete
+      !currentParsed.employerCostPolicy ||
+      !currentParsed.isSocialMechanismComplete ||
+      !currentParsed.isEmployerCostComplete
     ) {
       return false;
     }
@@ -737,6 +789,9 @@ export function SimulationConfigurationProvider({
 
     const nextSequence = sessionSequence + 1;
     setSessionSequence(nextSequence);
+    const employerCostFp = employerCostFingerprintParts(
+      currentParsed.employerCostPolicy,
+    );
     const fingerprint = buildConfigurationFingerprint({
       campaignId: selectedCampaignId,
       budgetMode: currentParsed.budgetTarget.mode,
@@ -787,6 +842,7 @@ export function SimulationConfigurationProvider({
           ? currentParsed.universalFixedAmountPolicy.seniorityReferenceDate
           : null,
       universalFixedAmountContractVersion: UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
+      ...employerCostFp,
     });
     const sourceFingerprint = buildSimulationSourceFingerprint({
       campaignId: selectedCampaignId,
@@ -805,6 +861,7 @@ export function SimulationConfigurationProvider({
       minimumIncreasePolicy: currentParsed.minimumIncreasePolicy,
       socialMechanismKind: currentParsed.socialMechanismKind,
       universalFixedAmountPolicy: currentParsed.universalFixedAmountPolicy,
+      employerCostPolicy: currentParsed.employerCostPolicy,
     });
 
     const snapshot: ValidatedCampaignSimulationConfiguration = {
@@ -819,6 +876,7 @@ export function SimulationConfigurationProvider({
       minimumIncreasePolicy: currentParsed.minimumIncreasePolicy,
       socialMechanismKind: currentParsed.socialMechanismKind,
       universalFixedAmountPolicy: currentParsed.universalFixedAmountPolicy,
+      employerCostPolicy: currentParsed.employerCostPolicy,
       readinessReport: report,
       validatedAtSessionSequence: nextSequence,
       configurationFingerprint: fingerprint,
@@ -891,6 +949,8 @@ export function SimulationConfigurationProvider({
       setMinimumIncreaseMode,
       setMinimumMonthlyAmountInput,
       setMinimumIncreaseRatePercentInput,
+      setEmployerCostPolicyKind,
+      setEmployerCostRatePercentInput,
       validateConfiguration,
       refreshReadiness,
       markValidationStale,
@@ -915,6 +975,8 @@ export function SimulationConfigurationProvider({
       setBudgetTargetMode,
       setCampaignYearInput,
       setEligiblePayrollInput,
+      setEmployerCostPolicyKind,
+      setEmployerCostRatePercentInput,
       setManualBudgetInput,
       setMinimumIncreaseMode,
       setMinimumIncreaseRatePercentInput,

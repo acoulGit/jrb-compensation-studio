@@ -172,8 +172,15 @@ export async function executeCampaignSimulation(
     minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
     socialMechanismKind: validatedConfiguration.socialMechanismKind,
     universalFixedAmountPolicy: validatedConfiguration.universalFixedAmountPolicy,
+    // Empreinte uniquement : la politique n’est pas passée au moteur (H6-A3).
+    employerCostPolicy: validatedConfiguration.employerCostPolicy,
   });
 
+  const employerCostPolicy = validatedConfiguration.employerCostPolicy;
+  const employerCostRate =
+    employerCostPolicy.kind === "rate_on_gross_period"
+      ? (employerCostPolicy.components[0]?.rate ?? null)
+      : null;
   const currentConfigFingerprint = buildConfigurationFingerprint({
     campaignId,
     budgetMode: validatedConfiguration.budgetTarget.mode,
@@ -224,6 +231,9 @@ export async function executeCampaignSimulation(
         ? validatedConfiguration.universalFixedAmountPolicy.seniorityReferenceDate
         : null,
     universalFixedAmountContractVersion: UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
+    employerCostPolicyKind: employerCostPolicy.kind,
+    employerCostRateNumerator: employerCostRate?.numerator ?? null,
+    employerCostRateDenominator: employerCostRate?.denominator ?? null,
   });
 
   if (

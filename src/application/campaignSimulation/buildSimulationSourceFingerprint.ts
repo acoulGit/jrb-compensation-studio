@@ -15,9 +15,30 @@ import { UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION } from "../../domain/compensati
 import type { MinimumIncreasePolicy } from "../../domain/compensationCalculation";
 import type { SocialMechanismKind } from "../../domain/compensationCalculation";
 import type { UniversalFixedAmountPolicy } from "../../domain/compensationCalculation";
+import type { EmployerCostPolicy } from "../../domain/compensationCalculation";
 import type { CampaignStatus } from "../../domain/campaign/models";
 import type { NineBoxMode } from "../../domain/compensationReference/models";
 import { buildConfigurationFingerprint } from "./formatExactBudgetDisplay";
+
+function employerCostFingerprintParts(policy: EmployerCostPolicy): {
+  employerCostPolicyKind: string;
+  employerCostRateNumerator: bigint | null;
+  employerCostRateDenominator: bigint | null;
+} {
+  if (policy.kind === "neutral") {
+    return {
+      employerCostPolicyKind: "neutral",
+      employerCostRateNumerator: null,
+      employerCostRateDenominator: null,
+    };
+  }
+  const rate = policy.components[0]?.rate ?? null;
+  return {
+    employerCostPolicyKind: "rate_on_gross_period",
+    employerCostRateNumerator: rate?.numerator ?? null,
+    employerCostRateDenominator: rate?.denominator ?? null,
+  };
+}
 
 function fnv1aHex(input: string): string {
   let hash = 0x811c9dc5;
@@ -66,6 +87,12 @@ export interface SimulationSourceFingerprintInput {
   minimumIncreasePolicy: MinimumIncreasePolicy;
   socialMechanismKind: SocialMechanismKind;
   universalFixedAmountPolicy: UniversalFixedAmountPolicy;
+  /**
+   * Politique de coût employeur (Lot 2B-RC1-H6-A3).
+   * Incluse dans l’empreinte uniquement ; non passée au moteur de budget.
+   * Défaut fingerprint = neutral si absente (compat tests / appels historiques).
+   */
+  employerCostPolicy?: EmployerCostPolicy;
 }
 
 /**
@@ -184,6 +211,9 @@ export function buildSimulationSourceFingerprint(
         ? input.universalFixedAmountPolicy.seniorityReferenceDate
         : null,
     universalFixedAmountContractVersion: UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
+    ...employerCostFingerprintParts(
+      input.employerCostPolicy ?? { kind: "neutral" },
+    ),
   });
 
   const canonical = [

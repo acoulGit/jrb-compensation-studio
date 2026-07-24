@@ -121,6 +121,8 @@ export function SimulationPage() {
     setMinimumIncreaseMode,
     setMinimumMonthlyAmountInput,
     setMinimumIncreaseRatePercentInput,
+    setEmployerCostPolicyKind,
+    setEmployerCostRatePercentInput,
     validateConfiguration,
     refreshReadiness,
   } = useSimulationConfiguration();
@@ -1031,6 +1033,74 @@ export function SimulationPage() {
               </p>
             ) : null}
           </>
+        ) : null}
+      </SectionCard>
+
+      <SectionCard title="Coût employeur">
+        <p className="form-help">
+          L’assiette est l’impact brut de période. Cette étape configure uniquement
+          la politique de coût employeur. Le budget actuel reste calculé sur le
+          brut et n’inclut pas encore les charges.
+        </p>
+        <fieldset disabled={isReadOnly} className="form-grid">
+          <legend className="visually-hidden">Politique de coût employeur</legend>
+          <label className="field field--full">
+            <input
+              type="radio"
+              name="employer-cost-policy"
+              data-testid="simulation-employer-cost-neutral"
+              checked={draft.employerCostPolicyKind === "neutral"}
+              onChange={() => {
+                setEmployerCostPolicyKind("neutral");
+              }}
+            />{" "}
+            Ne pas appliquer de charges employeur
+          </label>
+          <label className="field field--full">
+            <input
+              type="radio"
+              name="employer-cost-policy"
+              data-testid="simulation-employer-cost-rate"
+              checked={draft.employerCostPolicyKind === "rate_on_gross_period"}
+              onChange={() => {
+                setEmployerCostPolicyKind("rate_on_gross_period");
+              }}
+            />{" "}
+            Appliquer un taux sur l’impact brut de période
+          </label>
+        </fieldset>
+        {parsed?.fieldErrors.employerCostPolicyKind ? (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {parsed.fieldErrors.employerCostPolicyKind.message}
+          </p>
+        ) : null}
+        {draft.employerCostPolicyKind === "rate_on_gross_period" ? (
+          <label
+            className="field field--full"
+            htmlFor="simulation-employer-cost-rate-percent"
+          >
+            Taux employeur
+            <input
+              id="simulation-employer-cost-rate-percent"
+              data-testid="simulation-employer-cost-rate-percent"
+              inputMode="decimal"
+              autoComplete="off"
+              disabled={isReadOnly}
+              value={draft.employerCostRatePercentInput}
+              aria-invalid={Boolean(
+                parsed?.fieldErrors.employerCostRatePercentInput,
+              )}
+              onChange={(event) => {
+                setEmployerCostRatePercentInput(event.target.value);
+              }}
+            />
+            <span className="form-help">Pourcentage (%) — aucune valeur préremplie.</span>
+          </label>
+        ) : null}
+        {parsed?.fieldErrors.employerCostRatePercentInput ? (
+          <p className="form-feedback form-feedback--error" role="alert">
+            {parsed.fieldErrors.employerCostRatePercentInput.message}
+          </p>
         ) : null}
       </SectionCard>
 

@@ -442,6 +442,7 @@ async function setupSuccessContext(options?: {
     minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     socialMechanismKind: "none",
     universalFixedAmountPolicy: NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
+    employerCostPolicy: { kind: "neutral" },
     readinessReport: {
       campaignId: campaign.id,
       campaignName: campaign.name,
