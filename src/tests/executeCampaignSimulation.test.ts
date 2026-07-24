@@ -350,6 +350,7 @@ async function buildValidated(options?: {
     minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     socialMechanismKind: "none",
     universalFixedAmountPolicy: NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
+    employerCostPolicy: { kind: "neutral" },
     readinessReport: await readinessModule.buildCampaignSimulationReadiness(
       { campaignId: campaign?.id ?? 1 },
       ports,

@@ -5,6 +5,8 @@
 
 import type { BudgetTargetInput } from "../../domain/compensationCalculation";
 import type {
+  EmployerCostPolicy,
+  ExactAmount,
   MinimumIncreaseMode,
   MinimumIncreasePolicy,
   RoundingPolicy,
@@ -12,6 +14,7 @@ import type {
   UniversalFixedAmountPolicy,
 } from "../../domain/compensationCalculation";
 import {
+  EMPLOYER_CHARGE_CATEGORY_UNSPECIFIED_BUNDLE,
   MINIMUM_INCREASE_MODES,
   NO_MINIMUM_INCREASE_POLICY,
   NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
@@ -414,6 +417,76 @@ export function parseMinimumIncreaseRatePercentInput(
   return { ok: true, value: rate };
 }
 
+/**
+ * Parse un taux % de charge employeur → fraction exacte (≥ 0).
+ * Au plus deux décimales (comme le taux budget). Aucun plafond métier.
+ * 0 → 0/1 ; 3 → 3/100 ; 4,25 → 17/400.
+ */
+export function parseEmployerCostRatePercentInput(
+  raw: string | null | undefined,
+): ParseResult<ExactAmount> {
+  if (raw === null || raw === undefined || raw.trim() === "") {
+    return {
+      ok: false,
+      code: "MISSING_EMPLOYER_COST_RATE",
+      message: "Le taux de charge employeur est obligatoire.",
+    };
+  }
+  const trimmed = raw.trim();
+  const compact = stripAllowedSpaces(trimmed);
+  if (/[eE]/.test(compact)) {
+    return {
+      ok: false,
+      code: "INVALID_EMPLOYER_COST_RATE",
+      message:
+        "Le taux de charge employeur ne doit pas utiliser la notation scientifique.",
+    };
+  }
+  if (compact.startsWith("-")) {
+    return {
+      ok: false,
+      code: "INVALID_EMPLOYER_COST_RATE",
+      message: "Le taux de charge employeur ne peut pas être négatif.",
+    };
+  }
+  const separators = compact.match(/[.,]/g) ?? [];
+  if (separators.length > 1) {
+    return {
+      ok: false,
+      code: "INVALID_EMPLOYER_COST_RATE",
+      message:
+        "Le taux de charge employeur ne doit contenir qu’un seul séparateur décimal.",
+    };
+  }
+  const match = /^(\d+)(?:[.,](\d+))?$/.exec(compact);
+  if (!match) {
+    return {
+      ok: false,
+      code: "INVALID_EMPLOYER_COST_RATE",
+      message: "Le taux de charge employeur doit être un nombre (ex. 10 ou 12,5).",
+    };
+  }
+  const fracPart = match[2] ?? "";
+  if (fracPart.length > 2) {
+    return {
+      ok: false,
+      code: "INVALID_EMPLOYER_COST_RATE",
+      message:
+        "Le taux de charge employeur accepte au maximum deux décimales (aucun arrondi).",
+    };
+  }
+  const intPart = BigInt(match[1] ?? "0");
+  const rate = minimumIncreaseRateFromPercentParts(intPart, fracPart);
+  if (rate.numerator < 0n) {
+    return {
+      ok: false,
+      code: "INVALID_EMPLOYER_COST_RATE",
+      message: "Le taux de charge employeur ne peut pas être négatif.",
+    };
+  }
+  return { ok: true, value: rate };
+}
+
 /** Parse le montant forfaitaire du minimum (entier FCFA strictement > 0). */
 export function parseMinimumMonthlyAmountInput(
   raw: string | null | undefined,
@@ -637,6 +710,28 @@ export type MinimumIncreaseModeChoice = MinimumIncreaseMode;
 
 export type SocialMechanismKindChoice = SocialMechanismKind;
 
+/** Politiques de coût employeur configurables en campagne (pas `mixed`). */
+export const EMPLOYER_COST_POLICY_KIND_CHOICES = [
+  "neutral",
+  "rate_on_gross_period",
+] as const;
+
+export type EmployerCostPolicyKindChoice =
+  (typeof EMPLOYER_COST_POLICY_KIND_CHOICES)[number];
+
+export const NO_EMPLOYER_COST_POLICY: EmployerCostPolicy = {
+  kind: "neutral",
+};
+
+export function isEmployerCostPolicyKindChoice(
+  value: unknown,
+): value is EmployerCostPolicyKindChoice {
+  return (
+    typeof value === "string" &&
+    (EMPLOYER_COST_POLICY_KIND_CHOICES as readonly string[]).includes(value)
+  );
+}
+
 export interface SimulationConfigurationDraftFields {
   budgetTargetMode: BudgetTargetModeChoice | null;
   manualBudgetInput: string;
@@ -674,6 +769,13 @@ export interface SimulationConfigurationDraftFields {
   universalFixedAmountMinimumSeniorityMonthsInput: string;
   /** Date de référence d’ancienneté du forfait (ISO YYYY-MM-DD). */
   universalFixedAmountSeniorityReferenceDateInput: string;
+  /**
+   * Politique de coût employeur (Lot 2B-RC1-H6-A3).
+   * `mixed` n’est pas une valeur de configuration de campagne.
+   */
+  employerCostPolicyKind: EmployerCostPolicyKindChoice;
+  /** Taux % unique (texte UI), actif seulement en mode rate_on_gross_period. */
+  employerCostRatePercentInput: string;
 }
 
 export interface ParsedSimulationConfiguration {
@@ -686,6 +788,7 @@ export interface ParsedSimulationConfiguration {
   socialMechanismKind: SocialMechanismKind | null;
   minimumIncreasePolicy: MinimumIncreasePolicy | null;
   universalFixedAmountPolicy: UniversalFixedAmountPolicy | null;
+  employerCostPolicy: EmployerCostPolicy | null;
   fieldErrors: Partial<
     Record<
       | "budgetTargetMode"
@@ -705,7 +808,9 @@ export interface ParsedSimulationConfiguration {
       | "universalFixedAmountMonthlyAmountInput"
       | "universalFixedAmountEffectiveMonthInput"
       | "universalFixedAmountMinimumSeniorityMonthsInput"
-      | "universalFixedAmountSeniorityReferenceDateInput",
+      | "universalFixedAmountSeniorityReferenceDateInput"
+      | "employerCostPolicyKind"
+      | "employerCostRatePercentInput",
       ParseFailure
     >
   >;
@@ -713,6 +818,8 @@ export interface ParsedSimulationConfiguration {
   isRoundingComplete: boolean;
   isApplicationCalendarComplete: boolean;
   isSocialMechanismComplete: boolean;
+  /** Politique de coût employeur parsée sans erreur. */
+  isEmployerCostComplete: boolean;
   /** @deprecated Alias de isSocialMechanismComplete (compat H4). */
   isMinimumIncreaseComplete: boolean;
   isConfigurationComplete: boolean;
@@ -1007,6 +1114,42 @@ export function parseSimulationConfigurationDraft(
     }
   }
 
+  let employerCostPolicy: EmployerCostPolicy | null = null;
+  let isEmployerCostComplete = false;
+  const employerKindRaw = draft.employerCostPolicyKind as string;
+  if (!isEmployerCostPolicyKindChoice(employerKindRaw)) {
+    fieldErrors.employerCostPolicyKind = {
+      ok: false,
+      code: "UNSUPPORTED_EMPLOYER_COST_POLICY_KIND",
+      message:
+        employerKindRaw === "mixed"
+          ? "La politique « mixed » est réservée aux résultats agrégés et ne peut pas être configurée pour une campagne."
+          : `Politique de coût employeur non supportée : ${String(employerKindRaw)}.`,
+    };
+  } else if (employerKindRaw === "neutral") {
+    // Le taux résiduel du brouillon est ignoré (aucun effet caché).
+    employerCostPolicy = NO_EMPLOYER_COST_POLICY;
+    isEmployerCostComplete = true;
+  } else {
+    const rate = parseEmployerCostRatePercentInput(
+      draft.employerCostRatePercentInput,
+    );
+    if (!rate.ok) {
+      fieldErrors.employerCostRatePercentInput = rate;
+    } else {
+      employerCostPolicy = {
+        kind: "rate_on_gross_period",
+        components: [
+          {
+            categoryId: EMPLOYER_CHARGE_CATEGORY_UNSPECIFIED_BUNDLE,
+            rate: rate.value,
+          },
+        ],
+      };
+      isEmployerCostComplete = true;
+    }
+  }
+
   return {
     budgetTarget,
     roundingPolicy,
@@ -1017,16 +1160,19 @@ export function parseSimulationConfigurationDraft(
     socialMechanismKind,
     minimumIncreasePolicy,
     universalFixedAmountPolicy,
+    employerCostPolicy,
     fieldErrors,
     isBudgetComplete,
     isRoundingComplete,
     isApplicationCalendarComplete,
     isSocialMechanismComplete,
+    isEmployerCostComplete,
     isMinimumIncreaseComplete: isSocialMechanismComplete,
     isConfigurationComplete:
       isBudgetComplete &&
       isRoundingComplete &&
       isApplicationCalendarComplete &&
-      isSocialMechanismComplete,
+      isSocialMechanismComplete &&
+      isEmployerCostComplete,
   };
 }

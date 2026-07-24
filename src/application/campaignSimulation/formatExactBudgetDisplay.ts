@@ -247,7 +247,26 @@ export function buildConfigurationFingerprint(parts: {
   universalFixedAmountSeniorityReferenceDate?: string | null;
   /** Version du contrat forfait social universel. */
   universalFixedAmountContractVersion?: number;
+  /**
+   * Politique de coût employeur (Lot 2B-RC1-H6-A3).
+   * Défaut fingerprint = neutral (absents = sans charges configurées).
+   * Ne modifie pas la signification de `employerChargesIncluded`.
+   */
+  employerCostPolicyKind?: string;
+  /** Numérateur du taux (mode rate_on_gross_period uniquement). */
+  employerCostRateNumerator?: bigint | null;
+  /** Dénominateur du taux (mode rate_on_gross_period uniquement). */
+  employerCostRateDenominator?: bigint | null;
 }): string {
+  const employerCostKind = parts.employerCostPolicyKind ?? "neutral";
+  const employerCostRateToken =
+    employerCostKind === "rate_on_gross_period" &&
+    parts.employerCostRateNumerator !== undefined &&
+    parts.employerCostRateNumerator !== null &&
+    parts.employerCostRateDenominator !== undefined &&
+    parts.employerCostRateDenominator !== null
+      ? `${parts.employerCostRateNumerator}/${parts.employerCostRateDenominator}`
+      : "";
   return [
     `contract:v${parts.calculationContractVersion ?? 4}`,
     `months:${(parts.annualBudgetPeriodMonths ?? 12n).toString()}`,
@@ -284,5 +303,7 @@ export function buildConfigurationFingerprint(parts: {
     `forfaitSeniority:${parts.universalFixedAmountMinimumSeniorityMonths ?? ""}`,
     `forfaitSeniorityRef:${parts.universalFixedAmountSeniorityReferenceDate ?? ""}`,
     `forfaitInc:v${parts.universalFixedAmountContractVersion ?? 1}`,
+    `employerCost:${employerCostKind}`,
+    `employerCostRate:${employerCostRateToken}`,
   ].join("|");
 }

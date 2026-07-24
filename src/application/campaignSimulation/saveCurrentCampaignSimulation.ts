@@ -148,6 +148,7 @@ export async function saveCurrentCampaignSimulation(
     minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
     socialMechanismKind: validatedConfiguration.socialMechanismKind,
     universalFixedAmountPolicy: validatedConfiguration.universalFixedAmountPolicy,
+    employerCostPolicy: validatedConfiguration.employerCostPolicy,
   });
 
   if (currentFingerprint !== result.sourceFingerprint) {
