@@ -26,6 +26,13 @@ import type { RoundingPolicy } from "./populationAllocationModels";
 import type { SocialMechanismKind } from "./socialMechanism";
 import type { UniversalFixedAmountPolicy } from "./universalFixedAmount";
 import type { UniversalFixedAmountExclusionReason } from "./universalFixedAmountPopulation";
+import type {
+  EmployerChargeAssietteBreakdown,
+} from "./employerChargeAssiette";
+import type {
+  EmployerCostPolicy,
+  PeriodEmployerCostBreakdown,
+} from "./employerPeriodCost";
 
 /**
  * Convention JRB : répartition du budget ANNUEL proportionnelle au
@@ -142,6 +149,12 @@ export interface PreparedPopulationCalculationInput {
    * `socialMechanismKind === "universal_fixed_amount"`).
    */
   universalFixedAmountPolicy?: UniversalFixedAmountPolicy;
+  /**
+   * Politique de coût employeur (Lot 2B-RC1-H6-A4-I1).
+   * Obligatoire : aucun défaut silencieux dans le moteur.
+   * Les charges restent hors enveloppe tant que `EMPLOYER_CHARGES_INCLUDED` est false.
+   */
+  employerCostPolicy: EmployerCostPolicy;
 }
 
 export interface PopulationCalculationIssue {
@@ -640,6 +653,16 @@ export interface PreparedPopulationCalculationResult {
   fullYearRunRateCompensationAboveMinimumCostFcfa: bigint;
   populationSummary: PopulationCalculationSummary;
   explanationSteps: CalculationExplanationStep[];
+  /**
+   * Analyse interne H6-A4-I1 : assiette + coût employeur de période.
+   * Hors enveloppe budgétaire, non persisté, non exposé UI.
+   */
+  analyticalEmployerCost: {
+    readonly populationAssiette: EmployerChargeAssietteBreakdown;
+    readonly populationPeriodCost: PeriodEmployerCostBreakdown;
+    readonly employeeAssiettes: ReadonlyMap<string, EmployerChargeAssietteBreakdown>;
+    readonly employeePeriodCosts: ReadonlyMap<string, PeriodEmployerCostBreakdown>;
+  };
 }
 
 /** Comparaison lexicographique stable (unités de code UTF-16), sans locale. */

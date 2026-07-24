@@ -14,6 +14,7 @@ import type {
   UniversalFixedAmountPolicy,
 } from "../../domain/compensationCalculation";
 import {
+  DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
   EMPLOYER_CHARGE_CATEGORY_UNSPECIFIED_BUNDLE,
   MINIMUM_INCREASE_MODES,
   NO_MINIMUM_INCREASE_POLICY,
@@ -721,6 +722,7 @@ export type EmployerCostPolicyKindChoice =
 
 export const NO_EMPLOYER_COST_POLICY: EmployerCostPolicy = {
   kind: "neutral",
+  componentLiability: DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
 };
 
 export function isEmployerCostPolicyKindChoice(
@@ -1145,6 +1147,7 @@ export function parseSimulationConfigurationDraft(
             rate: rate.value,
           },
         ],
+        componentLiability: DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
       };
       isEmployerCostComplete = true;
     }

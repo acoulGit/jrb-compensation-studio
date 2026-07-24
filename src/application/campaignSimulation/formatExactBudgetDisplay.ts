@@ -257,6 +257,11 @@ export function buildConfigurationFingerprint(parts: {
   employerCostRateNumerator?: bigint | null;
   /** Dénominateur du taux (mode rate_on_gross_period uniquement). */
   employerCostRateDenominator?: bigint | null;
+  /**
+   * Jeton d’assujettissement par composante (Lot 2B-RC1-H6-A4-I1).
+   * Format canonique : `m1,g1,u1,p1,s1` (ordre fixe).
+   */
+  employerCostLiability?: string;
 }): string {
   const employerCostKind = parts.employerCostPolicyKind ?? "neutral";
   const employerCostRateToken =
@@ -267,7 +272,9 @@ export function buildConfigurationFingerprint(parts: {
     parts.employerCostRateDenominator !== null
       ? `${parts.employerCostRateNumerator}/${parts.employerCostRateDenominator}`
       : "";
-  return [
+  const employerCostLiabilityToken =
+    parts.employerCostLiability ?? "m1,g1,u1,p1,s1";
+  const segments = [
     `contract:v${parts.calculationContractVersion ?? 4}`,
     `months:${(parts.annualBudgetPeriodMonths ?? 12n).toString()}`,
     `charges:${parts.employerChargesIncluded === true ? "1" : "0"}`,
@@ -305,5 +312,10 @@ export function buildConfigurationFingerprint(parts: {
     `forfaitInc:v${parts.universalFixedAmountContractVersion ?? 1}`,
     `employerCost:${employerCostKind}`,
     `employerCostRate:${employerCostRateToken}`,
-  ].join("|");
+  ];
+  // Compat historique : omis lorsque les cinq défauts `true` sont en vigueur.
+  if (employerCostLiabilityToken !== "m1,g1,u1,p1,s1") {
+    segments.push(`employerCostLiability:${employerCostLiabilityToken}`);
+  }
+  return segments.join("|");
 }

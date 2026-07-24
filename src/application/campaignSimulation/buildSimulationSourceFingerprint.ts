@@ -16,6 +16,10 @@ import type { MinimumIncreasePolicy } from "../../domain/compensationCalculation
 import type { SocialMechanismKind } from "../../domain/compensationCalculation";
 import type { UniversalFixedAmountPolicy } from "../../domain/compensationCalculation";
 import type { EmployerCostPolicy } from "../../domain/compensationCalculation";
+import {
+  employerCostLiabilityFingerprintToken,
+  normalizeEmployerCostPolicy,
+} from "../../domain/compensationCalculation";
 import type { CampaignStatus } from "../../domain/campaign/models";
 import type { NineBoxMode } from "../../domain/compensationReference/models";
 import { buildConfigurationFingerprint } from "./formatExactBudgetDisplay";
@@ -24,19 +28,27 @@ function employerCostFingerprintParts(policy: EmployerCostPolicy): {
   employerCostPolicyKind: string;
   employerCostRateNumerator: bigint | null;
   employerCostRateDenominator: bigint | null;
+  employerCostLiability: string;
 } {
-  if (policy.kind === "neutral") {
+  const normalized = normalizeEmployerCostPolicy(policy);
+  if (normalized.kind === "neutral") {
     return {
       employerCostPolicyKind: "neutral",
       employerCostRateNumerator: null,
       employerCostRateDenominator: null,
+      employerCostLiability: employerCostLiabilityFingerprintToken(
+        normalized.componentLiability,
+      ),
     };
   }
-  const rate = policy.components[0]?.rate ?? null;
+  const rate = normalized.components[0]?.rate ?? null;
   return {
     employerCostPolicyKind: "rate_on_gross_period",
     employerCostRateNumerator: rate?.numerator ?? null,
     employerCostRateDenominator: rate?.denominator ?? null,
+    employerCostLiability: employerCostLiabilityFingerprintToken(
+      normalized.componentLiability,
+    ),
   };
 }
 
@@ -88,8 +100,8 @@ export interface SimulationSourceFingerprintInput {
   socialMechanismKind: SocialMechanismKind;
   universalFixedAmountPolicy: UniversalFixedAmountPolicy;
   /**
-   * Politique de coût employeur (Lot 2B-RC1-H6-A3).
-   * Incluse dans l’empreinte uniquement ; non passée au moteur de budget.
+   * Politique de coût employeur (Lots 2B-RC1-H6-A3 / H6-A4-I1).
+   * Incluse dans l’empreinte et propagée obligatoirement au moteur.
    * Défaut fingerprint = neutral si absente (compat tests / appels historiques).
    */
   employerCostPolicy?: EmployerCostPolicy;
@@ -212,7 +224,9 @@ export function buildSimulationSourceFingerprint(
         : null,
     universalFixedAmountContractVersion: UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
     ...employerCostFingerprintParts(
-      input.employerCostPolicy ?? { kind: "neutral" },
+      input.employerCostPolicy
+        ? normalizeEmployerCostPolicy(input.employerCostPolicy)
+        : normalizeEmployerCostPolicy({ kind: "neutral" }),
     ),
   });
 

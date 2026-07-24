@@ -281,6 +281,7 @@ export async function executeCampaignSimulation(
     minimumIncreasePolicy: validatedConfiguration.minimumIncreasePolicy,
     socialMechanismKind: validatedConfiguration.socialMechanismKind,
     universalFixedAmountPolicy: validatedConfiguration.universalFixedAmountPolicy,
+    employerCostPolicy: validatedConfiguration.employerCostPolicy,
   };
 
   let engineResult;

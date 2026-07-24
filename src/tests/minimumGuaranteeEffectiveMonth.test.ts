@@ -21,6 +21,7 @@ import {
   RESULT_SCHEMA_VERSION,
   RESULT_SCHEMA_VERSION_V6,
   calculatePreparedPopulationCompensation,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   type PreparedPopulationCalculationInput,
   type PopulationCalculationReferences,
 } from "../domain/compensationCalculation";
@@ -101,6 +102,8 @@ function baseInput(
       },
     ],
     ...overrides,
+    employerCostPolicy:
+      overrides.employerCostPolicy ?? NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 

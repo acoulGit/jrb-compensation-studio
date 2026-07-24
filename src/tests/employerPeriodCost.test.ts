@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 import {
   aggregatePeriodEmployerCostBreakdowns,
   calculatePeriodEmployerCost,
+  DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
   EmployerPeriodCostError,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   type EmployerCostPolicy,
   type PeriodEmployerCostBreakdown,
   type PeriodGrossSalaryImpactInput,
@@ -36,6 +38,7 @@ function ratePolicy(
       categoryId: "unspecified_bundle" as const,
       rate: toExact(rate),
     })),
+    componentLiability: DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
   };
 }
 
@@ -50,7 +53,7 @@ function toExact(rate: ExactAmountLike) {
 
 describe("Lot 2B-RC1-H6-A2 — calculatePeriodEmployerCost", () => {
   it("1. politique neutre : charges 0, complet = brut", () => {
-    const result = calculatePeriodEmployerCost(grossInput(), { kind: "neutral" });
+    const result = calculatePeriodEmployerCost(grossInput(), NEUTRAL_EMPLOYER_COST_POLICY);
     expect(result.periodEmployerChargesFcfa).toBe(0n);
     expect(result.periodEmployerCompleteCostFcfa).toBe(180_000n);
     expect(result.chargeComponents).toEqual([]);
@@ -183,7 +186,7 @@ describe("Lot 2B-RC1-H6-A2 — calculatePeriodEmployerCost", () => {
     expect(() =>
       calculatePeriodEmployerCost(
         grossInput({ periodGrossImpactFcfa: -1n }),
-        { kind: "neutral" },
+        NEUTRAL_EMPLOYER_COST_POLICY,
       ),
     ).toThrowError(/négatif/);
   });
@@ -205,6 +208,7 @@ describe("Lot 2B-RC1-H6-A2 — calculatePeriodEmployerCost", () => {
           { categoryId: "unspecified_bundle", rate: reduceFraction(1n, 10n) },
           { categoryId: "unspecified_bundle", rate: reduceFraction(1n, 20n) },
         ],
+        componentLiability: DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
       });
       expect.unreachable();
     } catch (error) {
@@ -225,6 +229,7 @@ describe("Lot 2B-RC1-H6-A2 — calculatePeriodEmployerCost", () => {
           rate: reduceFraction(1n, 10n),
         },
       ],
+      componentLiability: DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
     };
     const inputSnapshot = structuredClone({
       monthlyGrossIncreaseFcfa: input.monthlyGrossIncreaseFcfa.toString(),
@@ -255,7 +260,7 @@ describe("Lot 2B-RC1-H6-A2 — calculatePeriodEmployerCost", () => {
   });
 
   it("20. politique neutre sans composant", () => {
-    const result = calculatePeriodEmployerCost(grossInput(), { kind: "neutral" });
+    const result = calculatePeriodEmployerCost(grossInput(), NEUTRAL_EMPLOYER_COST_POLICY);
     expect(result.chargeComponents).toEqual([]);
   });
 
@@ -358,14 +363,14 @@ describe("Lot 2B-RC1-H6-A2 — aggregatePeriodEmployerCostBreakdowns", () => {
   it("18. gestion déterministe du plein effet", () => {
     const withFull = calculatePeriodEmployerCost(
       grossInput({ fullYearGrossRunRateFcfa: 100n }),
-      { kind: "neutral" },
+      NEUTRAL_EMPLOYER_COST_POLICY,
     );
     const withoutFull = calculatePeriodEmployerCost(
       {
         monthlyGrossIncreaseFcfa: 1n,
         periodGrossImpactFcfa: 1n,
       },
-      { kind: "neutral" },
+      NEUTRAL_EMPLOYER_COST_POLICY,
     );
     expect(withoutFull.fullYearGrossRunRateFcfa).toBeNull();
     const mixed = aggregatePeriodEmployerCostBreakdowns([withFull, withoutFull]);
@@ -376,7 +381,7 @@ describe("Lot 2B-RC1-H6-A2 — aggregatePeriodEmployerCostBreakdowns", () => {
   });
 
   it("politiques hétérogènes → policyKind mixed", () => {
-    const neutral = calculatePeriodEmployerCost(grossInput(), { kind: "neutral" });
+    const neutral = calculatePeriodEmployerCost(grossInput(), NEUTRAL_EMPLOYER_COST_POLICY);
     const rated = calculatePeriodEmployerCost(
       grossInput({ periodGrossImpactFcfa: 10_000n }),
       ratePolicy(reduceFraction(1n, 10n)),
@@ -615,7 +620,7 @@ describe("Lot 2B-RC1-H6-A2 — aggregatePeriodEmployerCostBreakdowns", () => {
 
   describe("validation runtime de policyKind", () => {
     it("refuse une ligne dont policyKind est inconnu (cast)", () => {
-      const valid = calculatePeriodEmployerCost(grossInput(), { kind: "neutral" });
+      const valid = calculatePeriodEmployerCost(grossInput(), NEUTRAL_EMPLOYER_COST_POLICY);
       const broken: PeriodEmployerCostBreakdown = {
         ...valid,
         policyKind: "unknown_kind" as PeriodEmployerCostBreakdown["policyKind"],
@@ -663,9 +668,10 @@ describe("Lot 2B-RC1-H6-A2 — aggregatePeriodEmployerCostBreakdowns", () => {
     });
 
     it("conserve policyKind homogène neutral et rate_on_gross_period", () => {
-      const neutral = calculatePeriodEmployerCost(grossInput(), {
-        kind: "neutral",
-      });
+      const neutral = calculatePeriodEmployerCost(
+        grossInput(),
+        NEUTRAL_EMPLOYER_COST_POLICY,
+      );
       const rated = calculatePeriodEmployerCost(
         grossInput({ periodGrossImpactFcfa: 50_000n }),
         ratePolicy(reduceFraction(1n, 10n)),

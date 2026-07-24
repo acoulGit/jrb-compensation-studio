@@ -31,6 +31,7 @@ import {
   calculatePreparedPopulationCompensation,
   exactAmountFromInteger,
   fractionsEqual,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   type PopulationCalculationReferences,
   type PreparedEmployeeCalculationInput,
   type PreparedPopulationCalculationInput,
@@ -105,6 +106,8 @@ function baseInput(
     },
     campaignYear: overrides.campaignYear ?? 2026,
     technicalApplicationMonth: overrides.technicalApplicationMonth ?? 7,
+    employerCostPolicy:
+      overrides.employerCostPolicy ?? NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 
@@ -485,6 +488,7 @@ describe("Lot 2A-H2C-2B — parité fixture vue", () => {
       roundingPolicy: { mode: "nearest_half_up", stepFcfa: 5 },
       campaignYear: 2026,
       technicalApplicationMonth: 1,
+      employerCostPolicy: NEUTRAL_EMPLOYER_COST_POLICY,
     });
     const view = toView(engine);
     expect(view.budgetSummary.envelopeSummary.annualBudgetTargetLabel).toMatch(

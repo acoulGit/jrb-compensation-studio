@@ -15,6 +15,7 @@ import {
   calculatePreparedPopulationCompensation,
   computeBaseSalaryReminderBreakdown,
   CompensationCalculationError,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   RESULT_SCHEMA_VERSION,
   type PreparedEmployeeCalculationInput,
   type PreparedPopulationCalculationInput,
@@ -77,6 +78,8 @@ function buildInput(
     },
     campaignYear: overrides.campaignYear ?? 2026,
     technicalApplicationMonth: overrides.technicalApplicationMonth ?? 7,
+    employerCostPolicy:
+      overrides.employerCostPolicy ?? NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 

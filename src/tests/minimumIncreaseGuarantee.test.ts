@@ -23,6 +23,7 @@ import {
   fractionsEqual,
   isMinimumIncreasePopulationEmployee,
   minimumIncreaseRateFromPercentParts,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   reduceFraction,
   resolveMinimumIncreaseExclusionReason,
   validateMinimumIncreasePolicy,
@@ -114,6 +115,8 @@ function populationTest1Input(
     retroactivityStartMonth: 1,
     minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     ...overrides,
+    employerCostPolicy:
+      overrides.employerCostPolicy ?? NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 

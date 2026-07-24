@@ -12,6 +12,7 @@ import {
   exactAmountFromInteger,
   formatExactAmount,
   fractionsEqual,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   type PreparedEmployeeCalculationInput,
   type PreparedPopulationCalculationInput,
   type PopulationCalculationReferences,
@@ -120,6 +121,8 @@ function baseInput(
     campaignYear: overrides.campaignYear ?? 2026,
     retroactivityStartMonth: overrides.retroactivityStartMonth ?? 1,
     technicalApplicationMonth: overrides.technicalApplicationMonth ?? 7,
+    employerCostPolicy:
+      overrides.employerCostPolicy ?? NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 
@@ -166,6 +169,8 @@ function buildRecipeInput(
     campaignYear: 2026,
     technicalApplicationMonth: 1,
     ...overrides,
+    employerCostPolicy:
+      overrides.employerCostPolicy ?? NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 

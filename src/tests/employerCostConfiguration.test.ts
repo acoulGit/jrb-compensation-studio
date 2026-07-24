@@ -12,6 +12,7 @@ import {
 } from "../application/campaignSimulation/parseSimulationConfiguration";
 import { createEmptyConfigurationDraft } from "../application/campaignSimulation/simulationConfigurationModels";
 import {
+  DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
   EMPLOYER_CHARGE_CATEGORY_UNSPECIFIED_BUNDLE,
   EMPLOYER_CHARGES_INCLUDED,
   fractionsEqual,
@@ -72,7 +73,7 @@ describe("H6-A3 — configuration coût employeur", () => {
       draft.employerCostPolicyKind = "neutral";
       draft.employerCostRatePercentInput = "42,5";
       const parsed = parseSimulationConfigurationDraft(draft);
-      expect(parsed.employerCostPolicy).toEqual({ kind: "neutral" });
+      expect(parsed.employerCostPolicy).toEqual(NO_EMPLOYER_COST_POLICY);
       expect(parsed.fieldErrors.employerCostRatePercentInput).toBeUndefined();
     });
 
@@ -124,6 +125,7 @@ describe("H6-A3 — configuration coût employeur", () => {
             rate: reduceFraction(0n, 100n),
           },
         ],
+        componentLiability: DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
       });
     });
 
@@ -316,7 +318,7 @@ describe("H6-A3 — configuration coût employeur", () => {
       forfaitDraft.employerCostPolicyKind = "neutral";
       const forfaitParsed = parseSimulationConfigurationDraft(forfaitDraft);
       expect(forfaitParsed.socialMechanismKind).toBe("universal_fixed_amount");
-      expect(forfaitParsed.employerCostPolicy).toEqual({ kind: "neutral" });
+      expect(forfaitParsed.employerCostPolicy).toEqual(NO_EMPLOYER_COST_POLICY);
     });
   });
 });

@@ -22,6 +22,7 @@ import {
   hasMinimumSeniorityAtDecemberNMinus1,
   isCompensatoryMeasureEligible,
   isPromotionBudgetPopulationEmployee,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   promotionAnnualBudgetCostFcfa,
   reduceFraction,
   solvePromotionAwareCompensatoryCalibrationRate,
@@ -99,6 +100,8 @@ function baseInput(
     },
     campaignYear: overrides.campaignYear ?? 2026,
     technicalApplicationMonth: overrides.technicalApplicationMonth ?? 7,
+    employerCostPolicy:
+      overrides.employerCostPolicy ?? NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 

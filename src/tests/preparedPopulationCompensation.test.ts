@@ -11,6 +11,7 @@ import {
   calculatePreparedPopulationCompensation,
   CompensationCalculationError,
   fractionsEqual,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   reduceFraction,
   resolveEmployeeS0,
   type PreparedEmployeeCalculationInput,
@@ -125,6 +126,8 @@ function buildInput(
     },
     campaignYear: overrides.campaignYear ?? 2026,
     technicalApplicationMonth: overrides.technicalApplicationMonth ?? 1,
+    employerCostPolicy:
+      overrides.employerCostPolicy ?? NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 
