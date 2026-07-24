@@ -20,6 +20,7 @@ import {
   ceilFcfaPercentOfAmount,
   computeSeniorityImpactBreakdown,
   effectiveAnniversaryCountAt,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   parseHireDateIso,
   seniorityRatePercentAt,
   seniorityRatePercentFromEffectiveAnniversaryCount,
@@ -83,6 +84,8 @@ function buildInput(
     },
     campaignYear: overrides.campaignYear ?? 2023,
     technicalApplicationMonth: overrides.technicalApplicationMonth ?? 7,
+    employerCostPolicy:
+      overrides.employerCostPolicy ?? NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 

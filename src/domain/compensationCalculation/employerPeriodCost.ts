@@ -1,8 +1,9 @@
 /**
- * Fondation pure du coût employeur de période (Lot 2B-RC1-H6-A2).
+ * Fondation pure du coût employeur de période (Lots 2B-RC1-H6-A2 / H6-A4-I1).
  *
- * Module non branché : aucun orchestrateur, UI ni persistance ne l’appelle.
- * Le budget de production reste exprimé en augmentation salariale brute.
+ * H6-A4-I1 : assujettissement configurable + assiette typée.
+ * Le budget de production reste exprimé en augmentation salariale brute
+ * (`EMPLOYER_CHARGES_INCLUDED = false`) ; le calcul de charges est analytique.
  */
 
 import {
@@ -43,14 +44,116 @@ export interface EmployerChargePolicyComponent {
   readonly rate: ExactAmount;
 }
 
+/**
+ * Assujettissement configurable par composante (Lot 2B-RC1-H6-A4-I1).
+ * `true` = la composante entre dans l’assiette des charges lorsqu’elle est calculée.
+ */
+export interface EmployerCostComponentLiability {
+  readonly matrixIncrease: boolean;
+  readonly minimumGuaranteeComplement: boolean;
+  readonly universalFixedAmount: boolean;
+  readonly promotionIncrease: boolean;
+  readonly additionalSeniorityImpact: boolean;
+}
+
+/** Défaut métier : les cinq composantes identifiées sont assujetties. */
+export const DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY: EmployerCostComponentLiability =
+  {
+    matrixIncrease: true,
+    minimumGuaranteeComplement: true,
+    universalFixedAmount: true,
+    promotionIncrease: true,
+    additionalSeniorityImpact: true,
+  };
+
 export type EmployerCostPolicy =
   | {
       readonly kind: "neutral";
+      readonly componentLiability: EmployerCostComponentLiability;
     }
   | {
       readonly kind: "rate_on_gross_period";
       readonly components: readonly EmployerChargePolicyComponent[];
+      readonly componentLiability: EmployerCostComponentLiability;
     };
+
+/** Politique neutre canonique (charges 0) avec assujettissement par défaut. */
+export const NEUTRAL_EMPLOYER_COST_POLICY: EmployerCostPolicy = {
+  kind: "neutral",
+  componentLiability: DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
+};
+
+type EmployerCostPolicyWithoutLiability =
+  | { readonly kind: "neutral"; readonly componentLiability?: EmployerCostComponentLiability }
+  | {
+      readonly kind: "rate_on_gross_period";
+      readonly components: readonly EmployerChargePolicyComponent[];
+      readonly componentLiability?: EmployerCostComponentLiability;
+    };
+
+function isLiabilityBoolean(value: unknown): value is boolean {
+  return value === true || value === false;
+}
+
+/**
+ * Normalise une politique éventuellement historique (sans `componentLiability`)
+ * en appliquant explicitement les cinq défauts `true`.
+ */
+export function normalizeEmployerCostPolicy(
+  policy: EmployerCostPolicyWithoutLiability | EmployerCostPolicy,
+): EmployerCostPolicy {
+  const liability = normalizeEmployerCostComponentLiability(
+    policy.componentLiability,
+  );
+  if (policy.kind === "neutral") {
+    return { kind: "neutral", componentLiability: liability };
+  }
+  return {
+    kind: "rate_on_gross_period",
+    components: policy.components,
+    componentLiability: liability,
+  };
+}
+
+export function normalizeEmployerCostComponentLiability(
+  raw: Partial<EmployerCostComponentLiability> | null | undefined,
+): EmployerCostComponentLiability {
+  return {
+    matrixIncrease:
+      raw && isLiabilityBoolean(raw.matrixIncrease)
+        ? raw.matrixIncrease
+        : DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY.matrixIncrease,
+    minimumGuaranteeComplement:
+      raw && isLiabilityBoolean(raw.minimumGuaranteeComplement)
+        ? raw.minimumGuaranteeComplement
+        : DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY.minimumGuaranteeComplement,
+    universalFixedAmount:
+      raw && isLiabilityBoolean(raw.universalFixedAmount)
+        ? raw.universalFixedAmount
+        : DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY.universalFixedAmount,
+    promotionIncrease:
+      raw && isLiabilityBoolean(raw.promotionIncrease)
+        ? raw.promotionIncrease
+        : DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY.promotionIncrease,
+    additionalSeniorityImpact:
+      raw && isLiabilityBoolean(raw.additionalSeniorityImpact)
+        ? raw.additionalSeniorityImpact
+        : DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY.additionalSeniorityImpact,
+  };
+}
+
+/** Jeton fingerprint canonique des cinq indicateurs (ordre fixe). */
+export function employerCostLiabilityFingerprintToken(
+  liability: EmployerCostComponentLiability = DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
+): string {
+  return [
+    `m${liability.matrixIncrease ? "1" : "0"}`,
+    `g${liability.minimumGuaranteeComplement ? "1" : "0"}`,
+    `u${liability.universalFixedAmount ? "1" : "0"}`,
+    `p${liability.promotionIncrease ? "1" : "0"}`,
+    `s${liability.additionalSeniorityImpact ? "1" : "0"}`,
+  ].join(",");
+}
 
 export interface PeriodGrossSalaryImpactInput {
   readonly monthlyGrossIncreaseFcfa: bigint;

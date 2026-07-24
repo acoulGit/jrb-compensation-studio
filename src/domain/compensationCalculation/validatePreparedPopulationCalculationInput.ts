@@ -12,6 +12,10 @@ import { NINE_BOX_MODES } from "../compensationReference/models";
 import { PROMOTION_BUDGET_EMPLOYMENT_STATUSES } from "./promotionBudgetPopulation";
 import { isSocialMechanismKind } from "./socialMechanism";
 import { parseSeniorityReferenceDateIso } from "./universalFixedAmountPopulation";
+import {
+  type EmployerCostComponentLiability,
+  type EmployerCostPolicy,
+} from "./employerPeriodCost";
 
 function issue(
   partial: PopulationCalculationIssue,
@@ -299,6 +303,8 @@ export function validatePreparedPopulationCalculationInput(
     }
   }
 
+  validateEmployerCostPolicyInput(input.employerCostPolicy, issues);
+
   const seenIds = new Set<string>();
   for (const employee of input.employees ?? []) {
     if (
@@ -449,6 +455,94 @@ export function validatePreparedPopulationCalculationInput(
 }
 
   return { isValid: issues.length === 0, issues };
+}
+
+function isLiabilityBoolean(value: unknown): value is boolean {
+  return value === true || value === false;
+}
+
+function validateEmployerCostComponentLiability(
+  liability: unknown,
+  issues: PopulationCalculationIssue[],
+): liability is EmployerCostComponentLiability {
+  if (liability === null || liability === undefined || typeof liability !== "object") {
+    issues.push(
+      issue({
+        code: "MISSING_EMPLOYER_COST_COMPONENT_LIABILITY",
+        message:
+          "L’assujettissement par composante (componentLiability) est obligatoire.",
+        field: "employerCostPolicy.componentLiability",
+        step: "validate_input",
+      }),
+    );
+    return false;
+  }
+  const record = liability as Record<string, unknown>;
+  const keys: (keyof EmployerCostComponentLiability)[] = [
+    "matrixIncrease",
+    "minimumGuaranteeComplement",
+    "universalFixedAmount",
+    "promotionIncrease",
+    "additionalSeniorityImpact",
+  ];
+  let ok = true;
+  for (const key of keys) {
+    if (!isLiabilityBoolean(record[key])) {
+      issues.push(
+        issue({
+          code: "INVALID_EMPLOYER_COST_COMPONENT_LIABILITY",
+          message: `L’indicateur d’assujettissement « ${key} » doit être un booléen.`,
+          field: `employerCostPolicy.componentLiability.${key}`,
+          step: "validate_input",
+        }),
+      );
+      ok = false;
+    }
+  }
+  return ok;
+}
+
+function validateEmployerCostPolicyInput(
+  policy: EmployerCostPolicy | undefined | null,
+  issues: PopulationCalculationIssue[],
+): void {
+  if (policy === null || policy === undefined) {
+    issues.push(
+      issue({
+        code: "MISSING_EMPLOYER_COST_POLICY",
+        message:
+          "La politique de coût employeur est obligatoire (aucun défaut silencieux).",
+        field: "employerCostPolicy",
+        step: "validate_input",
+      }),
+    );
+    return;
+  }
+  if (policy.kind !== "neutral" && policy.kind !== "rate_on_gross_period") {
+    issues.push(
+      issue({
+        code: "UNSUPPORTED_EMPLOYER_COST_POLICY",
+        message: `Politique de coût employeur non supportée : ${String((policy as { kind: string }).kind)}.`,
+        field: "employerCostPolicy.kind",
+        step: "validate_input",
+      }),
+    );
+    return;
+  }
+  validateEmployerCostComponentLiability(policy.componentLiability, issues);
+  if (policy.kind === "rate_on_gross_period") {
+    if (!Array.isArray(policy.components) || policy.components.length === 0) {
+      issues.push(
+        issue({
+          code: "INVALID_EMPLOYER_COST_POLICY_COMPONENTS",
+          message:
+            "La politique rate_on_gross_period exige au moins une composante de taux.",
+          field: "employerCostPolicy.components",
+          step: "validate_input",
+        }),
+      );
+    }
+  }
 }
 
 export function toIssueLikes(

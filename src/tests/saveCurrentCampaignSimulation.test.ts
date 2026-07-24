@@ -13,6 +13,7 @@ import type {
 } from "../domain/compensationCalculation";
 import {
   MINIMUM_INCREASE_CONTRACT_VERSION,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   NO_MINIMUM_INCREASE_POLICY,
   NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
   UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
@@ -442,7 +443,7 @@ async function setupSuccessContext(options?: {
     minimumIncreasePolicy: NO_MINIMUM_INCREASE_POLICY,
     socialMechanismKind: "none",
     universalFixedAmountPolicy: NO_UNIVERSAL_FIXED_AMOUNT_POLICY,
-    employerCostPolicy: { kind: "neutral" },
+    employerCostPolicy: NEUTRAL_EMPLOYER_COST_POLICY,
     readinessReport: {
       campaignId: campaign.id,
       campaignName: campaign.name,

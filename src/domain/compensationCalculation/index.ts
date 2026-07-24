@@ -9,18 +9,33 @@ export {
 export { allocateTheoreticalPopulationBudget } from "./allocateTheoreticalPopulationBudget";
 export {
   EMPLOYER_CHARGE_CATEGORY_UNSPECIFIED_BUNDLE,
+  DEFAULT_EMPLOYER_COST_COMPONENT_LIABILITY,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   EmployerPeriodCostError,
   aggregatePeriodEmployerCostBreakdowns,
   calculatePeriodEmployerCost,
+  employerCostLiabilityFingerprintToken,
+  normalizeEmployerCostComponentLiability,
+  normalizeEmployerCostPolicy,
   type AggregatedEmployerCostPolicyKind,
   type EmployerChargeCategoryId,
   type EmployerChargeComponent,
   type EmployerChargePolicyComponent,
+  type EmployerCostComponentLiability,
   type EmployerCostPolicy,
   type EmployerPeriodCostErrorCode,
   type PeriodEmployerCostBreakdown,
   type PeriodGrossSalaryImpactInput,
 } from "./employerPeriodCost";
+export {
+  assertCompensatoryAssiettePartition,
+  buildEmployerChargeAssietteBreakdown,
+  resolveLiabilityFromPolicy,
+  type EmployerChargeAssietteAvailability,
+  type EmployerChargeAssietteBreakdown,
+  type EmployerChargeAssietteComponentLine,
+  type EmployerChargeAssietteSourceAmounts,
+} from "./employerChargeAssiette";
 export {
   BUDGET_TARGET_MODES,
   type BudgetTargetInput,

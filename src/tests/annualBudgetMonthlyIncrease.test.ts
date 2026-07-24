@@ -13,6 +13,7 @@ import {
   exactAmountFromInteger,
   fractionsEqual,
   multiplyFractions,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   reduceFraction,
   type PreparedEmployeeCalculationInput,
   type PreparedPopulationCalculationInput,
@@ -109,6 +110,7 @@ function buildRecipeInput(): PreparedPopulationCalculationInput {
     },
     campaignYear: 2026,
     technicalApplicationMonth: 1,
+    employerCostPolicy: NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 
@@ -245,6 +247,7 @@ describe("Lot 2A-H1 — budget annuel / augmentation mensuelle", () => {
       roundingPolicy: { mode: "nearest_half_up", stepFcfa: 1 },
       campaignYear: 2026,
       technicalApplicationMonth: 1,
+      employerCostPolicy: NEUTRAL_EMPLOYER_COST_POLICY,
     });
 
     expect(result.budgetTargetResult.exactAmount).toEqual({
@@ -288,6 +291,7 @@ describe("Lot 2A-H1 — budget annuel / augmentation mensuelle", () => {
       roundingPolicy: { mode: "nearest_half_up", stepFcfa: 1 },
       campaignYear: 2026,
       technicalApplicationMonth: 1,
+      employerCostPolicy: NEUTRAL_EMPLOYER_COST_POLICY,
     });
     expect(result.employees[0].salaryRatioBasisPoints).toBe(10_000);
     expect(result.employees[0].s0Fcfa).toBe(500_000n);

@@ -39,6 +39,8 @@ import {
   MINIMUM_INCREASE_CONTRACT_VERSION,
   UNIVERSAL_FIXED_AMOUNT_CONTRACT_VERSION,
   defaultUniversalFixedAmountSeniorityReferenceDate,
+  employerCostLiabilityFingerprintToken,
+  normalizeEmployerCostPolicy,
   type EmployerCostPolicy,
   type MinimumIncreaseMode,
   type SocialMechanismKind,
@@ -55,19 +57,27 @@ function employerCostFingerprintParts(policy: EmployerCostPolicy): {
   employerCostPolicyKind: string;
   employerCostRateNumerator: bigint | null;
   employerCostRateDenominator: bigint | null;
+  employerCostLiability: string;
 } {
-  if (policy.kind === "neutral") {
+  const normalized = normalizeEmployerCostPolicy(policy);
+  if (normalized.kind === "neutral") {
     return {
       employerCostPolicyKind: "neutral",
       employerCostRateNumerator: null,
       employerCostRateDenominator: null,
+      employerCostLiability: employerCostLiabilityFingerprintToken(
+        normalized.componentLiability,
+      ),
     };
   }
-  const rate = policy.components[0]?.rate ?? null;
+  const rate = normalized.components[0]?.rate ?? null;
   return {
     employerCostPolicyKind: "rate_on_gross_period",
     employerCostRateNumerator: rate?.numerator ?? null,
     employerCostRateDenominator: rate?.denominator ?? null,
+    employerCostLiability: employerCostLiabilityFingerprintToken(
+      normalized.componentLiability,
+    ),
   };
 }
 

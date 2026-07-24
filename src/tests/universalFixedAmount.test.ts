@@ -22,6 +22,7 @@ import {
   deriveSocialMechanismKindFromMinimumIncreaseMode,
   hasUniversalFixedAmountSeniority,
   isUniversalFixedAmountEligible,
+  NEUTRAL_EMPLOYER_COST_POLICY,
   parseHireDateIso,
   resolveUniversalFixedAmountExclusionReason,
   seniorityMonthsAtDecemberNMinus1,
@@ -132,6 +133,8 @@ function baseInput(
     retroactivityStartMonth: 1,
     socialMechanismKind: "none",
     ...overrides,
+    employerCostPolicy:
+      overrides.employerCostPolicy ?? NEUTRAL_EMPLOYER_COST_POLICY,
   };
 }
 

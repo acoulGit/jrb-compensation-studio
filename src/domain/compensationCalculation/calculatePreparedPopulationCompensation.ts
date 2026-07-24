@@ -61,6 +61,16 @@ import {
   validateUniversalFixedAmountPolicy,
 } from "./universalFixedAmount";
 import {
+  assertCompensatoryAssiettePartition,
+  buildEmployerChargeAssietteBreakdown,
+  type EmployerChargeAssietteBreakdown,
+} from "./employerChargeAssiette";
+import {
+  aggregatePeriodEmployerCostBreakdowns,
+  calculatePeriodEmployerCost,
+  type PeriodEmployerCostBreakdown,
+} from "./employerPeriodCost";
+import {
   buildEmployeePromotionAwareExposures,
   finalizeEmployeePromotionAwareCompensation,
   type EmployeePromotionAwareExposureResult,
@@ -1473,6 +1483,70 @@ export function calculatePreparedPopulationCompensation(
     },
   ];
 
+  const employerCostPolicy = input.employerCostPolicy;
+  const liability = employerCostPolicy.componentLiability;
+  const employeeAssiettes = new Map<string, EmployerChargeAssietteBreakdown>();
+  const employeePeriodCosts = new Map<string, PeriodEmployerCostBreakdown>();
+
+  let sumAbove = 0n;
+  let sumFloor = 0n;
+  let sumForfait = 0n;
+  let sumPromo = 0n;
+  let sumSeniority = 0n;
+
+  for (const employee of employees) {
+    assertCompensatoryAssiettePartition({
+      floorFcfa: employee.campaignPeriodMinimumComplementFloorCostFcfa,
+      aboveMinimumFcfa: employee.campaignPeriodCompensationAboveMinimumCostFcfa,
+      universalFixedFcfa: employee.campaignPeriodUniversalFixedAmountCostFcfa,
+      annualActualCompensatoryCostFcfa: employee.annualActualCostFcfa,
+    });
+    const assiette = buildEmployerChargeAssietteBreakdown(
+      {
+        campaignPeriodCompensationAboveMinimumCostFcfa:
+          employee.campaignPeriodCompensationAboveMinimumCostFcfa,
+        campaignPeriodMinimumComplementFloorCostFcfa:
+          employee.campaignPeriodMinimumComplementFloorCostFcfa,
+        campaignPeriodUniversalFixedAmountCostFcfa:
+          employee.campaignPeriodUniversalFixedAmountCostFcfa,
+        annualPromotionBudgetCostFcfa: employee.annualPromotionBudgetCostFcfa,
+        combinedAnnualSeniorityImpactFcfa:
+          employee.combinedAnnualSeniorityImpactFcfa,
+      },
+      liability,
+    );
+    employeeAssiettes.set(employee.employeeId, assiette);
+    employeePeriodCosts.set(
+      employee.employeeId,
+      calculatePeriodEmployerCost(
+        {
+          monthlyGrossIncreaseFcfa: 0n,
+          periodGrossImpactFcfa: assiette.periodGrossImpactFcfa,
+        },
+        employerCostPolicy,
+      ),
+    );
+    sumAbove += employee.campaignPeriodCompensationAboveMinimumCostFcfa;
+    sumFloor += employee.campaignPeriodMinimumComplementFloorCostFcfa;
+    sumForfait += employee.campaignPeriodUniversalFixedAmountCostFcfa;
+    sumPromo += employee.annualPromotionBudgetCostFcfa;
+    sumSeniority += employee.combinedAnnualSeniorityImpactFcfa;
+  }
+
+  const populationAssiette = buildEmployerChargeAssietteBreakdown(
+    {
+      campaignPeriodCompensationAboveMinimumCostFcfa: sumAbove,
+      campaignPeriodMinimumComplementFloorCostFcfa: sumFloor,
+      campaignPeriodUniversalFixedAmountCostFcfa: sumForfait,
+      annualPromotionBudgetCostFcfa: sumPromo,
+      combinedAnnualSeniorityImpactFcfa: sumSeniority,
+    },
+    liability,
+  );
+  const populationPeriodCost = aggregatePeriodEmployerCostBreakdowns([
+    ...employeePeriodCosts.values(),
+  ]);
+
   return {
     budgetTargetResult,
     evaluationMode: input.references.evaluationMode,
@@ -1528,5 +1602,11 @@ export function calculatePreparedPopulationCompensation(
     fullYearRunRateCompensationAboveMinimumCostFcfa,
     populationSummary,
     explanationSteps,
+    analyticalEmployerCost: {
+      populationAssiette,
+      populationPeriodCost,
+      employeeAssiettes,
+      employeePeriodCosts,
+    },
   };
 }
