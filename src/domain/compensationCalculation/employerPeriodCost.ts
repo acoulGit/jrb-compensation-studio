@@ -150,6 +150,25 @@ function roundChargeAmountFcfa(
   return roundFractionToStepHalfUp(exact, 1n);
 }
 
+const AGGREGATED_POLICY_KINDS = [
+  "neutral",
+  "rate_on_gross_period",
+  "mixed",
+] as const;
+
+function assertAggregatedPolicyKind(
+  policyKind: string,
+): asserts policyKind is AggregatedEmployerCostPolicyKind {
+  if (
+    !(AGGREGATED_POLICY_KINDS as readonly string[]).includes(policyKind)
+  ) {
+    throw new EmployerPeriodCostError(
+      "UNSUPPORTED_EMPLOYER_COST_POLICY",
+      `policyKind de breakdown non supporté : ${policyKind}.`,
+    );
+  }
+}
+
 /**
  * Valide un breakdown.
  * `strictComponentAmounts` : exige amountFcfa = half-up(assiette × taux).
@@ -160,6 +179,8 @@ function assertBreakdownInvariants(
   options?: { strictComponentAmounts?: boolean },
 ): void {
   const strictComponentAmounts = options?.strictComponentAmounts !== false;
+
+  assertAggregatedPolicyKind(breakdown.policyKind);
 
   assertNonNegativeFcfa(
     breakdown.monthlyGrossIncreaseFcfa,

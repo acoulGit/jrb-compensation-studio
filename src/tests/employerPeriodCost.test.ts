@@ -612,4 +612,70 @@ describe("Lot 2B-RC1-H6-A2 — aggregatePeriodEmployerCostBreakdowns", () => {
       expect(agg.chargeComponents[0]!.amountFcfa).toBe(2n);
     });
   });
+
+  describe("validation runtime de policyKind", () => {
+    it("refuse une ligne dont policyKind est inconnu (cast)", () => {
+      const valid = calculatePeriodEmployerCost(grossInput(), { kind: "neutral" });
+      const broken: PeriodEmployerCostBreakdown = {
+        ...valid,
+        policyKind: "unknown_kind" as PeriodEmployerCostBreakdown["policyKind"],
+      };
+      try {
+        aggregatePeriodEmployerCostBreakdowns([broken]);
+        expect.unreachable();
+      } catch (error) {
+        expect(error).toBeInstanceOf(EmployerPeriodCostError);
+        expect((error as EmployerPeriodCostError).code).toBe(
+          "UNSUPPORTED_EMPLOYER_COST_POLICY",
+        );
+        expect((error as EmployerPeriodCostError).message).toMatch(
+          /policyKind/,
+        );
+      }
+    });
+
+    it("accepte un breakdown agrégé mixed comme ligne d’une nouvelle agrégation", () => {
+      // mixed « naturel » (neutral + rated) ne satisfait pas baseAmount === brut
+      // en mode strict ; on utilise un mixed synthétique cohérent avec tous
+      // les invariants de ligne source.
+      const rate = reduceFraction(1n, 10n);
+      const mixedSource: PeriodEmployerCostBreakdown = {
+        monthlyGrossIncreaseFcfa: 1_000n,
+        fullYearGrossRunRateFcfa: null,
+        periodGrossImpactFcfa: 10_000n,
+        periodEmployerChargesFcfa: 1_000n,
+        periodEmployerCompleteCostFcfa: 11_000n,
+        chargeComponents: [
+          {
+            categoryId: "unspecified_bundle",
+            baseAmountFcfa: 10_000n,
+            rate,
+            amountFcfa: 1_000n,
+          },
+        ],
+        policyKind: "mixed",
+      };
+      const again = aggregatePeriodEmployerCostBreakdowns([mixedSource]);
+      expect(again.policyKind).toBe("mixed");
+      expect(again.periodGrossImpactFcfa).toBe(10_000n);
+      expect(again.periodEmployerChargesFcfa).toBe(1_000n);
+      expect(again.periodEmployerCompleteCostFcfa).toBe(11_000n);
+    });
+
+    it("conserve policyKind homogène neutral et rate_on_gross_period", () => {
+      const neutral = calculatePeriodEmployerCost(grossInput(), {
+        kind: "neutral",
+      });
+      const rated = calculatePeriodEmployerCost(
+        grossInput({ periodGrossImpactFcfa: 50_000n }),
+        ratePolicy(reduceFraction(1n, 10n)),
+      );
+      expect(
+        aggregatePeriodEmployerCostBreakdowns([neutral, neutral]).policyKind,
+      ).toBe("neutral");
+      expect(
+        aggregatePeriodEmployerCostBreakdowns([rated, rated]).policyKind,
+      ).toBe("rate_on_gross_period");
+    });
+  });
 });
