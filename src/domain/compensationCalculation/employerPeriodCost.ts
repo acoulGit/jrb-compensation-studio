@@ -150,9 +150,84 @@ function roundChargeAmountFcfa(
   return roundFractionToStepHalfUp(exact, 1n);
 }
 
+/**
+ * Valide un breakdown.
+ * `strictComponentAmounts` : exige amountFcfa = half-up(assiette × taux).
+ * Désactivé sur le résultat d’agrégation car Σ round ≠ round(Σ) en général.
+ */
 function assertBreakdownInvariants(
   breakdown: PeriodEmployerCostBreakdown,
+  options?: { strictComponentAmounts?: boolean },
 ): void {
+  const strictComponentAmounts = options?.strictComponentAmounts !== false;
+
+  assertNonNegativeFcfa(
+    breakdown.monthlyGrossIncreaseFcfa,
+    "monthlyGrossIncreaseFcfa",
+  );
+  assertNonNegativeFcfa(
+    breakdown.periodGrossImpactFcfa,
+    "periodGrossImpactFcfa",
+  );
+  assertNonNegativeFcfa(
+    breakdown.periodEmployerChargesFcfa,
+    "periodEmployerChargesFcfa",
+  );
+  assertNonNegativeFcfa(
+    breakdown.periodEmployerCompleteCostFcfa,
+    "periodEmployerCompleteCostFcfa",
+  );
+  if (breakdown.fullYearGrossRunRateFcfa !== null) {
+    assertNonNegativeFcfa(
+      breakdown.fullYearGrossRunRateFcfa,
+      "fullYearGrossRunRateFcfa",
+    );
+  }
+
+  if (breakdown.policyKind === "neutral") {
+    if (
+      breakdown.periodEmployerChargesFcfa !== 0n ||
+      breakdown.chargeComponents.length !== 0
+    ) {
+      throw new EmployerPeriodCostError(
+        "INVALID_EMPLOYER_COST_BREAKDOWN",
+        "Incohérence : politique neutre avec charges non nulles.",
+      );
+    }
+  }
+
+  for (const component of breakdown.chargeComponents) {
+    assertCategoryId(component.categoryId);
+    assertNonNegativeRate(component.rate);
+    assertNonNegativeFcfa(component.baseAmountFcfa, "baseAmountFcfa");
+    assertNonNegativeFcfa(component.amountFcfa, "amountFcfa");
+
+    if (component.baseAmountFcfa !== breakdown.periodGrossImpactFcfa) {
+      // Sur un agrégat, une composante peut ne provenir que d’un sous-ensemble
+      // de lignes (ex. politique mixed) : la stricte égalité ne s’applique
+      // qu’aux breakdowns sources.
+      if (strictComponentAmounts) {
+        throw new EmployerPeriodCostError(
+          "INVALID_EMPLOYER_COST_BREAKDOWN",
+          "Incohérence : baseAmountFcfa de la composante ≠ periodGrossImpactFcfa.",
+        );
+      }
+    }
+
+    if (strictComponentAmounts) {
+      const expectedAmount = roundChargeAmountFcfa(
+        breakdown.periodGrossImpactFcfa,
+        component.rate,
+      );
+      if (component.amountFcfa !== expectedAmount) {
+        throw new EmployerPeriodCostError(
+          "INVALID_EMPLOYER_COST_BREAKDOWN",
+          "Incohérence : amountFcfa ≠ arrondi half-up de (assiette × taux).",
+        );
+      }
+    }
+  }
+
   const componentsSum = breakdown.chargeComponents.reduce(
     (sum, component) => sum + component.amountFcfa,
     0n,
@@ -171,17 +246,6 @@ function assertBreakdownInvariants(
       "INVALID_EMPLOYER_COST_BREAKDOWN",
       "Incohérence : coût complet ≠ brut période + charges.",
     );
-  }
-  if (breakdown.policyKind === "neutral") {
-    if (
-      breakdown.periodEmployerChargesFcfa !== 0n ||
-      breakdown.chargeComponents.length !== 0
-    ) {
-      throw new EmployerPeriodCostError(
-        "INVALID_EMPLOYER_COST_BREAKDOWN",
-        "Incohérence : politique neutre avec charges non nulles.",
-      );
-    }
   }
 }
 
@@ -286,7 +350,7 @@ export function aggregatePeriodEmployerCostBreakdowns(
   }
 
   for (const row of rows) {
-    assertBreakdownInvariants(row);
+    assertBreakdownInvariants(row, { strictComponentAmounts: true });
   }
 
   let monthlyGrossIncreaseFcfa = 0n;
@@ -382,6 +446,8 @@ export function aggregatePeriodEmployerCostBreakdowns(
     chargeComponents,
     policyKind,
   };
-  assertBreakdownInvariants(breakdown);
+  // Résultat agrégé : ne pas réimposer amount = round(Σbase × taux)
+  // (Σ round ≠ round(Σ) avec half-up).
+  assertBreakdownInvariants(breakdown, { strictComponentAmounts: false });
   return breakdown;
 }

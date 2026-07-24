@@ -107,8 +107,8 @@ describe("Lot 2B-RC1-H6-A2 — calculatePeriodEmployerCost", () => {
   });
 
   it("6. arrondi supérieur à 0,5 FCFA", () => {
-    // 2 × 2/3 = 1 + 1/3 → reste > 0,5 unité relative → 2? 
-    // 4/3 : floor=1, remainder such that 2*remainder >= den → round up to 2
+    // 2 × 2/3 = 4/3 ≈ 1,333 → half-up → 1
+    // 5 × 1/3 ≈ 1,666 → half-up → 2
     const result = calculatePeriodEmployerCost(
       grossInput({
         monthlyGrossIncreaseFcfa: 0n,
@@ -401,5 +401,215 @@ describe("Lot 2B-RC1-H6-A2 — aggregatePeriodEmployerCostBreakdowns", () => {
     expect(() => aggregatePeriodEmployerCostBreakdowns([broken])).toThrow(
       EmployerPeriodCostError,
     );
+  });
+
+  it("accepte sans modification un breakdown valide issu de calculatePeriodEmployerCost", () => {
+    const valid = calculatePeriodEmployerCost(
+      grossInput({ periodGrossImpactFcfa: 77_777n }),
+      ratePolicy(reduceFraction(1n, 7n)),
+    );
+    const agg = aggregatePeriodEmployerCostBreakdowns([valid]);
+    expect(agg.periodGrossImpactFcfa).toBe(valid.periodGrossImpactFcfa);
+    expect(agg.periodEmployerChargesFcfa).toBe(valid.periodEmployerChargesFcfa);
+    expect(agg.periodEmployerCompleteCostFcfa).toBe(
+      valid.periodEmployerCompleteCostFcfa,
+    );
+    expect(agg.chargeComponents).toEqual(valid.chargeComponents);
+  });
+
+  describe("durcissement — refus des breakdowns manuels incohérents", () => {
+    const rate = reduceFraction(1n, 10n);
+    const validRated = (): PeriodEmployerCostBreakdown =>
+      calculatePeriodEmployerCost(
+        {
+          monthlyGrossIncreaseFcfa: 1_000n,
+          periodGrossImpactFcfa: 10_000n,
+          fullYearGrossRunRateFcfa: 12_000n,
+        },
+        ratePolicy(rate),
+      );
+
+    function expectInvalid(broken: PeriodEmployerCostBreakdown): void {
+      expect(() => aggregatePeriodEmployerCostBreakdowns([broken])).toThrow(
+        EmployerPeriodCostError,
+      );
+    }
+
+    it("1. periodGrossImpactFcfa négatif", () => {
+      expectInvalid({
+        ...validRated(),
+        periodGrossImpactFcfa: -1n,
+        periodEmployerCompleteCostFcfa: -1n + 1_000n,
+        chargeComponents: [
+          {
+            categoryId: "unspecified_bundle",
+            baseAmountFcfa: -1n,
+            rate,
+            amountFcfa: 0n,
+          },
+        ],
+        periodEmployerChargesFcfa: 0n,
+      });
+    });
+
+    it("2. periodEmployerChargesFcfa négatif", () => {
+      const base = validRated();
+      expectInvalid({
+        ...base,
+        periodEmployerChargesFcfa: -1n,
+        periodEmployerCompleteCostFcfa: base.periodGrossImpactFcfa - 1n,
+        chargeComponents: [
+          {
+            categoryId: "unspecified_bundle",
+            baseAmountFcfa: base.periodGrossImpactFcfa,
+            rate,
+            amountFcfa: -1n,
+          },
+        ],
+      });
+    });
+
+    it("3. periodEmployerCompleteCostFcfa négatif", () => {
+      expectInvalid({
+        monthlyGrossIncreaseFcfa: 0n,
+        fullYearGrossRunRateFcfa: null,
+        periodGrossImpactFcfa: 0n,
+        periodEmployerChargesFcfa: 0n,
+        periodEmployerCompleteCostFcfa: -1n,
+        chargeComponents: [],
+        policyKind: "neutral",
+      });
+    });
+
+    it("4. monthlyGrossIncreaseFcfa négatif", () => {
+      expectInvalid({
+        ...validRated(),
+        monthlyGrossIncreaseFcfa: -5n,
+      });
+    });
+
+    it("5. fullYearGrossRunRateFcfa négatif lorsqu’il est présent", () => {
+      expectInvalid({
+        ...validRated(),
+        fullYearGrossRunRateFcfa: -1n,
+      });
+    });
+
+    it("6. baseAmountFcfa négatif", () => {
+      const base = validRated();
+      expectInvalid({
+        ...base,
+        chargeComponents: [
+          {
+            categoryId: "unspecified_bundle",
+            baseAmountFcfa: -10n,
+            rate,
+            amountFcfa: base.periodEmployerChargesFcfa,
+          },
+        ],
+      });
+    });
+
+    it("7. amountFcfa négatif", () => {
+      const base = validRated();
+      expectInvalid({
+        ...base,
+        periodEmployerChargesFcfa: -1n,
+        periodEmployerCompleteCostFcfa: base.periodGrossImpactFcfa - 1n,
+        chargeComponents: [
+          {
+            categoryId: "unspecified_bundle",
+            baseAmountFcfa: base.periodGrossImpactFcfa,
+            rate,
+            amountFcfa: -1n,
+          },
+        ],
+      });
+    });
+
+    it("8. baseAmountFcfa différent du brut de période", () => {
+      const base = validRated();
+      expectInvalid({
+        ...base,
+        chargeComponents: [
+          {
+            categoryId: "unspecified_bundle",
+            baseAmountFcfa: base.periodGrossImpactFcfa + 1n,
+            rate,
+            amountFcfa: base.periodEmployerChargesFcfa,
+          },
+        ],
+      });
+    });
+
+    it("9. amountFcfa incompatible avec assiette, taux et arrondi", () => {
+      const base = validRated();
+      expectInvalid({
+        ...base,
+        periodEmployerChargesFcfa: base.periodEmployerChargesFcfa + 1n,
+        periodEmployerCompleteCostFcfa:
+          base.periodGrossImpactFcfa + base.periodEmployerChargesFcfa + 1n,
+        chargeComponents: [
+          {
+            categoryId: "unspecified_bundle",
+            baseAmountFcfa: base.periodGrossImpactFcfa,
+            rate,
+            amountFcfa: base.periodEmployerChargesFcfa + 1n,
+          },
+        ],
+      });
+    });
+
+    it("10. taux de composante négatif dans un breakdown manuel", () => {
+      const base = validRated();
+      expectInvalid({
+        ...base,
+        chargeComponents: [
+          {
+            categoryId: "unspecified_bundle",
+            baseAmountFcfa: base.periodGrossImpactFcfa,
+            rate: reduceFraction(-1n, 10n),
+            amountFcfa: base.periodEmployerChargesFcfa,
+          },
+        ],
+      });
+    });
+
+    it("11. catégorie runtime inconnue (cast de défense en profondeur)", () => {
+      const base = validRated();
+      expectInvalid({
+        ...base,
+        chargeComponents: [
+          {
+            categoryId: "cnss_invented" as PeriodEmployerCostBreakdown["chargeComponents"][number]["categoryId"],
+            baseAmountFcfa: base.periodGrossImpactFcfa,
+            rate,
+            amountFcfa: base.periodEmployerChargesFcfa,
+          },
+        ],
+      });
+    });
+
+    it("agrégation half-up : Σ round ≠ round(Σ) reste acceptée en sortie", () => {
+      // Chaque ligne : 1 × 1/2 → 1 ; agrégat base 2, amounts 2 (≠ round(1)=1)
+      const row = (full: bigint | null): PeriodEmployerCostBreakdown =>
+        calculatePeriodEmployerCost(
+          {
+            monthlyGrossIncreaseFcfa: 0n,
+            periodGrossImpactFcfa: 1n,
+            ...(full === null
+              ? {}
+              : { fullYearGrossRunRateFcfa: full }),
+          },
+          ratePolicy(reduceFraction(1n, 2n)),
+        );
+      const a = row(null);
+      const b = row(null);
+      expect(a.periodEmployerChargesFcfa).toBe(1n);
+      const agg = aggregatePeriodEmployerCostBreakdowns([a, b]);
+      expect(agg.periodGrossImpactFcfa).toBe(2n);
+      expect(agg.periodEmployerChargesFcfa).toBe(2n);
+      expect(agg.chargeComponents[0]!.amountFcfa).toBe(2n);
+    });
   });
 });
